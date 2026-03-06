@@ -44,12 +44,6 @@ To install the latest beta release of this plugin (regardless if it is available
 2. Click [Install via BRAT](https://intradeus.github.io/http-protocol-redirector?r=obsidian://brat?plugin=https://github.com/mnaoumov/obsidian-nested-properties).
 3. An Obsidian pop-up window should appear. In the window, click the `Add plugin` button once and wait a few seconds for the plugin to install.
 
-## Support
-
-<!-- markdownlint-disable MD033 -->
-<a href="https://www.buymeacoffee.com/mnaoumov" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="60" width="217"></a>
-<!-- markdownlint-enable MD033 -->
-
 ## Debugging
 
 By default, debug messages for this plugin are hidden.
@@ -61,6 +55,14 @@ window.DEBUG.enable('nested-properties');
 ```
 
 For more details, refer to the [documentation](https://github.com/mnaoumov/obsidian-dev-utils/blob/main/docs/debugging.md).
+
+## Support
+
+<!-- markdownlint-disable MD033 -->
+
+<a href="https://www.buymeacoffee.com/mnaoumov" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="60" width="217"></a>
+
+<!-- markdownlint-enable MD033 -->
 
 ## My other Obsidian resources
 
