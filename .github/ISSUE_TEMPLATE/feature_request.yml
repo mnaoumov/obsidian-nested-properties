@@ -59,16 +59,16 @@ body:
     attributes:
       label: Video
       options:
-        - "Attached"
         - "Not attached. ⚠️ Providing a video helps the maintainer understand the request and speeds up implementation."
+        - "Attached"
     validations:
       required: true
   - type: dropdown
     attributes:
       label: Sample vault
       options:
-        - "Attached"
         - "Not attached. ⚠️ Providing a sample vault helps the maintainer understand the request and speeds up implementation."
+        - "Attached"
     validations:
       required: true
   - type: checkboxes
