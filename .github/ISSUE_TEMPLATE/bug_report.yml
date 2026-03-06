@@ -68,7 +68,9 @@ body:
   - type: dropdown
     attributes:
       label: Video
+      default: 0
       options:
+        - ""
         - "Attached"
         - "Not attached. ⚠️ The bug report will be closed if the maintainer is unable to reproduce it without the attachment."
     validations:
