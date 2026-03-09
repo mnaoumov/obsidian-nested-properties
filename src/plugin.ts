@@ -1,8 +1,8 @@
 import { PluginBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginBase';
 
-import type { PluginTypes } from './PluginTypes.ts';
+import type { PluginTypes } from './plugin-types.ts';
 
-import { registerNestedPropertyRenderer } from './NestedPropertyRenderer.ts';
+import { registerNestedPropertyRenderer } from './nested-property-renderer.ts';
 
 export class Plugin extends PluginBase<PluginTypes> {
   protected override createSettingsManager(): null {
