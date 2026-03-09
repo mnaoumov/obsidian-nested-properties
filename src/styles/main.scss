@@ -119,6 +119,16 @@
   }
 }
 
+.nested-properties-add-row {
+  > .metadata-property-key {
+    pointer-events: none;
+
+    > .nested-properties-add-property {
+      pointer-events: auto;
+    }
+  }
+}
+
 .nested-properties-collapse-btn {
   display: inline-flex;
   align-items: center;

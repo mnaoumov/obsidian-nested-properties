@@ -177,7 +177,8 @@ function renderArray(
   arr: unknown[],
   ctx: PropertyRenderContext,
   parentPath: string,
-  onArrayChange: (newValue: unknown) => void
+  onArrayChange: (newValue: unknown) => void,
+  addButtonContainerEl?: HTMLElement
 ): void {
   for (const [index, item] of arr.entries()) {
     renderEntry(plugin, containerEl, String(index), item, ctx, parentPath, (newValue: unknown) => {
@@ -189,6 +190,41 @@ function renderArray(
       onArrayChange(newArr);
     });
   }
+
+  const buttonContainer = addButtonContainerEl ?? containerEl;
+  renderAddArrayItemButton(buttonContainer, arr, onArrayChange);
+}
+
+function getDefaultArrayItemValue(arr: unknown[]): unknown {
+  const firstDefinedItem = arr.find((item) => item !== undefined);
+  if (Array.isArray(firstDefinedItem)) {
+    return [];
+  }
+  if (firstDefinedItem !== null && typeof firstDefinedItem === 'object') {
+    return {};
+  }
+  return '';
+}
+
+function renderAddArrayItemButton(
+  containerEl: HTMLElement,
+  arr: unknown[],
+  onArrayChange: (newValue: unknown) => void
+): void {
+  const addItemRow = containerEl.createDiv({ cls: ['metadata-property', 'nested-properties-add-row'] });
+  const keyEl = addItemRow.createDiv({ cls: 'metadata-property-key' });
+  addItemRow.createDiv({ cls: 'metadata-property-value' });
+
+  const addItemButton = keyEl.createDiv({ cls: 'nested-properties-add-property' });
+  setIcon(addItemButton, 'plus');
+  addItemButton.createSpan({ text: 'Add property' });
+  addItemButton.addEventListener('click', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    pendingFocusKey = String(arr.length);
+    onArrayChange([...arr, getDefaultArrayItemValue(arr)]);
+  });
 }
 
 function renderEntry(
@@ -247,7 +283,7 @@ function renderEntry(
     const valueEl = propertyEl.createDiv({ cls: 'metadata-property-value' });
     createSummary(valueEl, value, propertyEl, path);
     const nestedContainer = valueEl.createDiv({ cls: 'nested-properties-container' });
-    renderNestedValue(plugin, nestedContainer, value, ctx, path, onValueChange);
+    renderNestedValue(plugin, nestedContainer, value, ctx, path, onValueChange, valueEl);
     return;
   }
   const propertyEl = containerEl.createDiv({ cls: 'metadata-property' });
@@ -304,12 +340,17 @@ function renderNestedValue(
   value: unknown,
   ctx: PropertyRenderContext,
   path: string,
-  onValueChange: (newValue: unknown) => void
+  onValueChange: (newValue: unknown) => void,
+  addButtonContainerEl?: HTMLElement
 ): void {
   if (Array.isArray(value)) {
-    renderArray(plugin, containerEl, value, ctx, path, onValueChange);
+    renderArray(plugin, containerEl, value, ctx, path, onArrayChange, addButtonContainerEl);
   } else {
     renderObject(plugin, containerEl, value as GenericObject, ctx, path, onValueChange);
+  }
+
+  function onArrayChange(newValue: unknown): void {
+    onValueChange(newValue);
   }
 }
 
