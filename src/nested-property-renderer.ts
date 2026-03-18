@@ -1,5 +1,5 @@
 import type { Plugin } from 'obsidian';
-import type { GenericObject } from 'obsidian-dev-utils/TypeGuards';
+import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 import type {
   PropertyRenderContext,
   PropertyWidgetComponentBase
@@ -10,7 +10,7 @@ import {
   Menu,
   setIcon
 } from 'obsidian';
-import { registerPatch } from 'obsidian-dev-utils/obsidian/MonkeyAround';
+import { registerPatch } from 'obsidian-dev-utils/obsidian/monkey-around';
 
 type RenderFn = (el: HTMLElement, value: unknown, ctx: PropertyRenderContext) => PropertyWidgetComponentBase;
 
