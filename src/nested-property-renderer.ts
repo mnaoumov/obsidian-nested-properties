@@ -113,6 +113,17 @@ function reloadAllProperties(plugin: Plugin): void {
   }
 }
 
+function renderAddItemButton(containerEl: HTMLElement, arr: unknown[], onValueChange: (newValue: unknown) => void): void {
+  const addItemButton = containerEl.createDiv({ cls: 'nested-properties-add-item' });
+  setIcon(addItemButton, 'plus');
+  addItemButton.createSpan({ text: 'Add item' });
+  addItemButton.addEventListener('click', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    onValueChange([...arr, '']);
+  });
+}
+
 function renderAddPropertyButton(containerEl: HTMLElement, obj: GenericObject, onValueChange: (newValue: unknown) => void): void {
   const addPropertyButton = containerEl.createDiv({ cls: 'nested-properties-add-property' });
   setIcon(addPropertyButton, 'plus');
@@ -189,6 +200,7 @@ function renderArray(
       onArrayChange(newArr);
     });
   }
+  renderAddItemButton(containerEl, arr, onArrayChange);
 }
 
 function renderEntry(

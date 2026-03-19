@@ -89,6 +89,7 @@
   vertical-align: middle;
 }
 
+.nested-properties-add-item,
 .nested-properties-add-property {
   display: flex;
   align-items: center;
@@ -108,7 +109,9 @@
     width: 16px;
     height: 16px;
   }
+}
 
+.nested-properties-add-property {
   input {
     background: transparent;
     border: none;
