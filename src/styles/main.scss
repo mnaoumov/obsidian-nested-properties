@@ -122,6 +122,41 @@
   }
 }
 
+.nested-properties-floating-scrollbar {
+  display: none;
+  position: fixed;
+  left: var(--track-left);
+  width: var(--track-width);
+  bottom: var(--track-bottom);
+  height: 12px;
+  z-index: 10;
+  cursor: ew-resize;
+  background: var(--background-secondary);
+  border-top: 1px solid var(--background-modifier-border);
+
+  &.is-visible {
+    display: block;
+  }
+}
+
+.nested-properties-floating-scrollbar-thumb {
+  position: absolute;
+  left: var(--thumb-left);
+  width: var(--thumb-width);
+  top: 2px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--scrollbar-thumb-bg);
+
+  &:hover {
+    background: var(--scrollbar-active-thumb-bg);
+  }
+}
+
+.nested-properties-ew-resize {
+  cursor: ew-resize;
+}
+
 .nested-properties-collapse-btn {
   display: inline-flex;
   align-items: center;

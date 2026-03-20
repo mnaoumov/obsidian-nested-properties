@@ -1,4 +1,3 @@
-import type { Plugin } from 'obsidian';
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 import type {
   PropertyRenderContext,
@@ -14,6 +13,12 @@ import {
 import { convertAsyncToSync } from 'obsidian-dev-utils/async';
 import { registerPatch } from 'obsidian-dev-utils/obsidian/monkey-around';
 
+import type { Plugin } from './plugin.ts';
+
+import {
+  initFloatingScrollbar,
+  updateFloatingScrollbar
+} from './floating-scrollbar.ts';
 import { TypeChangeModal } from './type-change-modal.ts';
 
 type RenderFn = (el: HTMLElement, value: unknown, ctx: PropertyRenderContext) => PropertyWidgetComponentBase;
@@ -29,6 +34,8 @@ export function registerNestedPropertyRenderer(plugin: Plugin): void {
   registerPatch(plugin, unknownWidget, {
     render: (next: RenderFn): RenderFn => (el, value, ctx) => renderUnknownWidget(plugin, next, el, value, ctx)
   });
+
+  initFloatingScrollbar(plugin);
 
   plugin.register(() => {
     for (const el of document.querySelectorAll('.nested-properties-header-actions')) {
@@ -443,8 +450,7 @@ function renderUnknownWidget(plugin: Plugin, next: RenderFn, el: HTMLElement, va
 
     const keyEl = propertyEl.querySelector('.metadata-property-key');
     if (keyEl && !keyEl.querySelector('.nested-properties-collapse-btn')) {
-      const collapseBtn = document.createElement('div');
-      collapseBtn.className = 'nested-properties-collapse-btn';
+      const collapseBtn = createDiv('nested-properties-collapse-btn');
       setIcon(collapseBtn, 'right-triangle');
       keyEl.insertBefore(collapseBtn, keyEl.firstChild);
       collapseBtn.addEventListener('click', (e) => {
@@ -457,19 +463,9 @@ function renderUnknownWidget(plugin: Plugin, next: RenderFn, el: HTMLElement, va
         } else {
           expandedPaths.delete(rootPath);
         }
+        updateFloatingScrollbar();
       });
     }
-  }
-
-  if (propertyEl instanceof HTMLElement) {
-    propertyEl.addEventListener('wheel', (e) => {
-      if (propertyEl.scrollWidth >= propertyEl.clientWidth) {
-        return;
-      }
-      propertyEl.scrollLeft += e.deltaX || e.deltaY;
-      e.preventDefault();
-      e.stopPropagation();
-    }, { passive: false });
   }
 
   if (propertyEl instanceof HTMLElement) {
@@ -506,6 +502,7 @@ function renderUnknownWidget(plugin: Plugin, next: RenderFn, el: HTMLElement, va
         }
       }
     }
+    updateFloatingScrollbar();
   }, 0);
 
   return {
