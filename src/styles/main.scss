@@ -70,7 +70,7 @@
   display: none;
   color: var(--text-muted);
   font-style: italic;
-  cursor: pointer;
+  cursor: var(--cursor);
   white-space: nowrap;
 }
 
@@ -90,13 +90,14 @@
 }
 
 .nested-properties-add-property {
-  display: flex;
+  display: inline-flex;
+  width: fit-content;
   align-items: center;
   gap: 4px;
   padding: 2px 4px;
   color: var(--text-muted);
   font-size: var(--metadata-label-font-size);
-  cursor: pointer;
+  cursor: var(--cursor);
   border-radius: var(--radius-s);
 
   &:hover {
@@ -123,11 +124,12 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
+  cursor: var(--cursor);
   color: var(--text-muted);
   flex-shrink: 0;
   width: 16px;
   height: 16px;
+  align-self: center;
   transition: transform 100ms ease-in-out;
 
   svg {
