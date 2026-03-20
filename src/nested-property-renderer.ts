@@ -21,29 +21,45 @@ import {
 } from './floating-scrollbar.ts';
 import { TypeChangeModal } from './type-change-modal.ts';
 
-type RenderFn = (el: HTMLElement, value: unknown, ctx: PropertyRenderContext) => PropertyWidgetComponentBase;
+const OBJECT_WIDGET_TYPE = 'object';
 
-const assignedTypes = new WeakMap<object, string>();
 const expandedPaths = new Set<string>();
 let pendingFocusKey: null | string = null;
 let lastMenuCloseTime = 0;
 
-export function registerNestedPropertyRenderer(plugin: Plugin): void {
-  const unknownWidget = plugin.app.metadataTypeManager.getWidget('unknown');
+type UnknownRenderFn = (el: HTMLElement, value: unknown, ctx: PropertyRenderContext) => PropertyWidgetComponentBase;
 
+export function registerNestedPropertyRenderer(plugin: Plugin): void {
+  const objectWidget: PropertyWidget = {
+    icon: 'lucide-braces',
+    name: () => 'Object',
+    render: (el, value, ctx) => renderObjectWidget(plugin, el, value, ctx),
+    type: OBJECT_WIDGET_TYPE,
+    validate: (value) => value !== null && typeof value === 'object'
+  };
+
+  plugin.app.metadataTypeManager.registeredTypeWidgets[OBJECT_WIDGET_TYPE] = objectWidget;
+
+  const unknownWidget = plugin.app.metadataTypeManager.getWidget('unknown');
   registerPatch(plugin, unknownWidget, {
-    render: (next: RenderFn): RenderFn => (el, value, ctx) => renderUnknownWidget(plugin, next, el, value, ctx)
+    render: (next: UnknownRenderFn): UnknownRenderFn => (el, value, ctx) => {
+      if (isComplexValue(value)) {
+        return objectWidget.render(el, value, ctx);
+      }
+      return next(el, value, ctx);
+    }
   });
 
-  initFloatingScrollbar(plugin);
-
   plugin.register(() => {
+    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- Unregister widget on unload.
+    delete plugin.app.metadataTypeManager.registeredTypeWidgets[OBJECT_WIDGET_TYPE];
     for (const el of document.querySelectorAll('.nested-properties-header-actions')) {
       el.remove();
     }
     reloadAllProperties(plugin);
   });
 
+  initFloatingScrollbar(plugin);
   reloadAllProperties(plugin);
 }
 
@@ -60,9 +76,6 @@ async function changeType(plugin: Plugin, widget: PropertyWidget, value: unknown
     document.activeElement.blur();
   }
   const converted = convertValue(value, widget.type);
-  if (typeof converted === 'object' && converted !== null) {
-    assignedTypes.set(converted, widget.type);
-  }
   if (converted === value) {
     reloadAllProperties(plugin);
   } else {
@@ -104,7 +117,7 @@ function convertValue(value: unknown, targetType: string): unknown {
       return null;
     case 'number':
       return Number(str) || 0;
-    case 'unknown':
+    case 'object':
       if (value !== null && typeof value === 'object') {
         return value;
       }
@@ -136,19 +149,11 @@ function expandAllIn(parentNode: ParentNode): void {
 }
 
 function getWidget(plugin: Plugin, label: string, value: unknown): PropertyWidget {
-  if (typeof value === 'object' && value !== null) {
-    const assigned = assignedTypes.get(value);
-    if (assigned) {
-      if (assigned === 'unknown') {
-        return plugin.app.metadataTypeManager.getWidget('unknown');
-      }
-      const widget = plugin.app.metadataTypeManager.registeredTypeWidgets[assigned];
-      if (widget) {
-        return widget;
-      }
-    }
+  const inferred = plugin.app.metadataTypeManager.getTypeInfo(label, value).inferred;
+  if (inferred.type === 'unknown' && isComplexValue(value)) {
+    return plugin.app.metadataTypeManager.registeredTypeWidgets[OBJECT_WIDGET_TYPE] ?? inferred;
   }
-  return plugin.app.metadataTypeManager.getTypeInfo(label, value).inferred;
+  return inferred;
 }
 
 function injectHeaderButtons(metadataContainerEl: HTMLElement): void {
@@ -432,9 +437,10 @@ function renderObject(
   renderAddPropertyButton(containerEl, obj, onValueChange);
 }
 
-function renderUnknownWidget(plugin: Plugin, next: RenderFn, el: HTMLElement, value: unknown, ctx: PropertyRenderContext): PropertyWidgetComponentBase {
+function renderObjectWidget(plugin: Plugin, el: HTMLElement, value: unknown, ctx: PropertyRenderContext): PropertyWidgetComponentBase {
   if (!isComplexValue(value)) {
-    return next(el, value, ctx);
+    value = {};
+    ctx.onChange(value);
   }
 
   const rootPath = `${ctx.sourcePath}:${ctx.key}`;
@@ -446,6 +452,11 @@ function renderUnknownWidget(plugin: Plugin, next: RenderFn, el: HTMLElement, va
     propertyEl.setAttribute('data-path', rootPath);
     if (!isExpanded) {
       propertyEl.classList.add('is-collapsed');
+    }
+
+    const existingIcon = propertyEl.querySelector('.metadata-property-key .metadata-property-icon');
+    if (existingIcon instanceof HTMLElement) {
+      setIcon(existingIcon, 'lucide-braces');
     }
 
     const keyEl = propertyEl.querySelector('.metadata-property-key');
@@ -509,7 +520,7 @@ function renderUnknownWidget(plugin: Plugin, next: RenderFn, el: HTMLElement, va
     focus: (): void => {
       containerEl.focus();
     },
-    type: 'unknown'
+    type: OBJECT_WIDGET_TYPE
   };
 }
 
@@ -549,15 +560,6 @@ function showNestedPropertyMenu(
           }));
       });
     }
-    const unknownWidget = plugin.app.metadataTypeManager.getWidget('unknown');
-    submenu.addItem((subItem) => {
-      subItem.setTitle(unknownWidget.name())
-        .setIcon(unknownWidget.icon)
-        .setChecked(currentWidget.type === 'unknown')
-        .onClick(convertAsyncToSync(async () => {
-          await changeType(plugin, unknownWidget, value, onValueChange);
-        }));
-    });
   });
   menu.addItem((item) => {
     item.setTitle('Cut')
