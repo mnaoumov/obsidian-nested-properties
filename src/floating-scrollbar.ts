@@ -1,5 +1,6 @@
 import type { Plugin } from './plugin.ts';
 
+const ARROW_SCROLL_PX = 40;
 const SCROLLBAR_HIT_ZONE_PX = 16;
 
 const ROOT_PROPERTY_SELECTOR =
@@ -25,6 +26,21 @@ export function initFloatingScrollbar(plugin: Plugin): void {
   }, { passive: false });
 
   plugin.registerDomEvent(track, 'mousedown', handleTrackMousedown);
+
+  plugin.registerPopupDocumentDomEvent('keydown', (e) => {
+    if (!activeEl || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) {
+      return;
+    }
+    if (
+      document.activeElement instanceof HTMLInputElement
+      || document.activeElement instanceof HTMLTextAreaElement
+      || (document.activeElement instanceof HTMLElement && document.activeElement.isContentEditable)
+    ) {
+      return;
+    }
+    activeEl.scrollLeft += e.key === 'ArrowLeft' ? -ARROW_SCROLL_PX : ARROW_SCROLL_PX;
+    e.preventDefault();
+  });
 
   plugin.registerPopupDocumentDomEvent('scroll', updateFloatingScrollbar, true);
   plugin.registerPopupDocumentDomEvent('wheel', handleNativeScrollbarWheel, { capture: true, passive: false });
