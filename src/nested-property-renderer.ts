@@ -2,6 +2,7 @@ import type { Plugin } from 'obsidian';
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 import type {
   PropertyRenderContext,
+  PropertyWidget,
   PropertyWidgetComponentBase
 } from 'obsidian-typings';
 
@@ -10,10 +11,14 @@ import {
   Menu,
   setIcon
 } from 'obsidian';
+import { convertAsyncToSync } from 'obsidian-dev-utils/async';
 import { registerPatch } from 'obsidian-dev-utils/obsidian/monkey-around';
+
+import { TypeChangeModal } from './type-change-modal.ts';
 
 type RenderFn = (el: HTMLElement, value: unknown, ctx: PropertyRenderContext) => PropertyWidgetComponentBase;
 
+const assignedTypes = new WeakMap<object, string>();
 const expandedPaths = new Set<string>();
 let pendingFocusKey: null | string = null;
 let lastMenuCloseTime = 0;
@@ -35,6 +40,29 @@ export function registerNestedPropertyRenderer(plugin: Plugin): void {
   reloadAllProperties(plugin);
 }
 
+async function changeType(plugin: Plugin, widget: PropertyWidget, value: unknown, onValueChange: (newValue: unknown) => void): Promise<void> {
+  if (!widget.validate(value)) {
+    const modal = new TypeChangeModal(plugin.app, widget.name());
+    modal.open();
+    if (!await modal.waitForResult()) {
+      return;
+    }
+  }
+
+  if (document.activeElement instanceof HTMLElement) {
+    document.activeElement.blur();
+  }
+  const converted = convertValue(value, widget.type);
+  if (typeof converted === 'object' && converted !== null) {
+    assignedTypes.set(converted, widget.type);
+  }
+  if (converted === value) {
+    reloadAllProperties(plugin);
+  } else {
+    onValueChange(converted);
+  }
+}
+
 function collapseAllIn(parentNode: ParentNode): void {
   for (const el of parentNode.querySelectorAll('.nested-properties-collapsible')) {
     el.classList.add('is-collapsed');
@@ -42,6 +70,41 @@ function collapseAllIn(parentNode: ParentNode): void {
     if (path) {
       expandedPaths.delete(path);
     }
+  }
+}
+
+function convertValue(value: unknown, targetType: string): unknown {
+  // eslint-disable-next-line @typescript-eslint/no-base-to-string -- We want to convert the value to a string.
+  const str = String(value ?? '');
+  switch (targetType) {
+    case 'aliases':
+    case 'multitext':
+    case 'tags':
+      if (Array.isArray(value)) {
+        return value;
+      }
+      if (str) {
+        return [str];
+      }
+      return [];
+    case 'checkbox':
+      return Boolean(value);
+    case 'date':
+    case 'datetime':
+      if (typeof value === 'string' && value && window.moment(value).isValid()) {
+        return value;
+      }
+      return null;
+    case 'number':
+      return Number(str) || 0;
+    case 'unknown':
+      if (value !== null && typeof value === 'object') {
+        return value;
+      }
+      return {};
+    case 'text':
+    default:
+      return str;
   }
 }
 
@@ -63,6 +126,22 @@ function expandAllIn(parentNode: ParentNode): void {
       expandedPaths.add(path);
     }
   }
+}
+
+function getWidget(plugin: Plugin, label: string, value: unknown): PropertyWidget {
+  if (typeof value === 'object' && value !== null) {
+    const assigned = assignedTypes.get(value);
+    if (assigned) {
+      if (assigned === 'unknown') {
+        return plugin.app.metadataTypeManager.getWidget('unknown');
+      }
+      const widget = plugin.app.metadataTypeManager.registeredTypeWidgets[assigned];
+      if (widget) {
+        return widget;
+      }
+    }
+  }
+  return plugin.app.metadataTypeManager.getTypeInfo(label, value).inferred;
 }
 
 function injectHeaderButtons(metadataContainerEl: HTMLElement): void {
@@ -223,7 +302,7 @@ function renderEntry(
     });
     propertyEl.addEventListener('contextmenu', (e) => {
       e.stopPropagation();
-      showNestedPropertyMenu(e, label, value, onValueChange, onDelete);
+      showNestedPropertyMenu(plugin, e, label, value, onValueChange, onDelete);
     });
 
     const keyEl = propertyEl.createDiv({ cls: 'metadata-property-key' });
@@ -242,12 +321,12 @@ function renderEntry(
       }
     });
 
-    const typeInfo = plugin.app.metadataTypeManager.getTypeInfo(label, value);
+    const complexWidget = getWidget(plugin, label, value);
     const iconEl = keyEl.createSpan({ cls: 'metadata-property-icon' });
-    setIcon(iconEl, typeInfo.inferred.icon);
+    setIcon(iconEl, complexWidget.icon);
     iconEl.addEventListener('click', (e) => {
       e.stopPropagation();
-      showNestedPropertyMenu(e, label, value, onValueChange, onDelete);
+      showNestedPropertyMenu(plugin, e, label, value, onValueChange, onDelete);
     });
     const keyInput = keyEl.createEl('input', {
       attr: { readonly: '', tabindex: '-1' },
@@ -265,12 +344,11 @@ function renderEntry(
   const propertyEl = containerEl.createDiv({ cls: 'metadata-property' });
   propertyEl.addEventListener('contextmenu', (e) => {
     e.stopPropagation();
-    showNestedPropertyMenu(e, label, value, onValueChange, onDelete);
+    showNestedPropertyMenu(plugin, e, label, value, onValueChange, onDelete);
   });
   renderKeyEl(plugin, propertyEl, label, value, onValueChange, onDelete);
 
-  const typeInfo = plugin.app.metadataTypeManager.getTypeInfo(label, value);
-  const widget = typeInfo.inferred;
+  const widget = getWidget(plugin, label, value);
   const valueEl = propertyEl.createDiv({ cls: 'metadata-property-value' });
   valueEl.setAttr('data-property-type', widget.type);
   widget.render(valueEl, value, {
@@ -292,13 +370,13 @@ function renderKeyEl(
 ): void {
   const keyEl = parentEl.createDiv({ cls: 'metadata-property-key' });
 
-  const typeInfo = plugin.app.metadataTypeManager.getTypeInfo(label, value);
+  const widget = getWidget(plugin, label, value);
   const iconEl = keyEl.createSpan({ cls: 'metadata-property-icon' });
-  setIcon(iconEl, typeInfo.inferred.icon);
+  setIcon(iconEl, widget.icon);
   if (onValueChange && onDelete) {
     iconEl.addEventListener('click', (e) => {
       e.stopPropagation();
-      showNestedPropertyMenu(e, label, value, onValueChange, onDelete);
+      showNestedPropertyMenu(plugin, e, label, value, onValueChange, onDelete);
     });
   }
 
@@ -438,7 +516,14 @@ function renderUnknownWidget(plugin: Plugin, next: RenderFn, el: HTMLElement, va
   };
 }
 
-function showNestedPropertyMenu(evt: MouseEvent, label: string, value: unknown, onValueChange: (newValue: unknown) => void, onDelete: () => void): void {
+function showNestedPropertyMenu(
+  plugin: Plugin,
+  evt: MouseEvent,
+  label: string,
+  value: unknown,
+  onValueChange: (newValue: unknown) => void,
+  onDelete: () => void
+): void {
   const MENU_DELAY_IN_MILLISECONDS = 200;
   if (Date.now() - lastMenuCloseTime < MENU_DELAY_IN_MILLISECONDS) {
     return;
@@ -447,29 +532,58 @@ function showNestedPropertyMenu(evt: MouseEvent, label: string, value: unknown, 
   menu.onHide(() => {
     lastMenuCloseTime = Date.now();
   });
-  menu.addSections(['action', '', 'danger']);
+  menu.addSections(['type', 'action', '', 'danger']);
+  menu.addItem((item) => {
+    item.setTitle('Property type')
+      .setIcon('lucide-info')
+      .setSection('type');
+    const submenu = item.setSubmenu();
+    const currentWidget = getWidget(plugin, label, value);
+    for (const widget of Object.values(plugin.app.metadataTypeManager.registeredTypeWidgets)) {
+      if (widget.reservedKeys && !widget.reservedKeys.contains(label)) {
+        continue;
+      }
+      submenu.addItem((subItem) => {
+        subItem.setTitle(widget.name())
+          .setIcon(widget.icon)
+          .setChecked(widget.type === currentWidget.type)
+          .onClick(convertAsyncToSync(async () => {
+            await changeType(plugin, widget, value, onValueChange);
+          }));
+      });
+    }
+    const unknownWidget = plugin.app.metadataTypeManager.getWidget('unknown');
+    submenu.addItem((subItem) => {
+      subItem.setTitle(unknownWidget.name())
+        .setIcon(unknownWidget.icon)
+        .setChecked(currentWidget.type === 'unknown')
+        .onClick(convertAsyncToSync(async () => {
+          await changeType(plugin, unknownWidget, value, onValueChange);
+        }));
+    });
+  });
   menu.addItem((item) => {
     item.setTitle('Cut')
       .setIcon('lucide-scissors')
       .setSection('action')
-      .onClick(async () => {
+      .onClick(convertAsyncToSync(async () => {
         await navigator.clipboard.writeText(JSON.stringify({ [label]: value }));
         onDelete();
-      });
+      }));
   });
   menu.addItem((item) => {
     item.setTitle('Copy')
       .setIcon('lucide-copy')
       .setSection('action')
-      .onClick(async () => {
+      .onClick(convertAsyncToSync(async () => {
         await navigator.clipboard.writeText(JSON.stringify({ [label]: value }));
-      });
+      }));
   });
   menu.addItem((item) => {
     item.setTitle('Paste')
       .setIcon('lucide-clipboard-paste')
       .setSection('action')
-      .onClick(async () => {
+      .onClick(convertAsyncToSync(async () => {
         try {
           const text = await navigator.clipboard.readText();
           const parsed = JSON.parse(text) as unknown;
@@ -482,7 +596,7 @@ function showNestedPropertyMenu(evt: MouseEvent, label: string, value: unknown, 
         } catch (e) {
           console.error(e);
         }
-      });
+      }));
   });
   menu.addItem((item) => {
     item.dom.addClass('is-warning');
