@@ -43,6 +43,14 @@ export function registerNestedPropertyRenderer(plugin: Plugin): void {
   const unknownWidget = plugin.app.metadataTypeManager.getWidget('unknown');
   registerPatch(plugin, unknownWidget, {
     render: (next: UnknownRenderFn): UnknownRenderFn => (el, value, ctx) => {
+      if (isSimpleArray(value)) {
+        const listWidget = plugin.app.metadataTypeManager.registeredTypeWidgets.multitext;
+        const iconEl = el.closest('.metadata-property')?.querySelector('.metadata-property-key .metadata-property-icon');
+        if (iconEl instanceof HTMLElement) {
+          setIcon(iconEl, listWidget.icon);
+        }
+        return listWidget.render(el, value, ctx);
+      }
       if (isComplexValue(value)) {
         return objectWidget.render(el, value, ctx);
       }
@@ -192,6 +200,10 @@ function injectHeaderButtons(metadataContainerEl: HTMLElement): void {
 
 function isComplexValue(value: unknown): value is GenericObject | unknown[] {
   return value !== null && typeof value === 'object';
+}
+
+function isSimpleArray(value: unknown): boolean {
+  return Array.isArray(value) && value.every((item) => !isComplexValue(item));
 }
 
 function reloadAllProperties(plugin: Plugin): void {
