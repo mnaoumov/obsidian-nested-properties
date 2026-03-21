@@ -1,5 +1,6 @@
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 import type {
+  MetadataTypeManager,
   PropertyRenderContext,
   PropertyWidget,
   PropertyWidgetComponentBase
@@ -39,6 +40,23 @@ export function registerNestedPropertyRenderer(plugin: Plugin): void {
   };
 
   plugin.app.metadataTypeManager.registeredTypeWidgets[OBJECT_WIDGET_TYPE] = objectWidget;
+
+  const listWidget = plugin.app.metadataTypeManager.registeredTypeWidgets['multitext'];
+
+  type TypeInfo = { expected: PropertyWidget; inferred: PropertyWidget };
+  type GetTypeInfoFn = MetadataTypeManager['getTypeInfo'];
+  registerPatch(plugin, plugin.app.metadataTypeManager, {
+    getTypeInfo(next: GetTypeInfoFn) {
+      return function (this: MetadataTypeManager, property: string, value: unknown): TypeInfo {
+        const result = next.call(this, property, value);
+        if (result.inferred.type === 'unknown' && isComplexValue(value)) {
+          result.inferred = isSimpleArray(value) ? listWidget : objectWidget;
+          result.expected = Array.isArray(value) ? listWidget : objectWidget;
+        }
+        return result;
+      };
+    }
+  });
 
   const unknownWidget = plugin.app.metadataTypeManager.getWidget('unknown');
   registerPatch(plugin, unknownWidget, {
@@ -157,11 +175,7 @@ function expandAllIn(parentNode: ParentNode): void {
 }
 
 function getWidget(plugin: Plugin, label: string, value: unknown): PropertyWidget {
-  const inferred = plugin.app.metadataTypeManager.getTypeInfo(label, value).inferred;
-  if (inferred.type === 'unknown' && isComplexValue(value)) {
-    return plugin.app.metadataTypeManager.registeredTypeWidgets[OBJECT_WIDGET_TYPE] ?? inferred;
-  }
-  return inferred;
+  return plugin.app.metadataTypeManager.getTypeInfo(label, value).inferred;
 }
 
 function injectHeaderButtons(metadataContainerEl: HTMLElement): void {
