@@ -20,6 +20,11 @@ import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
 import { FloatingScrollbar } from './floating-scrollbar.ts';
 import { TypeChangeModal } from './type-change-modal.ts';
+import {
+  convertValue,
+  isComplexValue,
+  isSimpleArray
+} from './value-utils.ts';
 
 const OBJECT_WIDGET_TYPE = 'object';
 
@@ -485,41 +490,6 @@ function collapseAllIn(parentNode: ParentNode, expandedPaths: Set<string>): void
   }
 }
 
-function convertValue(value: unknown, targetType: string): unknown {
-  // eslint-disable-next-line @typescript-eslint/no-base-to-string -- We want to convert the value to a string.
-  const str = String(value ?? '');
-  switch (targetType) {
-    case 'aliases':
-    case 'multitext':
-    case 'tags':
-      if (Array.isArray(value)) {
-        return value;
-      }
-      if (str) {
-        return [str];
-      }
-      return [];
-    case 'checkbox':
-      return Boolean(value);
-    case 'date':
-    case 'datetime':
-      if (typeof value === 'string' && value && window.moment(value).isValid()) {
-        return value;
-      }
-      return null;
-    case 'number':
-      return Number(str) || 0;
-    case 'object':
-      if (value !== null && typeof value === 'object') {
-        return value;
-      }
-      return {};
-    case 'text':
-    default:
-      return str;
-  }
-}
-
 function createSummary(parentEl: HTMLElement, value: unknown, propertyEl: HTMLElement, path: string, expandedPaths: Set<string>): void {
   const summary = parentEl.createSpan({ cls: 'nested-properties-summary', text: Array.isArray(value) ? '[ ... ]' : '{ ... }' });
   summary.addEventListener('click', (e) => {
@@ -572,14 +542,6 @@ function injectHeaderButtons(metadataContainerEl: HTMLElement, expandedPaths: Se
     }
     updateToggleButton(toggleButton, metadataContainerEl);
   });
-}
-
-function isComplexValue(value: unknown): value is GenericObject | unknown[] {
-  return value !== null && typeof value === 'object';
-}
-
-function isSimpleArray(value: unknown): boolean {
-  return Array.isArray(value) && value.every((item) => !isComplexValue(item));
 }
 
 function renderAddItemButton(containerEl: HTMLElement, arr: unknown[], onValueChange: (newValue: unknown) => void): void {
