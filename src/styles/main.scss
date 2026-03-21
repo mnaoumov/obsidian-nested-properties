@@ -2,6 +2,10 @@
   flex-wrap: wrap;
   overflow: auto;
 
+  > .metadata-property-warning-icon {
+    display: none;
+  }
+
   > .metadata-property-value {
     overflow: visible;
     width: 100%;
