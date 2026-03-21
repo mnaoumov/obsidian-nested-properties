@@ -456,7 +456,7 @@ function renderObjectWidget(plugin: Plugin, el: HTMLElement, value: unknown, ctx
 
     const existingIcon = propertyEl.querySelector('.metadata-property-key .metadata-property-icon');
     if (existingIcon instanceof HTMLElement) {
-      setIcon(existingIcon, 'lucide-braces');
+      setIcon(existingIcon, Array.isArray(value) ? 'lucide-list' : 'lucide-braces');
     }
 
     const keyEl = propertyEl.querySelector('.metadata-property-key');
