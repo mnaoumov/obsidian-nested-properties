@@ -11,6 +11,8 @@ export function convertValue(value: unknown, targetType: string): unknown {
     case 'date':
     case 'datetime':
       return convertToDate(value);
+    case 'list':
+      return convertToList(value);
     case 'number':
       return convertToNumber(value);
     case 'object':
