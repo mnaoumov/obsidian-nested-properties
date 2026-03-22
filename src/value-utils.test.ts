@@ -87,7 +87,7 @@ describe('isSimpleArray', () => {
 });
 
 describe('convertValue', () => {
-  describe('to list types (aliases/multitext/tags)', () => {
+  describe('to list types (aliases/list/multitext/tags)', () => {
     it('should return array as-is', () => {
       const arr = [1, 2, 3];
       expect(convertValue(arr, 'multitext')).toBe(arr);
@@ -119,6 +119,11 @@ describe('convertValue', () => {
 
     it('should convert objects to array of values', () => {
       expect(convertValue({ a: 1, b: 2 }, 'multitext')).toEqual([1, 2]);
+    });
+
+    it('should work for list type', () => {
+      const arr = [1, { a: 2 }];
+      expect(convertValue(arr, 'list')).toBe(arr);
     });
   });
 

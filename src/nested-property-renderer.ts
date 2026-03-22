@@ -26,6 +26,7 @@ import {
   isSimpleArray
 } from './value-utils.ts';
 
+const LIST_WIDGET_TYPE = 'list';
 const OBJECT_WIDGET_TYPE = 'object';
 
 type GetTypeInfoFn = MetadataTypeManager['getTypeInfo'];
@@ -33,6 +34,7 @@ type UnknownRenderFn = (el: HTMLElement, value: unknown, ctx: PropertyRenderCont
 
 export class NestedPropertyRenderer extends Component {
   private _listWidget: null | PropertyWidget = null;
+  private _mixedListWidget: null | PropertyWidget = null;
   private _objectWidget: null | PropertyWidget = null;
   private readonly expandedPaths = new Set<string>();
   private floatingScrollbar: FloatingScrollbar | null = null;
@@ -41,6 +43,10 @@ export class NestedPropertyRenderer extends Component {
 
   private get listWidget(): PropertyWidget {
     return ensureNonNullable(this._listWidget);
+  }
+
+  private get mixedListWidget(): PropertyWidget {
+    return ensureNonNullable(this._mixedListWidget);
   }
 
   private get objectWidget(): PropertyWidget {
@@ -52,14 +58,23 @@ export class NestedPropertyRenderer extends Component {
   }
 
   public override onload(): void {
+    this._mixedListWidget = {
+      icon: 'lucide-list',
+      name: (): string => 'Mixed list',
+      render: (el, value, ctx): PropertyWidgetComponentBase => this.renderComplexWidget(el, value, ctx, LIST_WIDGET_TYPE),
+      type: LIST_WIDGET_TYPE,
+      validate: (value): boolean => Array.isArray(value)
+    };
+
     this._objectWidget = {
       icon: 'lucide-braces',
       name: (): string => 'Object',
-      render: (el, value, ctx): PropertyWidgetComponentBase => this.renderObjectWidget(el, value, ctx),
+      render: (el, value, ctx): PropertyWidgetComponentBase => this.renderComplexWidget(el, value, ctx, OBJECT_WIDGET_TYPE),
       type: OBJECT_WIDGET_TYPE,
-      validate: (value): boolean => value !== null && typeof value === 'object'
+      validate: (value): boolean => value !== null && typeof value === 'object' && !Array.isArray(value)
     };
 
+    this.app.metadataTypeManager.registeredTypeWidgets[LIST_WIDGET_TYPE] = this.mixedListWidget;
     this.app.metadataTypeManager.registeredTypeWidgets[OBJECT_WIDGET_TYPE] = this.objectWidget;
     this._listWidget = this.app.metadataTypeManager.registeredTypeWidgets.multitext;
 
@@ -79,6 +94,8 @@ export class NestedPropertyRenderer extends Component {
     });
 
     this.register(() => {
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- Unregister widget on unload.
+      delete this.app.metadataTypeManager.registeredTypeWidgets[LIST_WIDGET_TYPE];
       // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- Unregister widget on unload.
       delete this.app.metadataTypeManager.registeredTypeWidgets[OBJECT_WIDGET_TYPE];
       for (const el of document.querySelectorAll('.nested-properties-header-actions')) {
@@ -125,8 +142,14 @@ export class NestedPropertyRenderer extends Component {
     const result = next.call(this.app.metadataTypeManager, property, value);
 
     if (result.inferred.type === 'unknown' && isComplexValue(value)) {
-      result.inferred = isSimpleArray(value) ? this.listWidget : this.objectWidget;
-      result.expected = Array.isArray(value) ? this.listWidget : this.objectWidget;
+      if (isSimpleArray(value)) {
+        result.inferred = this.listWidget;
+      } else if (Array.isArray(value)) {
+        result.inferred = this.mixedListWidget;
+      } else {
+        result.inferred = this.objectWidget;
+      }
+      result.expected = Array.isArray(value) ? this.mixedListWidget : this.objectWidget;
     }
     return result;
   }
@@ -153,6 +176,93 @@ export class NestedPropertyRenderer extends Component {
       });
     }
     renderAddItemButton(containerEl, arr, onArrayChange);
+  }
+
+  private renderComplexWidget(el: HTMLElement, value: unknown, ctx: PropertyRenderContext, widgetType: string): PropertyWidgetComponentBase {
+    if (!isComplexValue(value)) {
+      value = widgetType === LIST_WIDGET_TYPE ? [] : {};
+      ctx.onChange(value);
+    }
+
+    const rootPath = `${ctx.sourcePath}:${ctx.key}`;
+
+    const propertyEl = el.closest('.metadata-property');
+    if (propertyEl instanceof HTMLElement) {
+      const isExpanded = this.expandedPaths.has(rootPath);
+      propertyEl.classList.add('nested-properties-collapsible');
+      propertyEl.setAttribute('data-path', rootPath);
+      if (!isExpanded) {
+        propertyEl.classList.add('is-collapsed');
+      }
+
+      const existingIcon = propertyEl.querySelector('.metadata-property-key .metadata-property-icon');
+      if (existingIcon instanceof HTMLElement) {
+        setIcon(existingIcon, widgetType === LIST_WIDGET_TYPE ? 'lucide-list' : 'lucide-braces');
+      }
+
+      const keyEl = propertyEl.querySelector('.metadata-property-key');
+      if (keyEl && !keyEl.querySelector('.nested-properties-collapse-btn')) {
+        const collapseBtn = createDiv('nested-properties-collapse-btn');
+        setIcon(collapseBtn, 'right-triangle');
+        keyEl.insertBefore(collapseBtn, keyEl.firstChild);
+        collapseBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          const collapsed = propertyEl.hasClass('is-collapsed');
+          propertyEl.toggleClass('is-collapsed', !collapsed);
+          if (collapsed) {
+            this.expandedPaths.add(rootPath);
+          } else {
+            this.expandedPaths.delete(rootPath);
+          }
+          this.floatingScrollbar?.update();
+        });
+      }
+    }
+
+    if (propertyEl instanceof HTMLElement) {
+      createSummary(el, value, propertyEl, rootPath, this.expandedPaths);
+    }
+
+    const containerEl = el.createDiv({ cls: 'nested-properties-container' });
+    this.renderNestedValue(containerEl, value, ctx, rootPath, (newValue: unknown) => {
+      ctx.onChange(newValue);
+    });
+
+    setTimeout(() => {
+      const metadataContainerEl = containerEl.closest('.metadata-container');
+      if (metadataContainerEl instanceof HTMLElement) {
+        injectHeaderButtons(metadataContainerEl, this.expandedPaths);
+      }
+
+      if (this.pendingFocusKey) {
+        const key = this.pendingFocusKey;
+        this.pendingFocusKey = null;
+        for (const input of containerEl.querySelectorAll('.metadata-property-key-input')) {
+          if (input instanceof HTMLInputElement && input.value === key) {
+            const prop = input.closest('.metadata-property');
+            const valueEl = prop?.querySelector(':scope > .metadata-property-value');
+            if (valueEl instanceof HTMLElement) {
+              const focusTargetEl = valueEl.querySelector('input, textarea, [contenteditable]');
+              if (focusTargetEl instanceof HTMLElement) {
+                focusTargetEl.focus();
+              } else {
+                valueEl.click();
+              }
+            }
+            break;
+          }
+        }
+      }
+      this.floatingScrollbar?.update();
+    }, 0);
+
+    return {
+      focus: (): void => {
+        containerEl.focus();
+      },
+      type: widgetType
+    };
   }
 
   private renderEntry(
@@ -296,93 +406,6 @@ export class NestedPropertyRenderer extends Component {
     });
   }
 
-  private renderObjectWidget(el: HTMLElement, value: unknown, ctx: PropertyRenderContext): PropertyWidgetComponentBase {
-    if (!isComplexValue(value)) {
-      value = {};
-      ctx.onChange(value);
-    }
-
-    const rootPath = `${ctx.sourcePath}:${ctx.key}`;
-
-    const propertyEl = el.closest('.metadata-property');
-    if (propertyEl instanceof HTMLElement) {
-      const isExpanded = this.expandedPaths.has(rootPath);
-      propertyEl.classList.add('nested-properties-collapsible');
-      propertyEl.setAttribute('data-path', rootPath);
-      if (!isExpanded) {
-        propertyEl.classList.add('is-collapsed');
-      }
-
-      const existingIcon = propertyEl.querySelector('.metadata-property-key .metadata-property-icon');
-      if (existingIcon instanceof HTMLElement) {
-        setIcon(existingIcon, Array.isArray(value) ? 'lucide-list' : 'lucide-braces');
-      }
-
-      const keyEl = propertyEl.querySelector('.metadata-property-key');
-      if (keyEl && !keyEl.querySelector('.nested-properties-collapse-btn')) {
-        const collapseBtn = createDiv('nested-properties-collapse-btn');
-        setIcon(collapseBtn, 'right-triangle');
-        keyEl.insertBefore(collapseBtn, keyEl.firstChild);
-        collapseBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          e.preventDefault();
-          const collapsed = propertyEl.hasClass('is-collapsed');
-          propertyEl.toggleClass('is-collapsed', !collapsed);
-          if (collapsed) {
-            this.expandedPaths.add(rootPath);
-          } else {
-            this.expandedPaths.delete(rootPath);
-          }
-          this.floatingScrollbar?.update();
-        });
-      }
-    }
-
-    if (propertyEl instanceof HTMLElement) {
-      createSummary(el, value, propertyEl, rootPath, this.expandedPaths);
-    }
-
-    const containerEl = el.createDiv({ cls: 'nested-properties-container' });
-    this.renderNestedValue(containerEl, value, ctx, rootPath, (newValue: unknown) => {
-      ctx.onChange(newValue);
-    });
-
-    setTimeout(() => {
-      const metadataContainerEl = containerEl.closest('.metadata-container');
-      if (metadataContainerEl instanceof HTMLElement) {
-        injectHeaderButtons(metadataContainerEl, this.expandedPaths);
-      }
-
-      if (this.pendingFocusKey) {
-        const key = this.pendingFocusKey;
-        this.pendingFocusKey = null;
-        for (const input of containerEl.querySelectorAll('.metadata-property-key-input')) {
-          if (input instanceof HTMLInputElement && input.value === key) {
-            const prop = input.closest('.metadata-property');
-            const valueEl = prop?.querySelector(':scope > .metadata-property-value');
-            if (valueEl instanceof HTMLElement) {
-              const focusTargetEl = valueEl.querySelector('input, textarea, [contenteditable]');
-              if (focusTargetEl instanceof HTMLElement) {
-                focusTargetEl.focus();
-              } else {
-                valueEl.click();
-              }
-            }
-            break;
-          }
-        }
-      }
-      this.floatingScrollbar?.update();
-    }, 0);
-
-    return {
-      focus: (): void => {
-        containerEl.focus();
-      },
-      type: OBJECT_WIDGET_TYPE
-    };
-  }
-
   private renderUnknownWidget(next: UnknownRenderFn, el: HTMLElement, value: unknown, ctx: PropertyRenderContext): PropertyWidgetComponentBase {
     if (isSimpleArray(value)) {
       const iconEl = el.closest('.metadata-property')?.querySelector('.metadata-property-key .metadata-property-icon');
@@ -390,6 +413,9 @@ export class NestedPropertyRenderer extends Component {
         setIcon(iconEl, this.listWidget.icon);
       }
       return this.listWidget.render(el, value, ctx);
+    }
+    if (Array.isArray(value)) {
+      return this.mixedListWidget.render(el, value, ctx);
     }
     if (isComplexValue(value)) {
       return this.objectWidget.render(el, value, ctx);
