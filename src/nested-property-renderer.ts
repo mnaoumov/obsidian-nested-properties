@@ -40,6 +40,7 @@ export class NestedPropertyRenderer extends Component {
   private floatingScrollbar: FloatingScrollbar | null = null;
   private lastMenuCloseTime = 0;
   private pendingFocusKey: null | string = null;
+  private readonly widgetTypeOverrides = new Map<string, string>();
 
   private get listWidget(): PropertyWidget {
     return ensureNonNullable(this._listWidget);
@@ -118,7 +119,7 @@ export class NestedPropertyRenderer extends Component {
     }
   }
 
-  private async changeType(widget: PropertyWidget, value: unknown, onValueChange: (newValue: unknown) => void): Promise<void> {
+  private async changeType(widget: PropertyWidget, path: string, value: unknown, onValueChange: (newValue: unknown) => void): Promise<void> {
     if (!widget.validate(value)) {
       const modal = new TypeChangeModal(this.app, widget.name());
       modal.open();
@@ -130,6 +131,9 @@ export class NestedPropertyRenderer extends Component {
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
+
+    this.widgetTypeOverrides.set(path, widget.type);
+
     const converted = convertValue(value, widget.type);
     if (converted === value) {
       this.reloadAllProperties();
@@ -154,7 +158,14 @@ export class NestedPropertyRenderer extends Component {
     return result;
   }
 
-  private getWidget(label: string, value: unknown): PropertyWidget {
+  private getWidget(path: string, label: string, value: unknown): PropertyWidget {
+    const override = this.widgetTypeOverrides.get(path);
+    if (override) {
+      const widget = this.app.metadataTypeManager.registeredTypeWidgets[override];
+      if (widget) {
+        return widget;
+      }
+    }
     return this.app.metadataTypeManager.getTypeInfo(label, value).inferred;
   }
 
@@ -275,8 +286,11 @@ export class NestedPropertyRenderer extends Component {
     onDelete: () => void
   ): void {
     const path = parentPath ? `${parentPath}.${label}` : label;
+    const typeOverride = this.widgetTypeOverrides.get(path);
+    const isComplex = typeOverride === LIST_WIDGET_TYPE || typeOverride === OBJECT_WIDGET_TYPE
+      || (isComplexValue(value) && !isSimpleArray(value));
 
-    if (isComplexValue(value) && !isSimpleArray(value)) {
+    if (isComplex) {
       const isExpanded = this.expandedPaths.has(path);
       const propertyEl = containerEl.createDiv({
         attr: { 'data-path': path },
@@ -284,7 +298,7 @@ export class NestedPropertyRenderer extends Component {
       });
       propertyEl.addEventListener('contextmenu', (e) => {
         e.stopPropagation();
-        this.showNestedPropertyMenu(e, label, value, onValueChange, onDelete);
+        this.showNestedPropertyMenu(e, path, label, value, onValueChange, onDelete);
       });
 
       const keyEl = propertyEl.createDiv({ cls: 'metadata-property-key' });
@@ -303,12 +317,12 @@ export class NestedPropertyRenderer extends Component {
         }
       });
 
-      const complexWidget = this.getWidget(label, value);
+      const complexWidget = this.getWidget(path, label, value);
       const iconEl = keyEl.createSpan({ cls: 'metadata-property-icon' });
       setIcon(iconEl, complexWidget.icon);
       iconEl.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.showNestedPropertyMenu(e, label, value, onValueChange, onDelete);
+        this.showNestedPropertyMenu(e, path, label, value, onValueChange, onDelete);
       });
       const keyInput = keyEl.createEl('input', {
         attr: { readonly: '', tabindex: '-1' },
@@ -326,11 +340,11 @@ export class NestedPropertyRenderer extends Component {
     const propertyEl = containerEl.createDiv({ cls: 'metadata-property' });
     propertyEl.addEventListener('contextmenu', (e) => {
       e.stopPropagation();
-      this.showNestedPropertyMenu(e, label, value, onValueChange, onDelete);
+      this.showNestedPropertyMenu(e, path, label, value, onValueChange, onDelete);
     });
-    this.renderKeyEl(propertyEl, label, value, onValueChange, onDelete);
+    this.renderKeyEl(propertyEl, path, label, value, onValueChange, onDelete);
 
-    const widget = this.getWidget(label, value);
+    const widget = this.getWidget(path, label, value);
     const valueEl = propertyEl.createDiv({ cls: 'metadata-property-value' });
     valueEl.setAttr('data-property-type', widget.type);
     widget.render(valueEl, value, {
@@ -344,6 +358,7 @@ export class NestedPropertyRenderer extends Component {
 
   private renderKeyEl(
     parentEl: HTMLElement,
+    path: string,
     label: string,
     value: unknown,
     onValueChange?: (newValue: unknown) => void,
@@ -351,13 +366,13 @@ export class NestedPropertyRenderer extends Component {
   ): void {
     const keyEl = parentEl.createDiv({ cls: 'metadata-property-key' });
 
-    const widget = this.getWidget(label, value);
+    const widget = this.getWidget(path, label, value);
     const iconEl = keyEl.createSpan({ cls: 'metadata-property-icon' });
     setIcon(iconEl, widget.icon);
     if (onValueChange && onDelete) {
       iconEl.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.showNestedPropertyMenu(e, label, value, onValueChange, onDelete);
+        this.showNestedPropertyMenu(e, path, label, value, onValueChange, onDelete);
       });
     }
 
@@ -425,6 +440,7 @@ export class NestedPropertyRenderer extends Component {
 
   private showNestedPropertyMenu(
     evt: MouseEvent,
+    path: string,
     label: string,
     value: unknown,
     onValueChange: (newValue: unknown) => void,
@@ -444,7 +460,7 @@ export class NestedPropertyRenderer extends Component {
         .setIcon('lucide-info')
         .setSection('type');
       const submenu = item.setSubmenu();
-      const currentWidget = this.getWidget(label, value);
+      const currentWidget = this.getWidget(path, label, value);
       for (const widget of Object.values(this.app.metadataTypeManager.registeredTypeWidgets)) {
         if (widget.reservedKeys && !widget.reservedKeys.contains(label)) {
           continue;
@@ -454,7 +470,7 @@ export class NestedPropertyRenderer extends Component {
             .setIcon(widget.icon)
             .setChecked(widget.type === currentWidget.type)
             .onClick(convertAsyncToSync(async () => {
-              await this.changeType(widget, value, onValueChange);
+              await this.changeType(widget, path, value, onValueChange);
             }));
         });
       }
