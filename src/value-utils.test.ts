@@ -116,6 +116,10 @@ describe('convertValue', () => {
     it('should work for tags type', () => {
       expect(convertValue('tag', 'tags')).toEqual(['tag']);
     });
+
+    it('should convert objects to array of values', () => {
+      expect(convertValue({ a: 1, b: 2 }, 'multitext')).toEqual([1, 2]);
+    });
   });
 
   describe('to checkbox', () => {
@@ -173,9 +177,8 @@ describe('convertValue', () => {
       expect(convertValue(obj, 'object')).toBe(obj);
     });
 
-    it('should return arrays as-is', () => {
-      const arr = [1, 2];
-      expect(convertValue(arr, 'object')).toBe(arr);
+    it('should convert arrays to indexed objects', () => {
+      expect(convertValue([1, 2], 'object')).toEqual({ 0: 1, 1: 2 });
     });
 
     it('should return empty object for primitives', () => {
