@@ -23,6 +23,7 @@ import { TypeChangeModal } from './type-change-modal.ts';
 import {
   convertValue,
   isComplexValue,
+  isLossyConversion,
   isSimpleArray
 } from './value-utils.ts';
 
@@ -31,6 +32,7 @@ const OBJECT_WIDGET_TYPE = 'object';
 
 type GetTypeInfoFn = MetadataTypeManager['getTypeInfo'];
 type UnknownRenderFn = (el: HTMLElement, value: unknown, ctx: PropertyRenderContext) => PropertyWidgetComponentBase;
+type ValidateFn = PropertyWidget['validate'];
 
 export class NestedPropertyRenderer extends Component {
   private _listWidget: null | PropertyWidget = null;
@@ -79,6 +81,12 @@ export class NestedPropertyRenderer extends Component {
     this.app.metadataTypeManager.registeredTypeWidgets[OBJECT_WIDGET_TYPE] = this.objectWidget;
     this._listWidget = this.app.metadataTypeManager.registeredTypeWidgets.multitext;
 
+    registerPatch(this, this.listWidget, {
+      validate: (next: ValidateFn) => {
+        return (value: unknown): boolean => this.validateListWidget(next, value);
+      }
+    });
+
     registerPatch(this, this.app.metadataTypeManager, {
       getTypeInfo: (next: GetTypeInfoFn) => {
         return (property: string, value: unknown): TypeInfo => {
@@ -120,7 +128,7 @@ export class NestedPropertyRenderer extends Component {
   }
 
   private async changeType(widget: PropertyWidget, path: string, value: unknown, onValueChange: (newValue: unknown) => void): Promise<void> {
-    if (!widget.validate(value)) {
+    if (isLossyConversion(value, widget.type)) {
       const modal = new TypeChangeModal(this.app, widget.name());
       modal.open();
       if (!await modal.waitForResult()) {
@@ -153,7 +161,7 @@ export class NestedPropertyRenderer extends Component {
       } else {
         result.inferred = this.objectWidget;
       }
-      result.expected = Array.isArray(value) ? this.mixedListWidget : this.objectWidget;
+      result.expected = result.inferred;
     }
     return result;
   }
@@ -190,9 +198,10 @@ export class NestedPropertyRenderer extends Component {
   }
 
   private renderComplexWidget(el: HTMLElement, value: unknown, ctx: PropertyRenderContext, widgetType: string): PropertyWidgetComponentBase {
-    if (!isComplexValue(value)) {
-      value = widgetType === LIST_WIDGET_TYPE ? [] : {};
-      ctx.onChange(value);
+    if (widgetType === LIST_WIDGET_TYPE && !Array.isArray(value)) {
+      value = [];
+    } else if (widgetType === OBJECT_WIDGET_TYPE && (!isComplexValue(value) || Array.isArray(value))) {
+      value = {};
     }
 
     const rootPath = `${ctx.sourcePath}:${ctx.key}`;
@@ -519,6 +528,10 @@ export class NestedPropertyRenderer extends Component {
         .onClick(onDelete);
     });
     menu.showAtMouseEvent(evt);
+  }
+
+  private validateListWidget(next: ValidateFn, value: unknown): boolean {
+    return next(value) || isSimpleArray(value);
   }
 }
 

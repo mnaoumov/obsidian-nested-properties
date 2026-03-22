@@ -8,6 +8,7 @@ import {
 import {
   convertValue,
   isComplexValue,
+  isLossyConversion,
   isSimpleArray
 } from './value-utils.ts';
 
@@ -87,10 +88,14 @@ describe('isSimpleArray', () => {
 });
 
 describe('convertValue', () => {
-  describe('to list types (aliases/list/multitext/tags)', () => {
-    it('should return array as-is', () => {
+  describe('to simple list types (aliases/multitext/tags)', () => {
+    it('should return simple array as-is', () => {
       const arr = [1, 2, 3];
       expect(convertValue(arr, 'multitext')).toBe(arr);
+    });
+
+    it('should filter out complex items from array', () => {
+      expect(convertValue([1, { a: 2 }, 3, [4]], 'multitext')).toEqual([1, 3]);
     });
 
     it('should wrap string in array', () => {
@@ -117,13 +122,34 @@ describe('convertValue', () => {
       expect(convertValue('tag', 'tags')).toEqual(['tag']);
     });
 
-    it('should convert objects to array of values', () => {
-      expect(convertValue({ a: 1, b: 2 }, 'multitext')).toEqual([1, 2]);
+    it('should return empty array for objects', () => {
+      expect(convertValue({ a: 1, b: 2 }, 'multitext')).toEqual([]);
     });
+  });
 
-    it('should work for list type', () => {
+  describe('to mixed list', () => {
+    it('should return array as-is', () => {
       const arr = [1, { a: 2 }];
       expect(convertValue(arr, 'list')).toBe(arr);
+    });
+
+    it('should wrap object in array', () => {
+      const obj = { a: 1 };
+      expect(convertValue(obj, 'list')).toEqual([obj]);
+    });
+
+    it('should wrap primitive in array', () => {
+      expect(convertValue('hello', 'list')).toEqual(['hello']);
+      expect(convertValue(42, 'list')).toEqual([42]);
+      expect(convertValue(true, 'list')).toEqual([true]);
+    });
+
+    it('should return empty array for null', () => {
+      expect(convertValue(null, 'list')).toEqual([]);
+    });
+
+    it('should return empty array for undefined', () => {
+      expect(convertValue(undefined, 'list')).toEqual([]);
     });
   });
 
@@ -206,5 +232,43 @@ describe('convertValue', () => {
     it('should use text as default for unknown types', () => {
       expect(convertValue(42, 'unknown-type')).toBe('42');
     });
+  });
+});
+
+describe('isLossyConversion', () => {
+  it('should not be lossy for simple primitive array to multitext', () => {
+    expect(isLossyConversion([1, 2, 3], 'multitext')).toBe(false);
+  });
+
+  it('should not be lossy for simple string array to multitext', () => {
+    expect(isLossyConversion(['a', 'b'], 'multitext')).toBe(false);
+  });
+
+  it('should be lossy for mixed array to multitext', () => {
+    expect(isLossyConversion([1, { a: 2 }, 3], 'multitext')).toBe(true);
+  });
+
+  it('should be lossy for object to multitext', () => {
+    expect(isLossyConversion({ a: 1 }, 'multitext')).toBe(true);
+  });
+
+  it('should be lossy for array to object', () => {
+    expect(isLossyConversion([1, 2], 'object')).toBe(true);
+  });
+
+  it('should not be lossy for object to object', () => {
+    expect(isLossyConversion({ a: 1 }, 'object')).toBe(false);
+  });
+
+  it('should not be lossy for array to list', () => {
+    expect(isLossyConversion([1, 2], 'list')).toBe(false);
+  });
+
+  it('should be lossy for object to list', () => {
+    expect(isLossyConversion({ a: 1 }, 'list')).toBe(true);
+  });
+
+  it('should be lossy for primitive to list', () => {
+    expect(isLossyConversion('hello', 'list')).toBe(true);
   });
 });
