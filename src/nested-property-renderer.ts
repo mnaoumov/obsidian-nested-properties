@@ -60,7 +60,7 @@ export class NestedPropertyRenderer extends Component {
 
   public override onload(): void {
     this._mixedListWidget = {
-      icon: 'lucide-list',
+      icon: 'lucide-list-tree',
       name: (): string => 'Mixed list',
       render: (el, value, ctx): PropertyWidgetComponentBase => this.renderComplexWidget(el, value, ctx, LIST_WIDGET_TYPE),
       type: LIST_WIDGET_TYPE,
@@ -208,7 +208,7 @@ export class NestedPropertyRenderer extends Component {
 
       const existingIcon = propertyEl.querySelector('.metadata-property-key .metadata-property-icon');
       if (existingIcon instanceof HTMLElement) {
-        setIcon(existingIcon, widgetType === LIST_WIDGET_TYPE ? 'lucide-list' : 'lucide-braces');
+        setIcon(existingIcon, widgetType === LIST_WIDGET_TYPE ? 'lucide-list-tree' : 'lucide-braces');
       }
 
       const keyEl = propertyEl.querySelector('.metadata-property-key');
