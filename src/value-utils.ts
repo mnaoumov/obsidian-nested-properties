@@ -57,10 +57,7 @@ function convertToNumber(value: unknown): number {
 }
 
 function convertToObject(value: unknown): GenericObject {
-  if (Array.isArray(value)) {
-    return Object.fromEntries(value.map((item, index) => [String(index), item]));
-  }
-  if (value !== null && typeof value === 'object') {
+  if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
     return value as GenericObject;
   }
   return {};

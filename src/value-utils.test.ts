@@ -182,8 +182,8 @@ describe('convertValue', () => {
       expect(convertValue(obj, 'object')).toBe(obj);
     });
 
-    it('should convert arrays to indexed objects', () => {
-      expect(convertValue([1, 2], 'object')).toEqual({ 0: 1, 1: 2 });
+    it('should convert arrays to empty objects', () => {
+      expect(convertValue([1, 2], 'object')).toEqual({});
     });
 
     it('should return empty object for primitives', () => {
