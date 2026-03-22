@@ -166,7 +166,7 @@ export class NestedPropertyRenderer extends Component {
   ): void {
     const path = parentPath ? `${parentPath}.${label}` : label;
 
-    if (isComplexValue(value)) {
+    if (isComplexValue(value) && !isSimpleArray(value)) {
       const isExpanded = this.expandedPaths.has(path);
       const propertyEl = containerEl.createDiv({
         attr: { 'data-path': path },
