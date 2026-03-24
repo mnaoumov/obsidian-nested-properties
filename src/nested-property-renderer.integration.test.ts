@@ -95,9 +95,12 @@ describe('widget rendering integration', () => {
         // eslint-disable-next-line no-shadow -- Executed in different processes.
         let onChangeCallCount = 0;
         const el = createDiv();
+        function noop(): void {
+          /* No-op */
+        }
         const ctx = {
           app,
-          blur: (): void => {/* Noop */},
+          blur: noop,
           key: 'testList',
           onChange: (): void => {
             onChangeCallCount++;
