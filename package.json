@@ -44,8 +44,9 @@
     "nano-staged": "latest",
     "obsidian": "latest",
     "obsidian-dev-utils": "latest",
+    "obsidian-integration-testing": "latest",
     "obsidian-typings": "obsidian-public-latest",
-    "vitest": "4.1.0"
+    "vitest": "latest"
   },
   "overrides": {
     "@antfu/utils": "9.2.0",
