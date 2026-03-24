@@ -2,6 +2,10 @@
   flex-wrap: wrap;
   overflow: auto;
 
+  > .metadata-property-warning-icon {
+    display: none;
+  }
+
   > .metadata-property-value {
     overflow: visible;
     width: 100%;
@@ -89,6 +93,7 @@
   vertical-align: middle;
 }
 
+.nested-properties-add-item,
 .nested-properties-add-property {
   display: inline-flex;
   width: fit-content;
@@ -109,7 +114,9 @@
     width: 16px;
     height: 16px;
   }
+}
 
+.nested-properties-add-property {
   input {
     background: transparent;
     border: none;
@@ -118,6 +125,41 @@
     font-size: inherit;
     padding: 0;
   }
+}
+
+.nested-properties-floating-scrollbar {
+  display: none;
+  position: fixed;
+  left: var(--track-left);
+  width: var(--track-width);
+  bottom: var(--track-bottom);
+  height: 12px;
+  z-index: 10;
+  cursor: ew-resize;
+  background: var(--background-secondary);
+  border-top: 1px solid var(--background-modifier-border);
+
+  &.is-visible {
+    display: block;
+  }
+}
+
+.nested-properties-floating-scrollbar-thumb {
+  position: absolute;
+  left: var(--thumb-left);
+  width: var(--thumb-width);
+  top: 2px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--scrollbar-thumb-bg);
+
+  &:hover {
+    background: var(--scrollbar-active-thumb-bg);
+  }
+}
+
+.nested-properties-ew-resize {
+  cursor: ew-resize;
 }
 
 .nested-properties-collapse-btn {

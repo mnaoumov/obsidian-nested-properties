@@ -1,8 +1,9 @@
 {
   "version": "0.2",
   "ignorePaths": [
-    "dist",
-    "node_modules",
+    "coverage/",
+    "dist/",
+    "node_modules/",
     "tsconfig.tsbuildinfo"
   ],
   "dictionaryDefinitions": [],
@@ -14,6 +15,7 @@
     "dblclick",
     "frontmatter",
     "mnaoumov",
+    "multitext",
     "Naumov",
     "tsbuildinfo"
   ],
