@@ -25,3 +25,5 @@ dist
 .env
 /tsconfig.tsbuildinfo
 /coverage
+
+.claude/settings.local.json
