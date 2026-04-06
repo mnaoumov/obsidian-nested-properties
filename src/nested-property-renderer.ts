@@ -508,7 +508,7 @@ export class NestedPropertyRenderer extends Component {
         .onClick(convertAsyncToSync(async () => {
           try {
             const text = await navigator.clipboard.readText();
-            const parsed = JSON.parse(text) as unknown;
+            const parsed = JSON.parse(text);
             if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
               const firstValue = Object.values(parsed as GenericObject)[0];
               if (firstValue !== undefined) {
