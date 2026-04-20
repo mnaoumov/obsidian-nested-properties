@@ -5,6 +5,21 @@ import {
   vi
 } from 'vitest';
 
+const momentMock = vi.hoisted(() =>
+  vi.fn((inp?: string) => ({
+    isValid: (): boolean => inp !== undefined && !isNaN(Date.parse(inp))
+  }))
+);
+
+vi.mock('obsidian', () => ({
+  moment: momentMock
+}));
+
+vi.mock('obsidian-dev-utils/object-utils', () => ({
+  extractDefaultExportInterop: <T>(m: T): T => m
+}));
+
+// eslint-disable-next-line import-x/first, import-x/imports-first -- vi.mock must precede imports.
 import {
   convertValue,
   isComplexValue,
@@ -169,18 +184,21 @@ describe('convertValue', () => {
 
   describe('to date/datetime', () => {
     it('should return valid date string as-is', () => {
-      vi.stubGlobal('window', { moment: (v: string) => ({ isValid: (): boolean => !isNaN(Date.parse(v)) }) });
       expect(convertValue('2024-01-15', 'date')).toBe('2024-01-15');
     });
 
     it('should return null for invalid date', () => {
-      vi.stubGlobal('window', { moment: () => ({ isValid: (): boolean => false }) });
+      momentMock.mockReturnValueOnce({ isValid: (): boolean => false });
       expect(convertValue('not-a-date', 'date')).toBeNull();
     });
 
     it('should return null for non-string values', () => {
       expect(convertValue(42, 'datetime')).toBeNull();
       expect(convertValue(null, 'datetime')).toBeNull();
+    });
+
+    it('should return null for empty string', () => {
+      expect(convertValue('', 'datetime')).toBeNull();
     });
   });
 
@@ -240,6 +258,14 @@ describe('isLossyConversion', () => {
     expect(isLossyConversion([1, 2, 3], 'multitext')).toBe(false);
   });
 
+  it('should not be lossy for simple string array to aliases', () => {
+    expect(isLossyConversion(['a', 'b'], 'aliases')).toBe(false);
+  });
+
+  it('should not be lossy for simple string array to tags', () => {
+    expect(isLossyConversion(['a', 'b'], 'tags')).toBe(false);
+  });
+
   it('should not be lossy for simple string array to multitext', () => {
     expect(isLossyConversion(['a', 'b'], 'multitext')).toBe(false);
   });
@@ -270,5 +296,11 @@ describe('isLossyConversion', () => {
 
   it('should be lossy for primitive to list', () => {
     expect(isLossyConversion('hello', 'list')).toBe(true);
+  });
+
+  it('should not be lossy for other target types', () => {
+    expect(isLossyConversion('hello', 'text')).toBe(false);
+    expect(isLossyConversion(42, 'number')).toBe(false);
+    expect(isLossyConversion(true, 'checkbox')).toBe(false);
   });
 });
