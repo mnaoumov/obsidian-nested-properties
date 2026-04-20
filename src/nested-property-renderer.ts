@@ -107,7 +107,7 @@ export class NestedPropertyRenderer extends Component {
       delete this.app.metadataTypeManager.registeredTypeWidgets[LIST_WIDGET_TYPE];
       // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- Unregister widget on unload.
       delete this.app.metadataTypeManager.registeredTypeWidgets[OBJECT_WIDGET_TYPE];
-      for (const el of document.querySelectorAll('.nested-properties-header-actions')) {
+      for (const el of activeDocument.querySelectorAll('.nested-properties-header-actions')) {
         el.remove();
       }
       this.reloadAllProperties();
@@ -136,8 +136,8 @@ export class NestedPropertyRenderer extends Component {
       }
     }
 
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
+    if (activeDocument.activeElement instanceof HTMLElement) {
+      activeDocument.activeElement.blur();
     }
 
     this.widgetTypeOverrides.set(path, widget.type);
@@ -249,7 +249,7 @@ export class NestedPropertyRenderer extends Component {
       ctx.onChange(newValue);
     });
 
-    setTimeout(() => {
+    activeWindow.setTimeout(() => {
       const metadataContainerEl = containerEl.closest('.metadata-container');
       if (metadataContainerEl instanceof HTMLElement) {
         injectHeaderButtons(metadataContainerEl, this.expandedPaths);
@@ -259,7 +259,7 @@ export class NestedPropertyRenderer extends Component {
         const key = this.pendingFocusKey;
         this.pendingFocusKey = null;
         for (const input of containerEl.querySelectorAll('.metadata-property-key-input')) {
-          if (input instanceof HTMLInputElement && input.value === key) {
+          if (input.instanceOf(HTMLInputElement) && input.value === key) {
             const prop = input.closest('.metadata-property');
             const valueEl = prop?.querySelector(':scope > .metadata-property-value');
             if (valueEl instanceof HTMLElement) {

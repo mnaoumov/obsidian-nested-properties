@@ -32,7 +32,7 @@ interface Context {
 
 const contextId = new ContextId<Context>();
 
-beforeEach(async () => {
+beforeEach(() => {
   vault.populate({
     'test.md': `---
 simpleList:

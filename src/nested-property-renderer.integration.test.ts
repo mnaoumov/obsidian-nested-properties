@@ -33,7 +33,7 @@ interface Context {
 
 const contextId = new ContextId<Context>();
 
-beforeEach(async () => {
+beforeEach(() => {
   vault.populate({
     'test.md': `---
 simpleList:
@@ -174,7 +174,7 @@ describe('type inference integration', () => {
   it('should infer simple array as list, not mixed list', async () => {
     const { expectedType, inferredType } = await evalInObsidian({
       contextId,
-      fn: async ({ context: { markdownView } }) => {
+      fn: ({ context: { markdownView } }) => {
         const listEntry = markdownView.metadataEditor.rendered.find(
           (r) => r.entry.key === 'simpleList'
         );

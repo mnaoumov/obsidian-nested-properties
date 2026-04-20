@@ -1,20 +1,15 @@
-import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin-base';
+import type {
+  App,
+  PluginManifest
+} from 'obsidian';
 
-import type { PluginTypes } from './plugin-types.ts';
+import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin';
 
 import { NestedPropertyRenderer } from './nested-property-renderer.ts';
 
-export class Plugin extends PluginBase<PluginTypes> {
-  protected override createSettingsManager(): null {
-    return null;
-  }
-
-  protected override createSettingsTab(): null {
-    return null;
-  }
-
-  protected override async onloadImpl(): Promise<void> {
-    await super.onloadImpl();
-    this.addChild(new NestedPropertyRenderer(this.app));
+export class Plugin extends PluginBase {
+  public constructor(app: App, manifest: PluginManifest) {
+    super(app, manifest);
+    this.registerComponent({ component: new NestedPropertyRenderer(app) });
   }
 }
