@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.2.2
+
+- chore: update libs
+
 ## 1.2.1
 
 - tests: add 100% coverage
