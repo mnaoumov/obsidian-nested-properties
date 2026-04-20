@@ -294,7 +294,7 @@ export class NestedPropertyRenderer extends Component {
     onValueChange: (newValue: unknown) => void,
     onDelete: () => void
   ): void {
-    const path = parentPath ? `${parentPath}.${label}` : label;
+    const path = `${parentPath}.${label}`;
     const typeOverride = this.widgetTypeOverrides.get(path);
     const isComplex = typeOverride === LIST_WIDGET_TYPE || typeOverride === OBJECT_WIDGET_TYPE
       || (isComplexValue(value) && !isSimpleArray(value));
@@ -370,20 +370,18 @@ export class NestedPropertyRenderer extends Component {
     path: string,
     label: string,
     value: unknown,
-    onValueChange?: (newValue: unknown) => void,
-    onDelete?: () => void
+    onValueChange: (newValue: unknown) => void,
+    onDelete: () => void
   ): void {
     const keyEl = parentEl.createDiv({ cls: 'metadata-property-key' });
 
     const widget = this.getWidget(path, label, value);
     const iconEl = keyEl.createSpan({ cls: 'metadata-property-icon' });
     setIcon(iconEl, widget.icon);
-    if (onValueChange && onDelete) {
-      iconEl.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.showNestedPropertyMenu(e, path, label, value, onValueChange, onDelete);
-      });
-    }
+    iconEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.showNestedPropertyMenu(e, path, label, value, onValueChange, onDelete);
+    });
 
     const keyInput = keyEl.createEl('input', {
       attr: { readonly: '', tabindex: '-1' },
