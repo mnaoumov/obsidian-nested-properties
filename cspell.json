@@ -18,8 +18,10 @@
     "mnaoumov",
     "multitext",
     "Naumov",
+    "obsidianmd",
     "Promisable",
-    "tsbuildinfo"
+    "tsbuildinfo",
+    "unstub"
   ],
   "ignoreWords": [],
   "import": [],
