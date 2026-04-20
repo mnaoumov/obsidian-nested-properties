@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 1.2.1
+
+- tests: add 100% coverage
+- refactor: new template
+
 ## 1.2.0
 
 - Style improvements: use native cursor, center chevrons, fit-content add property buttons (#5 by @davidvkimball)
