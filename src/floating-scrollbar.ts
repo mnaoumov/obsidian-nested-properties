@@ -23,7 +23,7 @@ export class FloatingScrollbar extends Component {
   public override onload(): void {
     this.track = createDiv('nested-properties-floating-scrollbar');
     this.thumb = this.track.createDiv('nested-properties-floating-scrollbar-thumb');
-    document.body.appendChild(this.track);
+    activeDocument.body.appendChild(this.track);
 
     this.registerDomEvent(this.track, 'wheel', (e) => {
       if (!this.activeEl || this.activeEl.scrollWidth <= this.activeEl.clientWidth) {
@@ -45,9 +45,9 @@ export class FloatingScrollbar extends Component {
         return;
       }
       if (
-        document.activeElement instanceof HTMLInputElement
-        || document.activeElement instanceof HTMLTextAreaElement
-        || (document.activeElement instanceof HTMLElement && document.activeElement.isContentEditable)
+        activeDocument.activeElement instanceof HTMLInputElement
+        || activeDocument.activeElement instanceof HTMLTextAreaElement
+        || (activeDocument.activeElement instanceof HTMLElement && activeDocument.activeElement.isContentEditable)
       ) {
         return;
       }
@@ -84,12 +84,12 @@ export class FloatingScrollbar extends Component {
       return;
     }
 
-    const statusBar = document.querySelector('.status-bar');
+    const statusBar = activeDocument.querySelector('.status-bar');
     const bottomOffset = statusBar instanceof HTMLElement ? statusBar.offsetHeight : 0;
-    const visibleBottom = window.innerHeight - bottomOffset;
+    const visibleBottom = activeWindow.innerHeight - bottomOffset;
 
     let best: HTMLElement | null = null;
-    for (const el of document.querySelectorAll<HTMLElement>(ROOT_PROPERTY_SELECTOR)) {
+    for (const el of activeDocument.querySelectorAll<HTMLElement>(ROOT_PROPERTY_SELECTOR)) {
       if (el.scrollWidth <= el.clientWidth) {
         continue;
       }
@@ -168,13 +168,13 @@ export class FloatingScrollbar extends Component {
     }
 
     function onMouseUp(): void {
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
+      activeDocument.removeEventListener('mousemove', onMouseMove);
+      activeDocument.removeEventListener('mouseup', onMouseUp);
     }
 
     scrollToRatio(toRatio(e));
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
+    activeDocument.addEventListener('mousemove', onMouseMove);
+    activeDocument.addEventListener('mouseup', onMouseUp);
   }
 
   private readonly syncThumb = (): void => {

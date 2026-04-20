@@ -1,5 +1,10 @@
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
+import { moment } from 'obsidian';
+import { extractDefaultExportInterop } from 'obsidian-dev-utils/object-utils';
+
+const momentFn = extractDefaultExportInterop(moment);
+
 export function convertValue(value: unknown, targetType: string): unknown {
   switch (targetType) {
     case 'aliases':
@@ -47,7 +52,7 @@ export function isSimpleArray(value: unknown): boolean {
 }
 
 function convertToDate(value: unknown): null | string {
-  if (typeof value === 'string' && value && window.moment(value).isValid()) {
+  if (typeof value === 'string' && value && momentFn(value).isValid()) {
     return value;
   }
   return null;
