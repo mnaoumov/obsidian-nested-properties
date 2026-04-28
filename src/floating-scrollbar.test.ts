@@ -382,7 +382,7 @@ describe('FloatingScrollbar', () => {
       scrollbar.onload();
       const event = createMockEvent({ deltaY: 10 });
 
-      hoisted.capturedCallbacks.trackWheel?.(event as never);
+      hoisted.capturedCallbacks.trackWheel?.(event);
 
       expect(event['preventDefault']).not.toHaveBeenCalled();
     });
@@ -393,7 +393,7 @@ describe('FloatingScrollbar', () => {
       setupActiveElement(activeEl);
 
       const event = createMockEvent({ deltaY: 10 });
-      hoisted.capturedCallbacks.trackWheel?.(event as never);
+      hoisted.capturedCallbacks.trackWheel?.(event);
 
       expect(event['preventDefault']).not.toHaveBeenCalled();
     });
@@ -404,7 +404,7 @@ describe('FloatingScrollbar', () => {
       setupActiveElement(activeEl);
 
       const event = createMockEvent({ deltaX: 0, deltaY: 50 });
-      hoisted.capturedCallbacks.trackWheel?.(event as never);
+      hoisted.capturedCallbacks.trackWheel?.(event);
 
       expect(activeEl.scrollLeft).toBe(50);
       expect(event['preventDefault']).toHaveBeenCalled();
@@ -417,7 +417,7 @@ describe('FloatingScrollbar', () => {
       setupActiveElement(activeEl);
 
       const event = createMockEvent({ deltaX: 30, deltaY: 50 });
-      hoisted.capturedCallbacks.trackWheel?.(event as never);
+      hoisted.capturedCallbacks.trackWheel?.(event);
 
       expect(activeEl.scrollLeft).toBe(30);
     });
@@ -428,7 +428,7 @@ describe('FloatingScrollbar', () => {
       scrollbar.onload();
       const event = createMockEvent({ key: 'ArrowLeft' });
 
-      hoisted.capturedCallbacks.docKeydown?.(event as never);
+      hoisted.capturedCallbacks.docKeydown?.(event);
 
       expect(event['preventDefault']).not.toHaveBeenCalled();
     });
@@ -439,7 +439,7 @@ describe('FloatingScrollbar', () => {
       setupActiveElement(activeEl);
 
       const event = createMockEvent({ key: 'Enter' });
-      hoisted.capturedCallbacks.docKeydown?.(event as never);
+      hoisted.capturedCallbacks.docKeydown?.(event);
 
       expect(event['preventDefault']).not.toHaveBeenCalled();
     });
@@ -451,7 +451,7 @@ describe('FloatingScrollbar', () => {
 
       mockDocument['activeElement'] = new MockHTMLInputElementClass();
       const event = createMockEvent({ key: 'ArrowLeft' });
-      hoisted.capturedCallbacks.docKeydown?.(event as never);
+      hoisted.capturedCallbacks.docKeydown?.(event);
 
       expect(event['preventDefault']).not.toHaveBeenCalled();
     });
@@ -463,7 +463,7 @@ describe('FloatingScrollbar', () => {
 
       mockDocument['activeElement'] = new MockHTMLTextAreaElementClass();
       const event = createMockEvent({ key: 'ArrowLeft' });
-      hoisted.capturedCallbacks.docKeydown?.(event as never);
+      hoisted.capturedCallbacks.docKeydown?.(event);
 
       expect(event['preventDefault']).not.toHaveBeenCalled();
     });
@@ -478,7 +478,7 @@ describe('FloatingScrollbar', () => {
       mockDocument['activeElement'] = editableEl;
 
       const event = createMockEvent({ key: 'ArrowLeft' });
-      hoisted.capturedCallbacks.docKeydown?.(event as never);
+      hoisted.capturedCallbacks.docKeydown?.(event);
 
       expect(event['preventDefault']).not.toHaveBeenCalled();
     });
@@ -490,7 +490,7 @@ describe('FloatingScrollbar', () => {
 
       mockDocument['activeElement'] = null;
       const event = createMockEvent({ key: 'ArrowLeft' });
-      hoisted.capturedCallbacks.docKeydown?.(event as never);
+      hoisted.capturedCallbacks.docKeydown?.(event);
 
       expect(activeEl.scrollLeft).toBe(60);
       expect(event['preventDefault']).toHaveBeenCalled();
@@ -503,7 +503,7 @@ describe('FloatingScrollbar', () => {
 
       mockDocument['activeElement'] = null;
       const event = createMockEvent({ key: 'ArrowRight' });
-      hoisted.capturedCallbacks.docKeydown?.(event as never);
+      hoisted.capturedCallbacks.docKeydown?.(event);
 
       expect(activeEl.scrollLeft).toBe(40);
       expect(event['preventDefault']).toHaveBeenCalled();
@@ -519,7 +519,7 @@ describe('FloatingScrollbar', () => {
       mockDocument['activeElement'] = nonEditableEl;
 
       const event = createMockEvent({ key: 'ArrowRight' });
-      hoisted.capturedCallbacks.docKeydown?.(event as never);
+      hoisted.capturedCallbacks.docKeydown?.(event);
 
       expect(activeEl.scrollLeft).toBe(40);
     });
@@ -530,7 +530,7 @@ describe('FloatingScrollbar', () => {
       scrollbar.onload();
       const event = createMockEvent({ target: null });
 
-      hoisted.capturedCallbacks.docWheel?.(event as never);
+      hoisted.capturedCallbacks.docWheel?.(event);
 
       expect(event['preventDefault']).not.toHaveBeenCalled();
     });
@@ -541,7 +541,7 @@ describe('FloatingScrollbar', () => {
       Object.assign(target, { closest: vi.fn(() => null) });
 
       const event = createMockEvent({ target });
-      hoisted.capturedCallbacks.docWheel?.(event as never);
+      hoisted.capturedCallbacks.docWheel?.(event);
 
       expect(event['preventDefault']).not.toHaveBeenCalled();
     });
@@ -553,7 +553,7 @@ describe('FloatingScrollbar', () => {
       Object.assign(target, { closest: vi.fn(() => propEl) });
 
       const event = createMockEvent({ target });
-      hoisted.capturedCallbacks.docWheel?.(event as never);
+      hoisted.capturedCallbacks.docWheel?.(event);
 
       expect(event['preventDefault']).not.toHaveBeenCalled();
     });
@@ -566,7 +566,7 @@ describe('FloatingScrollbar', () => {
       Object.assign(target, { closest: vi.fn(() => propEl) });
 
       const event = createMockEvent({ clientY: 400, target });
-      hoisted.capturedCallbacks.docWheel?.(event as never);
+      hoisted.capturedCallbacks.docWheel?.(event);
 
       expect(event['preventDefault']).not.toHaveBeenCalled();
     });
@@ -579,7 +579,7 @@ describe('FloatingScrollbar', () => {
       Object.assign(target, { closest: vi.fn(() => propEl) });
 
       const event = createMockEvent({ clientY: 495, deltaY: 20, target });
-      hoisted.capturedCallbacks.docWheel?.(event as never);
+      hoisted.capturedCallbacks.docWheel?.(event);
 
       expect(propEl.scrollLeft).toBe(20);
       expect(event['preventDefault']).toHaveBeenCalled();
@@ -592,7 +592,7 @@ describe('FloatingScrollbar', () => {
       scrollbar.onload();
       const event = createMockEvent({ target: null });
 
-      hoisted.capturedCallbacks.docMousemove?.(event as never);
+      hoisted.capturedCallbacks.docMousemove?.(event);
 
       // No error thrown
     });
@@ -603,7 +603,7 @@ describe('FloatingScrollbar', () => {
       Object.assign(target, { closest: vi.fn(() => null) });
 
       const event = createMockEvent({ target });
-      hoisted.capturedCallbacks.docMousemove?.(event as never);
+      hoisted.capturedCallbacks.docMousemove?.(event);
     });
 
     it('should do nothing when property element is not scrollable', () => {
@@ -613,7 +613,7 @@ describe('FloatingScrollbar', () => {
       Object.assign(target, { closest: vi.fn(() => propEl) });
 
       const event = createMockEvent({ target });
-      hoisted.capturedCallbacks.docMousemove?.(event as never);
+      hoisted.capturedCallbacks.docMousemove?.(event);
 
       expect(propEl.classList.toggle).not.toHaveBeenCalled();
     });
@@ -626,7 +626,7 @@ describe('FloatingScrollbar', () => {
       Object.assign(target, { closest: vi.fn(() => propEl) });
 
       const event = createMockEvent({ clientY: 495, target });
-      hoisted.capturedCallbacks.docMousemove?.(event as never);
+      hoisted.capturedCallbacks.docMousemove?.(event);
 
       expect(propEl.classList.toggle).toHaveBeenCalledWith('nested-properties-ew-resize', true);
     });
@@ -639,7 +639,7 @@ describe('FloatingScrollbar', () => {
       Object.assign(target, { closest: vi.fn(() => propEl) });
 
       const event = createMockEvent({ clientY: 400, target });
-      hoisted.capturedCallbacks.docMousemove?.(event as never);
+      hoisted.capturedCallbacks.docMousemove?.(event);
 
       expect(propEl.classList.toggle).toHaveBeenCalledWith('nested-properties-ew-resize', false);
     });
@@ -650,7 +650,7 @@ describe('FloatingScrollbar', () => {
       scrollbar.onload();
       const event = createMockEvent();
 
-      hoisted.capturedCallbacks.trackMousedown?.(event as never);
+      hoisted.capturedCallbacks.trackMousedown?.(event);
 
       expect(event['preventDefault']).not.toHaveBeenCalled();
     });
@@ -663,7 +663,7 @@ describe('FloatingScrollbar', () => {
       mockTrack.getBoundingClientRect.mockReturnValue({ left: 0, width: 200 });
 
       const event = createMockEvent({ clientX: 100 });
-      hoisted.capturedCallbacks.trackMousedown?.(event as never);
+      hoisted.capturedCallbacks.trackMousedown?.(event);
 
       expect(event['preventDefault']).toHaveBeenCalled();
       expect(activeEl.scrollLeft).toBe(50);
@@ -679,7 +679,7 @@ describe('FloatingScrollbar', () => {
       mockTrack.getBoundingClientRect.mockReturnValue({ left: 0, width: 200 });
 
       const mousedownEvent = createMockEvent({ clientX: 100 });
-      hoisted.capturedCallbacks.trackMousedown?.(mousedownEvent as never);
+      hoisted.capturedCallbacks.trackMousedown?.(mousedownEvent);
 
       const mousemoveHandlers = documentEventListeners.get('mousemove');
       expect(mousemoveHandlers).toBeDefined();
@@ -697,7 +697,7 @@ describe('FloatingScrollbar', () => {
       mockTrack.getBoundingClientRect.mockReturnValue({ left: 0, width: 200 });
 
       const mousedownEvent = createMockEvent({ clientX: 100 });
-      hoisted.capturedCallbacks.trackMousedown?.(mousedownEvent as never);
+      hoisted.capturedCallbacks.trackMousedown?.(mousedownEvent);
 
       const mouseupHandlers = documentEventListeners.get('mouseup');
       expect(mouseupHandlers).toBeDefined();
@@ -716,12 +716,12 @@ describe('FloatingScrollbar', () => {
       mockTrack.getBoundingClientRect.mockReturnValue({ left: 0, width: 200 });
 
       const event = createMockEvent({ clientX: -50 });
-      hoisted.capturedCallbacks.trackMousedown?.(event as never);
+      hoisted.capturedCallbacks.trackMousedown?.(event);
 
       expect(activeEl.scrollLeft).toBe(0);
 
       const event2 = createMockEvent({ clientX: 500 });
-      hoisted.capturedCallbacks.trackMousedown?.(event2 as never);
+      hoisted.capturedCallbacks.trackMousedown?.(event2);
 
       expect(activeEl.scrollLeft).toBe(100);
     });
