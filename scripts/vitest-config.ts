@@ -18,6 +18,7 @@ export const config = defineConfig({
     exclude: ['node_modules', 'dist'],
     globals: false,
     include: ['src/**/*.test.ts'],
+    passWithNoTests: true,
     projects: [
       {
         resolve: {
