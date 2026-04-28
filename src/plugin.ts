@@ -10,6 +10,6 @@ import { NestedPropertyRenderer } from './nested-property-renderer.ts';
 export class Plugin extends PluginBase {
   public constructor(app: App, manifest: PluginManifest) {
     super(app, manifest);
-    this.registerComponent({ component: new NestedPropertyRenderer(app) });
+    this.addChild(new NestedPropertyRenderer(app));
   }
 }
