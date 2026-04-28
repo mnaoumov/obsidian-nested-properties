@@ -44,7 +44,6 @@ export const config = defineConfig({
           hookTimeout: BIG_TIMEOUT_IN_MILLISECONDS * HOOK_TIMEOUT_MULTIPLIER,
           include: ['src/**/*.no-app.integration.test.ts'],
           name: 'integration-tests:no-app',
-          setupFiles: ['./scripts/load-env-file.ts', './scripts/setup-obsidian-globals.ts'],
           testTimeout: BIG_TIMEOUT_IN_MILLISECONDS
         }
       },
@@ -56,7 +55,6 @@ export const config = defineConfig({
           hookTimeout: BIG_TIMEOUT_IN_MILLISECONDS * HOOK_TIMEOUT_MULTIPLIER,
           include: ['src/**/*.desktop.integration.test.ts'],
           name: 'integration-tests:desktop',
-          setupFiles: ['./scripts/load-env-file.ts', './scripts/setup-obsidian-globals.ts'],
           testTimeout: BIG_TIMEOUT_IN_MILLISECONDS
         }
       },
