@@ -407,8 +407,6 @@ describe('NestedPropertyRenderer', () => {
       activeElement: null,
       querySelectorAll: vi.fn(() => [])
     });
-    // eslint-disable-next-line obsidianmd/prefer-active-window-timers -- Test mock delegates to real timer.
-    vi.stubGlobal('activeWindow', { setTimeout: (fn: () => void, ms: number) => setTimeout(fn, ms) });
     vi.stubGlobal('createDiv', vi.fn(() => createMockEl()));
     vi.stubGlobal('navigator', {
       clipboard: {

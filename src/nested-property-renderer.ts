@@ -249,7 +249,7 @@ export class NestedPropertyRenderer extends Component {
       ctx.onChange(newValue);
     });
 
-    activeWindow.setTimeout(() => {
+    window.setTimeout(() => {
       const metadataContainerEl = containerEl.closest('.metadata-container');
       if (metadataContainerEl instanceof HTMLElement) {
         injectHeaderButtons(metadataContainerEl, this.expandedPaths);
