@@ -1,6 +1,6 @@
 {
   "name": "nested-properties",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Allows to view/edit nested frontmatter properties.",
   "keywords": [],
   "license": "MIT",
