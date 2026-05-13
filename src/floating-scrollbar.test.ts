@@ -12,8 +12,6 @@ interface CapturedCallbacks {
   docMousemove: ((e: Partial<MouseEvent>) => void) | null;
   docScroll: (() => void) | null;
   docWheel: ((e: Partial<WheelEvent>) => void) | null;
-  trackMousedown: ((e: Partial<MouseEvent>) => void) | null;
-  trackWheel: ((e: Partial<WheelEvent>) => void) | null;
   windowsHandler: (() => void) | null;
 }
 
@@ -64,24 +62,8 @@ const hoisted = vi.hoisted(() => {
     docMousemove: null,
     docScroll: null,
     docWheel: null,
-    trackMousedown: null,
-    trackWheel: null,
     windowsHandler: null
   };
-
-  class ComponentBase {
-    public register(_fn: () => void): void {
-      /* Cleanup callback storage */
-    }
-
-    public registerDomEvent(_el: unknown, event: string, handler: EventHandler, _options?: unknown): void {
-      if (event === 'wheel') {
-        capturedCallbacks.trackWheel = handler;
-      } else if (event === 'mousedown') {
-        capturedCallbacks.trackMousedown = handler;
-      }
-    }
-  }
 
   class AllWindowsEventHandlerBase {
     public registerAllDocumentsDomEvent(event: string, handler: EventHandler, _options?: unknown): void {
@@ -101,13 +83,8 @@ const hoisted = vi.hoisted(() => {
     }
   }
 
-  return { AllWindowsEventHandlerBase, capturedCallbacks, ComponentBase };
+  return { AllWindowsEventHandlerBase, capturedCallbacks };
 });
-
-vi.mock('obsidian', () => ({
-  App: vi.fn(),
-  Component: hoisted.ComponentBase
-}));
 
 vi.mock('obsidian-dev-utils/obsidian/components/all-windows-event-handler', () => ({
   AllWindowsEventHandler: hoisted.AllWindowsEventHandlerBase
@@ -209,8 +186,6 @@ describe('FloatingScrollbar', () => {
     hoisted.capturedCallbacks.docMousemove = null;
     hoisted.capturedCallbacks.docScroll = null;
     hoisted.capturedCallbacks.docWheel = null;
-    hoisted.capturedCallbacks.trackMousedown = null;
-    hoisted.capturedCallbacks.trackWheel = null;
     hoisted.capturedCallbacks.windowsHandler = null;
   });
 
@@ -230,8 +205,8 @@ describe('FloatingScrollbar', () => {
     it('should register all event handlers', () => {
       scrollbar.onload();
 
-      expect(hoisted.capturedCallbacks.trackWheel).not.toBeNull();
-      expect(hoisted.capturedCallbacks.trackMousedown).not.toBeNull();
+      expect(getTrackHandler('wheel')).toBeDefined();
+      expect(getTrackHandler('mousedown')).toBeDefined();
       expect(hoisted.capturedCallbacks.docKeydown).not.toBeNull();
       expect(hoisted.capturedCallbacks.docScroll).not.toBeNull();
       expect(hoisted.capturedCallbacks.docWheel).not.toBeNull();
@@ -382,7 +357,7 @@ describe('FloatingScrollbar', () => {
       scrollbar.onload();
       const event = createMockEvent({ deltaY: 10 });
 
-      hoisted.capturedCallbacks.trackWheel?.(event);
+      getTrackHandler('wheel')?.(event);
 
       expect(event['preventDefault']).not.toHaveBeenCalled();
     });
@@ -393,7 +368,7 @@ describe('FloatingScrollbar', () => {
       setupActiveElement(activeEl);
 
       const event = createMockEvent({ deltaY: 10 });
-      hoisted.capturedCallbacks.trackWheel?.(event);
+      getTrackHandler('wheel')?.(event);
 
       expect(event['preventDefault']).not.toHaveBeenCalled();
     });
@@ -404,7 +379,7 @@ describe('FloatingScrollbar', () => {
       setupActiveElement(activeEl);
 
       const event = createMockEvent({ deltaX: 0, deltaY: 50 });
-      hoisted.capturedCallbacks.trackWheel?.(event);
+      getTrackHandler('wheel')?.(event);
 
       expect(activeEl.scrollLeft).toBe(50);
       expect(event['preventDefault']).toHaveBeenCalled();
@@ -417,7 +392,7 @@ describe('FloatingScrollbar', () => {
       setupActiveElement(activeEl);
 
       const event = createMockEvent({ deltaX: 30, deltaY: 50 });
-      hoisted.capturedCallbacks.trackWheel?.(event);
+      getTrackHandler('wheel')?.(event);
 
       expect(activeEl.scrollLeft).toBe(30);
     });
@@ -650,7 +625,7 @@ describe('FloatingScrollbar', () => {
       scrollbar.onload();
       const event = createMockEvent();
 
-      hoisted.capturedCallbacks.trackMousedown?.(event);
+      getTrackHandler('mousedown')?.(event);
 
       expect(event['preventDefault']).not.toHaveBeenCalled();
     });
@@ -663,7 +638,7 @@ describe('FloatingScrollbar', () => {
       mockTrack.getBoundingClientRect.mockReturnValue({ left: 0, width: 200 });
 
       const event = createMockEvent({ clientX: 100 });
-      hoisted.capturedCallbacks.trackMousedown?.(event);
+      getTrackHandler('mousedown')?.(event);
 
       expect(event['preventDefault']).toHaveBeenCalled();
       expect(activeEl.scrollLeft).toBe(50);
@@ -679,7 +654,7 @@ describe('FloatingScrollbar', () => {
       mockTrack.getBoundingClientRect.mockReturnValue({ left: 0, width: 200 });
 
       const mousedownEvent = createMockEvent({ clientX: 100 });
-      hoisted.capturedCallbacks.trackMousedown?.(mousedownEvent);
+      getTrackHandler('mousedown')?.(mousedownEvent);
 
       const mousemoveHandlers = documentEventListeners.get('mousemove');
       expect(mousemoveHandlers).toBeDefined();
@@ -697,7 +672,7 @@ describe('FloatingScrollbar', () => {
       mockTrack.getBoundingClientRect.mockReturnValue({ left: 0, width: 200 });
 
       const mousedownEvent = createMockEvent({ clientX: 100 });
-      hoisted.capturedCallbacks.trackMousedown?.(mousedownEvent);
+      getTrackHandler('mousedown')?.(mousedownEvent);
 
       const mouseupHandlers = documentEventListeners.get('mouseup');
       expect(mouseupHandlers).toBeDefined();
@@ -716,12 +691,12 @@ describe('FloatingScrollbar', () => {
       mockTrack.getBoundingClientRect.mockReturnValue({ left: 0, width: 200 });
 
       const event = createMockEvent({ clientX: -50 });
-      hoisted.capturedCallbacks.trackMousedown?.(event);
+      getTrackHandler('mousedown')?.(event);
 
       expect(activeEl.scrollLeft).toBe(0);
 
       const event2 = createMockEvent({ clientX: 500 });
-      hoisted.capturedCallbacks.trackMousedown?.(event2);
+      getTrackHandler('mousedown')?.(event2);
 
       expect(activeEl.scrollLeft).toBe(100);
     });
@@ -790,6 +765,13 @@ describe('FloatingScrollbar', () => {
       expect(updateSpy).toHaveBeenCalled();
     });
   });
+
+  function getTrackHandler(event: string): ((...args: unknown[]) => void) | undefined {
+    const call = mockTrack.addEventListener.mock.calls.find(
+      (c: unknown[]) => c[0] === event
+    ) as [string, (...args: unknown[]) => void] | undefined;
+    return call?.[1];
+  }
 
   function getScrollListener(activeEl: MockDomElement): () => void {
     const scrollCall = activeEl.addEventListener.mock.calls.find(

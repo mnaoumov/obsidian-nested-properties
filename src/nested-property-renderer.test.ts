@@ -59,24 +59,8 @@ const hoisted = vi.hoisted(() => {
   }
   class MockHTMLInputElementBase extends MockHTMLElementBase {}
 
-  class ComponentBase {
-    private readonly children: ComponentBase[] = [];
-    private readonly cleanups: (() => void)[] = [];
-
-    public addChild<T extends ComponentBase>(child: T): T {
-      this.children.push(child);
-      return child;
-    }
-
-    public register(fn: () => void): void {
-      this.cleanups.push(fn);
-    }
-
-    public runCleanups(): void {
-      for (const fn of this.cleanups) {
-        fn();
-      }
-    }
+  class FloatingScrollbarBase {
+    public update = vi.fn();
   }
 
   class MarkdownViewBase {
@@ -158,9 +142,7 @@ const hoisted = vi.hoisted(() => {
 
   const setIconMock = vi.fn();
 
-  class FloatingScrollbarMock extends ComponentBase {
-    public update = vi.fn();
-  }
+  class FloatingScrollbarMock extends FloatingScrollbarBase {}
 
   let typeChangeModalWaitResult = true;
   class TypeChangeModalMock {
@@ -185,7 +167,6 @@ const hoisted = vi.hoisted(() => {
     changeTypeChangeModalResult: (val: boolean): void => {
       typeChangeModalWaitResult = val;
     },
-    ComponentBase,
     createMenuItem,
     FloatingScrollbarMock,
     MarkdownViewBase,
@@ -206,8 +187,8 @@ const hoisted = vi.hoisted(() => {
   };
 });
 
-vi.mock('obsidian', () => ({
-  Component: hoisted.ComponentBase,
+vi.mock('obsidian', async (importOriginal) => ({
+  ...await importOriginal<typeof import('obsidian')>(),
   MarkdownView: hoisted.MarkdownViewBase,
   Menu: hoisted.MenuBase,
   moment: vi.fn((inp?: string) => ({
@@ -263,9 +244,9 @@ interface MockWorkspace {
 }
 
 interface RendererTestAccess {
+  cleanups__: (() => unknown)[];
   expandedPaths: Set<string>;
   pendingFocusKey: null | string;
-  runCleanups: () => void;
   widgetTypeOverrides: Map<string, string>;
 }
 
@@ -464,7 +445,9 @@ describe('NestedPropertyRenderer', () => {
       const mockRemoveEl = createMockEl();
       vi.spyOn(activeDocument, 'querySelectorAll').mockImplementation(() => asNodeList([mockRemoveEl]));
 
-      testAccess(renderer).runCleanups();
+      for (const fn of testAccess(renderer).cleanups__) {
+        fn();
+      }
 
       expect(mockApp.metadataTypeManager.registeredTypeWidgets['list']).toBeUndefined();
       expect(mockApp.metadataTypeManager.registeredTypeWidgets['object']).toBeUndefined();
