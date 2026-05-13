@@ -61,6 +61,7 @@ export class NestedPropertyRenderer extends Component {
   }
 
   public override onload(): void {
+    super.onload();
     this._mixedListWidget = {
       icon: 'lucide-list-tree',
       name: (): string => 'Mixed list',
