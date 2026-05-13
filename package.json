@@ -9,9 +9,9 @@
   "scripts": {
     "build": "jiti scripts/build.ts",
     "build:clean": "jiti scripts/build-clean.ts",
+    "build:compile": "jiti scripts/build-compile.ts",
     "build:compile:svelte": "jiti scripts/build-compile-svelte.ts",
     "build:compile:typescript": "jiti scripts/build-compile-typescript.ts",
-    "build:compile": "jiti scripts/build-compile.ts",
     "dev": "jiti scripts/dev.ts",
     "format": "jiti scripts/format.ts",
     "format:check": "jiti scripts/format-check.ts",
@@ -57,6 +57,7 @@
   },
   "overrides": {
     "@antfu/utils": "9.2.0",
+    "@eslint/config-helpers": "latest",
     "boolean": "npm:dry-uninstall",
     "dompurify": "3.0.1",
     "type-fest": "latest"
