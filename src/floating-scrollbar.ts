@@ -21,6 +21,7 @@ export class FloatingScrollbar extends Component {
   }
 
   public override onload(): void {
+    super.onload();
     this.track = createDiv('nested-properties-floating-scrollbar');
     this.thumb = this.track.createDiv('nested-properties-floating-scrollbar-thumb');
     activeDocument.body.appendChild(this.track);
@@ -70,6 +71,7 @@ export class FloatingScrollbar extends Component {
   }
 
   public override onunload(): void {
+    super.onunload();
     if (this.activeEl) {
       this.activeEl.removeEventListener('scroll', this.syncThumb);
       this.activeEl = null;

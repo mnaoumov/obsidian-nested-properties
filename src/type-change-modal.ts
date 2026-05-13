@@ -13,10 +13,12 @@ export class TypeChangeModal extends Modal {
   }
 
   public override onClose(): void {
+    super.onClose();
     this.resolve?.(this.confirmed);
   }
 
   public override onOpen(): void {
+    super.onOpen();
     this.titleEl.setText(`Display as ${this.typeName}?`);
     this.contentEl.createEl('p', {
       text: 'Your text data is not compatible. It will be adapted to fit the new format.'
