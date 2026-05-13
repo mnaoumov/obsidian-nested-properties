@@ -2,6 +2,7 @@ import { defineConfig } from 'vitest/config';
 
 const SHARED_EXCLUDE = ['node_modules', 'dist'];
 const BIG_TIMEOUT_IN_MILLISECONDS = 30_000;
+const ANDROID_TIMEOUT_IN_MILLISECONDS = 60_000;
 const HOOK_TIMEOUT_MULTIPLIER = 4;
 
 export const config = defineConfig({
@@ -32,9 +33,10 @@ export const config = defineConfig({
         test: {
           environment: 'jsdom',
           exclude: [...SHARED_EXCLUDE, 'src/**/*.integration.test.ts'],
+          execArgv: ['--no-webstorage'],
           include: ['src/**/*.test.ts'],
           name: 'unit-tests',
-          setupFiles: ['obsidian-test-mocks/setup']
+          setupFiles: ['obsidian-test-mocks/vitest-setup']
         }
       },
       {
@@ -65,16 +67,15 @@ export const config = defineConfig({
             obsidianTransport: {
               appiumUrl: 'http://localhost:4723',
               avdName: 'obsidian_test',
-              deviceId: 'emulator-5554',
               type: 'obsidian-android-appium'
             }
           },
           fileParallelism: false,
           globalSetup: ['obsidian-integration-testing/vitest-global-setup'],
-          hookTimeout: BIG_TIMEOUT_IN_MILLISECONDS * HOOK_TIMEOUT_MULTIPLIER,
+          hookTimeout: ANDROID_TIMEOUT_IN_MILLISECONDS * HOOK_TIMEOUT_MULTIPLIER,
           include: ['src/**/*.android.integration.test.ts'],
           name: 'integration-tests:android',
-          testTimeout: BIG_TIMEOUT_IN_MILLISECONDS
+          testTimeout: ANDROID_TIMEOUT_IN_MILLISECONDS
         }
       }
     ]
