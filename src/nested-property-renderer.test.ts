@@ -1,7 +1,7 @@
 import type {
   PropertyRenderContext,
   PropertyWidget
-} from 'obsidian-typings';
+} from '@obsidian-typings/obsidian-public-latest';
 
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import {

@@ -6,7 +6,7 @@ import type {
   PropertyWidget,
   PropertyWidgetComponentBase,
   TypeInfo
-} from 'obsidian-typings';
+} from '@obsidian-typings/obsidian-public-latest';
 
 import {
   Component,

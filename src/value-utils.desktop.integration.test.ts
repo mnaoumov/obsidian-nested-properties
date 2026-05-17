@@ -5,7 +5,7 @@ import type {
 import type {
   MultitextPropertyWidgetComponent,
   PropertyWidget
-} from 'obsidian-typings';
+} from '@obsidian-typings/obsidian-public-latest';
 
 import {
   ContextId,
