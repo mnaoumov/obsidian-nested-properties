@@ -27,17 +27,17 @@ export const config = defineConfig({
             obsidian: 'obsidian-test-mocks/obsidian'
           }
         },
-        server: {
-          deps: {
-            inline: ['@obsidian-typings', 'obsidian-dev-utils']
-          }
-        },
         test: {
           environment: 'jsdom',
           exclude: [...SHARED_EXCLUDE, 'src/**/*.integration.test.ts'],
           execArgv: ['--no-webstorage'],
           include: ['src/**/*.test.ts'],
           name: 'unit-tests',
+          server: {
+            deps: {
+              inline: ['@obsidian-typings', 'obsidian-dev-utils']
+            }
+          },
           setupFiles: ['obsidian-test-mocks/vitest-setup']
         }
       },

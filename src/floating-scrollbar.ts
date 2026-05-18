@@ -2,7 +2,7 @@ import {
   App,
   Component
 } from 'obsidian';
-import { AllWindowsEventHandler } from 'obsidian-dev-utils/obsidian/components/all-windows-event-handler';
+import { AllWindowsEventComponent } from 'obsidian-dev-utils/obsidian/components/all-windows-event-component';
 
 const ARROW_SCROLL_PX = 40;
 const MIN_THUMB_WIDTH_PX = 30;
@@ -40,8 +40,8 @@ export class FloatingScrollbar extends Component {
       this.handleTrackMousedown(e);
     });
 
-    const allWindowsEventHandler = new AllWindowsEventHandler(this.app, this);
-    allWindowsEventHandler.registerAllDocumentsDomEvent('keydown', (e) => {
+    const allWindowsEventComponent = this.addChild(new AllWindowsEventComponent(this.app));
+    allWindowsEventComponent.registerAllDocumentsDomEvent('keydown', (e) => {
       if (!this.activeEl || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) {
         return;
       }
@@ -56,16 +56,16 @@ export class FloatingScrollbar extends Component {
       e.preventDefault();
     });
 
-    allWindowsEventHandler.registerAllDocumentsDomEvent('scroll', () => {
+    allWindowsEventComponent.registerAllDocumentsDomEvent('scroll', () => {
       this.update();
     }, true);
-    allWindowsEventHandler.registerAllDocumentsDomEvent('wheel', (e) => {
+    allWindowsEventComponent.registerAllDocumentsDomEvent('wheel', (e) => {
       this.handleNativeScrollbarWheel(e);
     }, { capture: true, passive: false });
-    allWindowsEventHandler.registerAllDocumentsDomEvent('mousemove', (e) => {
+    allWindowsEventComponent.registerAllDocumentsDomEvent('mousemove', (e) => {
       this.handleNativeScrollbarCursor(e);
     });
-    allWindowsEventHandler.registerAllWindowsHandler(() => {
+    allWindowsEventComponent.registerAllWindowsHandler(() => {
       this.update();
     });
   }

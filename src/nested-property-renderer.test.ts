@@ -304,7 +304,7 @@ let getTypeInfoOriginal: MockFn;
 let mockApp: MockApp;
 
 interface RenderWidgetResult {
-  focus: () => void;
+  focus(): void;
   type: string;
 }
 

@@ -1,11 +1,11 @@
 import type {
-  MarkdownView,
-  TFile
-} from 'obsidian';
-import type {
   MultitextPropertyWidgetComponent,
   PropertyWidget
 } from '@obsidian-typings/obsidian-public-latest';
+import type {
+  MarkdownView,
+  TFile
+} from 'obsidian';
 
 import {
   ContextId,

@@ -1,5 +1,3 @@
-import type { App } from 'obsidian';
-import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 import type {
   MetadataTypeManager,
   PropertyRenderContext,
@@ -7,6 +5,8 @@ import type {
   PropertyWidgetComponentBase,
   TypeInfo
 } from '@obsidian-typings/obsidian-public-latest';
+import type { App } from 'obsidian';
+import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
 import {
   Component,
@@ -15,7 +15,7 @@ import {
   setIcon
 } from 'obsidian';
 import { convertAsyncToSync } from 'obsidian-dev-utils/async';
-import { registerPatch } from 'obsidian-dev-utils/obsidian/monkey-around';
+import { MonkeyAroundComponent } from 'obsidian-dev-utils/obsidian/components/monkey-around-component';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
 import { FloatingScrollbar } from './floating-scrollbar.ts';
@@ -82,24 +82,39 @@ export class NestedPropertyRenderer extends Component {
     this.app.metadataTypeManager.registeredTypeWidgets[OBJECT_WIDGET_TYPE] = this.objectWidget;
     this._listWidget = this.app.metadataTypeManager.registeredTypeWidgets.multitext;
 
-    registerPatch(this, this.listWidget, {
-      validate: (next: ValidateFn) => {
-        return (value: unknown): boolean => this.validateListWidget(next, value);
+    const patch = this.addChild(new MonkeyAroundComponent());
+    patch.registerMethodPatch({
+      methodName: 'validate',
+      obj: this.listWidget,
+      patchHandler: ({
+        originalArgs: [value],
+        originalMethod
+      }) => {
+        return this.validateListWidget(originalMethod, value);
       }
     });
 
-    registerPatch(this, this.app.metadataTypeManager, {
-      getTypeInfo: (next: GetTypeInfoFn) => {
-        return (property: string, value: unknown): TypeInfo => {
-          return this.getTypeInfo(next, property, value);
-        };
+    patch.registerMethodPatch({
+      methodName: 'getTypeInfo',
+      obj: this.app.metadataTypeManager,
+      patchHandler: ({
+        originalArgs: [property, value],
+        originalMethod
+      }) => {
+        return this.getTypeInfo(originalMethod, property, value);
       }
     });
 
     const unknownWidget = this.app.metadataTypeManager.getWidget('unknown');
-    registerPatch(this, unknownWidget, {
-      render: (next: UnknownRenderFn): UnknownRenderFn => (el, value, ctx) => {
-        return this.renderUnknownWidget(next, el, value, ctx);
+
+    patch.registerMethodPatch({
+      methodName: 'render',
+      obj: unknownWidget,
+      patchHandler: ({
+        originalArgs: [el, value, ctx],
+        originalMethod
+      }) => {
+        return this.renderUnknownWidget(originalMethod, el, value, ctx);
       }
     });
 
