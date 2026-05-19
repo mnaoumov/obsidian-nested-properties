@@ -150,18 +150,40 @@ const hoisted = vi.hoisted(() => {
     public waitForResult = vi.fn(() => Promise.resolve(typeChangeModalWaitResult));
   }
 
-  const registerPatchMock = vi.fn(
-    (
-      _component: unknown,
-      target: Record<string, (...args: unknown[]) => unknown>,
-      patches: Record<string, (next: (...args: unknown[]) => unknown) => (...args: unknown[]) => unknown>
-    ) => {
-      for (const [methodName, wrapper] of Object.entries(patches)) {
-        const original = target[methodName] as ((...args: unknown[]) => unknown) | undefined;
-        target[methodName] = wrapper(original ?? vi.fn());
-      }
+  type GenericFn = (...args: unknown[]) => unknown;
+
+  interface MockPatchHandlerParams {
+    fallback(): unknown;
+    readonly originalArgs: unknown[];
+    readonly originalMethod: GenericFn;
+    readonly originalMethodBound: GenericFn;
+    readonly originalThis: unknown;
+  }
+
+  interface MockRegisterMethodPatchParams {
+    readonly methodName: string;
+    readonly obj: Record<string, GenericFn>;
+    patchHandler(params: MockPatchHandlerParams): unknown;
+  }
+
+  const registerMethodPatchMock = vi.fn(
+    ({ methodName, obj, patchHandler }: MockRegisterMethodPatchParams): void => {
+      const original = obj[methodName] ?? vi.fn();
+      obj[methodName] = (...args: unknown[]): unknown => {
+        return patchHandler({
+          fallback: (): unknown => original.apply(obj, args),
+          originalArgs: args,
+          originalMethod: original,
+          originalMethodBound: original.bind(obj),
+          originalThis: obj
+        });
+      };
     }
   );
+
+  class MonkeyAroundComponentBase {
+    public registerMethodPatch = registerMethodPatchMock;
+  }
 
   return {
     changeTypeChangeModalResult: (val: boolean): void => {
@@ -180,7 +202,8 @@ const hoisted = vi.hoisted(() => {
     },
     MockHTMLElementBase,
     MockHTMLInputElementBase,
-    registerPatchMock,
+    MonkeyAroundComponentBase,
+    registerMethodPatchMock,
     setIconMock,
     submenuItems,
     TypeChangeModalMock
@@ -201,8 +224,8 @@ vi.mock('obsidian-dev-utils/async', () => ({
   convertAsyncToSync: <T extends (...args: unknown[]) => unknown>(fn: T): T => fn
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/monkey-around', () => ({
-  registerPatch: hoisted.registerPatchMock
+vi.mock('obsidian-dev-utils/obsidian/components/monkey-around-component', () => ({
+  MonkeyAroundComponent: hoisted.MonkeyAroundComponentBase
 }));
 
 vi.mock('obsidian-dev-utils/type-guards', () => ({
@@ -210,7 +233,7 @@ vi.mock('obsidian-dev-utils/type-guards', () => ({
 }));
 
 vi.mock('./floating-scrollbar.ts', () => ({
-  FloatingScrollbar: hoisted.FloatingScrollbarMock
+  FloatingScrollbarComponent: hoisted.FloatingScrollbarMock
 }));
 
 vi.mock('./type-change-modal.ts', () => ({
@@ -400,7 +423,7 @@ describe('NestedPropertyRenderer', () => {
     hoisted.submenuItems.length = 0;
     hoisted.menuOnHideCallback.set(null);
     hoisted.setIconMock.mockClear();
-    hoisted.registerPatchMock.mockClear();
+    hoisted.registerMethodPatchMock.mockClear();
     hoisted.changeTypeChangeModalResult(true);
 
     renderer = new NestedPropertyRendererComponent(mockApp as never);
@@ -423,13 +446,13 @@ describe('NestedPropertyRenderer', () => {
     it('should register patches for listWidget.validate, getTypeInfo, and unknownWidget.render', () => {
       renderer.onload();
 
-      expect(hoisted.registerPatchMock).toHaveBeenCalledTimes(3);
+      expect(hoisted.registerMethodPatchMock).toHaveBeenCalledTimes(3);
     });
 
     it('should create FloatingScrollbar as child', () => {
       renderer.onload();
 
-      expect(hoisted.registerPatchMock).toHaveBeenCalled();
+      expect(hoisted.registerMethodPatchMock).toHaveBeenCalled();
     });
 
     it('should call reloadAllProperties on load', () => {
