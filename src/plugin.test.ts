@@ -24,7 +24,7 @@ vi.mock('./nested-property-renderer.ts', () => ({
 }));
 
 // eslint-disable-next-line import-x/first, import-x/imports-first -- vi.mock must precede imports.
-import { NestedPropertyRenderer } from './nested-property-renderer.ts';
+import { NestedPropertyRendererComponent } from './nested-property-renderer.ts';
 // eslint-disable-next-line import-x/first, import-x/imports-first -- vi.mock must precede imports.
 import { Plugin } from './plugin.ts';
 
@@ -35,7 +35,7 @@ describe('Plugin', () => {
 
     new Plugin(app, manifest);
 
-    expect(NestedPropertyRenderer).toHaveBeenCalledWith(app);
-    expect(mockAddChild).toHaveBeenCalledWith(expect.any(NestedPropertyRenderer));
+    expect(NestedPropertyRendererComponent).toHaveBeenCalledWith(app);
+    expect(mockAddChild).toHaveBeenCalledWith(expect.any(NestedPropertyRendererComponent));
   });
 });

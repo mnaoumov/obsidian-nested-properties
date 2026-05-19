@@ -18,7 +18,7 @@ import { convertAsyncToSync } from 'obsidian-dev-utils/async';
 import { MonkeyAroundComponent } from 'obsidian-dev-utils/obsidian/components/monkey-around-component';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
-import { FloatingScrollbar } from './floating-scrollbar.ts';
+import { FloatingScrollbarComponent } from './floating-scrollbar.ts';
 import { TypeChangeModal } from './type-change-modal.ts';
 import {
   convertValue,
@@ -34,12 +34,12 @@ type GetTypeInfoFn = MetadataTypeManager['getTypeInfo'];
 type UnknownRenderFn = (el: HTMLElement, value: unknown, ctx: PropertyRenderContext) => PropertyWidgetComponentBase;
 type ValidateFn = PropertyWidget['validate'];
 
-export class NestedPropertyRenderer extends Component {
+export class NestedPropertyRendererComponent extends Component {
   private _listWidget: null | PropertyWidget = null;
   private _mixedListWidget: null | PropertyWidget = null;
   private _objectWidget: null | PropertyWidget = null;
   private readonly expandedPaths = new Set<string>();
-  private floatingScrollbar: FloatingScrollbar | null = null;
+  private floatingScrollbar: FloatingScrollbarComponent | null = null;
   private lastMenuCloseTime = 0;
   private pendingFocusKey: null | string = null;
   private readonly widgetTypeOverrides = new Map<string, string>();
@@ -129,7 +129,7 @@ export class NestedPropertyRenderer extends Component {
       this.reloadAllProperties();
     });
 
-    this.floatingScrollbar = this.addChild(new FloatingScrollbar(this.app));
+    this.floatingScrollbar = this.addChild(new FloatingScrollbarComponent(this.app));
     this.reloadAllProperties();
   }
 
