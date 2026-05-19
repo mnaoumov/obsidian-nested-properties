@@ -20,7 +20,7 @@ vi.mock('obsidian-dev-utils/obsidian/plugin/plugin', () => {
 });
 
 vi.mock('./nested-property-renderer.ts', () => ({
-  NestedPropertyRenderer: vi.fn()
+  NestedPropertyRendererComponent: vi.fn()
 }));
 
 // eslint-disable-next-line import-x/first, import-x/imports-first -- vi.mock must precede imports.

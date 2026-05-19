@@ -86,8 +86,8 @@ const hoisted = vi.hoisted(() => {
   return { AllWindowsEventHandlerBase, capturedCallbacks };
 });
 
-vi.mock('obsidian-dev-utils/obsidian/components/all-windows-event-handler', () => ({
-  AllWindowsEventHandler: hoisted.AllWindowsEventHandlerBase
+vi.mock('obsidian-dev-utils/obsidian/components/all-windows-event-component', () => ({
+  AllWindowsEventComponent: hoisted.AllWindowsEventHandlerBase
 }));
 
 // eslint-disable-next-line import-x/first, import-x/imports-first -- vi.mock must precede imports.
