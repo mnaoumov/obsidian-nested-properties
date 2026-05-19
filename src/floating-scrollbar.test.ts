@@ -91,7 +91,7 @@ vi.mock('obsidian-dev-utils/obsidian/components/all-windows-event-handler', () =
 }));
 
 // eslint-disable-next-line import-x/first, import-x/imports-first -- vi.mock must precede imports.
-import { FloatingScrollbar } from './floating-scrollbar.ts';
+import { FloatingScrollbarComponent } from './floating-scrollbar.ts';
 
 function createMockElement(overrides?: Partial<MockDomElement>): MockDomElement {
   const el: MockDomElement = {
@@ -137,7 +137,7 @@ function createMockEvent(overrides?: Record<string, unknown>): Record<string, un
 }
 
 describe('FloatingScrollbar', () => {
-  let scrollbar: FloatingScrollbar;
+  let scrollbar: FloatingScrollbarComponent;
   let mockTrack: MockDomElement;
   let mockThumb: MockDomElement;
   let mockDocument: Record<string, unknown>;
@@ -180,7 +180,7 @@ describe('FloatingScrollbar', () => {
     vi.stubGlobal('activeDocument', mockDocument);
     vi.stubGlobal('activeWindow', { innerHeight: 800 });
 
-    scrollbar = new FloatingScrollbar({} as never);
+    scrollbar = new FloatingScrollbarComponent({} as never);
 
     hoisted.capturedCallbacks.docKeydown = null;
     hoisted.capturedCallbacks.docMousemove = null;

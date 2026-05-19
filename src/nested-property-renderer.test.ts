@@ -13,7 +13,7 @@ import {
   vi
 } from 'vitest';
 
-import { NestedPropertyRenderer } from './nested-property-renderer.ts';
+import { NestedPropertyRendererComponent } from './nested-property-renderer.ts';
 
 interface MockClassList {
   add: MockFn;
@@ -296,7 +296,7 @@ function createMockEl(overrides?: Partial<MockDomElement>): MockDomElement {
   return el;
 }
 
-function testAccess(r: NestedPropertyRenderer): RendererTestAccess {
+function testAccess(r: NestedPropertyRendererComponent): RendererTestAccess {
   return castTo<RendererTestAccess>(r);
 }
 
@@ -356,7 +356,7 @@ const unknownWidget: PropertyWidget = {
 };
 
 describe('NestedPropertyRenderer', () => {
-  let renderer: NestedPropertyRenderer;
+  let renderer: NestedPropertyRendererComponent;
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -403,7 +403,7 @@ describe('NestedPropertyRenderer', () => {
     hoisted.registerPatchMock.mockClear();
     hoisted.changeTypeChangeModalResult(true);
 
-    renderer = new NestedPropertyRenderer(mockApp as never);
+    renderer = new NestedPropertyRendererComponent(mockApp as never);
   });
 
   afterEach(() => {

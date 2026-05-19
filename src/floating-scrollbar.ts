@@ -11,7 +11,7 @@ const SCROLLBAR_HIT_ZONE_PX = 16;
 const ROOT_PROPERTY_SELECTOR =
   '.metadata-property:not(.nested-properties-container .metadata-property):has(> .metadata-property-value > .nested-properties-container):not(.is-collapsed)';
 
-export class FloatingScrollbar extends Component {
+export class FloatingScrollbarComponent extends Component {
   private activeEl: HTMLElement | null = null;
   private thumb: HTMLDivElement | null = null;
   private track: HTMLDivElement | null = null;
