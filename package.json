@@ -1,6 +1,6 @@
 {
   "name": "nested-properties",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "Allows to view/edit nested frontmatter properties.",
   "keywords": [],
   "homepage": "https://github.com/mnaoumov/obsidian-nested-properties#readme",
