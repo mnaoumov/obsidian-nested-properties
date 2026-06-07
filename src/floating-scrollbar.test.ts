@@ -1,3 +1,4 @@
+import { castTo } from 'obsidian-dev-utils/object-utils';
 import {
   afterEach,
   beforeEach,
@@ -141,7 +142,7 @@ describe('FloatingScrollbar', () => {
   let mockTrack: MockDomElement;
   let mockThumb: MockDomElement;
   let mockDocument: Record<string, unknown>;
-  let documentEventListeners: Map<string, ((...args: never[]) => void)[]>;
+  let documentEventListeners: Map<string, ((...args: unknown[]) => void)[]>;
 
   beforeEach(() => {
     vi.stubGlobal('HTMLElement', MockHTMLElementClass);
@@ -158,7 +159,7 @@ describe('FloatingScrollbar', () => {
     documentEventListeners = new Map();
     mockDocument = {
       activeElement: null,
-      addEventListener: vi.fn((event: string, handler: (...args: never[]) => void) => {
+      addEventListener: vi.fn((event: string, handler: (...args: unknown[]) => void) => {
         if (!documentEventListeners.has(event)) {
           documentEventListeners.set(event, []);
         }
@@ -167,7 +168,7 @@ describe('FloatingScrollbar', () => {
       body: { appendChild: vi.fn() },
       querySelector: vi.fn(() => null),
       querySelectorAll: vi.fn(() => []),
-      removeEventListener: vi.fn((event: string, handler: (...args: never[]) => void) => {
+      removeEventListener: vi.fn((event: string, handler: (...args: unknown[]) => void) => {
         const handlers = documentEventListeners.get(event);
         if (handlers) {
           const idx = handlers.indexOf(handler);
@@ -180,7 +181,7 @@ describe('FloatingScrollbar', () => {
     vi.stubGlobal('activeDocument', mockDocument);
     vi.stubGlobal('activeWindow', { innerHeight: 800 });
 
-    scrollbar = new FloatingScrollbarComponent({} as never);
+    scrollbar = new FloatingScrollbarComponent(castTo({}));
 
     hoisted.capturedCallbacks.docKeydown = null;
     hoisted.capturedCallbacks.docMousemove = null;
@@ -659,7 +660,7 @@ describe('FloatingScrollbar', () => {
       const mousemoveHandlers = documentEventListeners.get('mousemove');
       expect(mousemoveHandlers).toBeDefined();
       const moveHandler = mousemoveHandlers?.at(0);
-      moveHandler?.({ clientX: 150 } as never);
+      moveHandler?.({ clientX: 150 });
 
       expect(activeEl.scrollLeft).toBe(75);
     });
@@ -677,7 +678,7 @@ describe('FloatingScrollbar', () => {
       const mouseupHandlers = documentEventListeners.get('mouseup');
       expect(mouseupHandlers).toBeDefined();
       const upHandler = mouseupHandlers?.at(0);
-      upHandler?.({} as never);
+      upHandler?.({});
 
       expect(mockDocument['removeEventListener']).toHaveBeenCalledWith('mousemove', expect.anything());
       expect(mockDocument['removeEventListener']).toHaveBeenCalledWith('mouseup', expect.anything());

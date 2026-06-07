@@ -2,6 +2,7 @@ import type {
   PropertyRenderContext,
   PropertyWidget
 } from '@obsidian-typings/obsidian-public-latest';
+import type { App } from 'obsidian';
 
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import {
@@ -333,7 +334,7 @@ interface RenderWidgetResult {
 
 function createMockCtx(overrides?: Partial<PropertyRenderContext>): PropertyRenderContext {
   return {
-    app: mockApp as never,
+    app: castTo<App>(mockApp),
     blur: vi.fn(),
     key: 'testKey',
     onChange: vi.fn(),
@@ -351,7 +352,7 @@ function getWidget(name: string): PropertyWidget {
 }
 
 function renderWidget(name: string, el: MockDomElement, value: unknown, ctx: PropertyRenderContext): RenderWidgetResult {
-  return getWidget(name).render(el as never, value, ctx);
+  return getWidget(name).render(castTo<HTMLElement>(el), value, ctx);
 }
 
 const multitextWidget: PropertyWidget = {
@@ -426,7 +427,7 @@ describe('NestedPropertyRenderer', () => {
     hoisted.registerMethodPatchMock.mockClear();
     hoisted.changeTypeChangeModalResult(true);
 
-    renderer = new NestedPropertyRendererComponent(mockApp as never);
+    renderer = new NestedPropertyRendererComponent(castTo<App>(mockApp));
   });
 
   afterEach(() => {
@@ -626,7 +627,7 @@ describe('NestedPropertyRenderer', () => {
       el.closest.mockReturnValue(propertyEl);
 
       const ctx = createMockCtx();
-      unknownWidget.render(el as never, ['a', 'b'], ctx);
+      unknownWidget.render(castTo<HTMLElement>(el), ['a', 'b'], ctx);
 
       // Check that setIcon was called with the icon element and correct icon name
       const calls = hoisted.setIconMock.mock.calls as unknown[][];
@@ -639,7 +640,7 @@ describe('NestedPropertyRenderer', () => {
 
       const el = createMockEl();
       const ctx = createMockCtx();
-      const result = unknownWidget.render(el as never, [1, { a: 2 }], ctx);
+      const result = unknownWidget.render(castTo<HTMLElement>(el), [1, { a: 2 }], ctx);
       expect(result).toBeDefined();
     });
 
@@ -648,7 +649,7 @@ describe('NestedPropertyRenderer', () => {
 
       const el = createMockEl();
       const ctx = createMockCtx();
-      const result = unknownWidget.render(el as never, { key: 'val' }, ctx);
+      const result = unknownWidget.render(castTo<HTMLElement>(el), { key: 'val' }, ctx);
       expect(result).toBeDefined();
     });
 
@@ -659,7 +660,7 @@ describe('NestedPropertyRenderer', () => {
 
       const el = createMockEl();
       const ctx = createMockCtx();
-      unknownWidget.render(el as never, 'primitive', ctx);
+      unknownWidget.render(castTo<HTMLElement>(el), 'primitive', ctx);
 
       unknownWidget.render = origRender;
     });
@@ -672,7 +673,7 @@ describe('NestedPropertyRenderer', () => {
       el.closest.mockReturnValue(propertyEl);
 
       const ctx = createMockCtx();
-      unknownWidget.render(el as never, ['a', 'b'], ctx);
+      unknownWidget.render(castTo<HTMLElement>(el), ['a', 'b'], ctx);
     });
 
     it('should handle missing property element for simple arrays', () => {
@@ -682,7 +683,7 @@ describe('NestedPropertyRenderer', () => {
       el.closest.mockReturnValue(null);
 
       const ctx = createMockCtx();
-      unknownWidget.render(el as never, ['a', 'b'], ctx);
+      unknownWidget.render(castTo<HTMLElement>(el), ['a', 'b'], ctx);
     });
   });
 
@@ -1215,7 +1216,7 @@ describe('NestedPropertyRenderer', () => {
         icon: 'lucide-reserved',
         name: (): string => 'Reserved',
         render: vi.fn(() => ({ focus: vi.fn(), type: 'reserved' })),
-        reservedKeys: { contains: () => false, length: 0 } as never,
+        reservedKeys: [],
         type: 'reserved',
         validate: vi.fn(() => true)
       };
