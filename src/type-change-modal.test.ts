@@ -1,3 +1,6 @@
+import type { App } from 'obsidian';
+
+import { castTo } from 'obsidian-dev-utils/object-utils';
 import {
   beforeEach,
   describe,
@@ -101,7 +104,7 @@ function getTitleEl(modal: TypeChangeModal): MockElement {
 
 describe('TypeChangeModal', () => {
   let modal: TypeChangeModal;
-  const mockApp = {} as never;
+  const mockApp = castTo<App>({});
 
   beforeEach(() => {
     modal = new TypeChangeModal(mockApp, 'Object');
