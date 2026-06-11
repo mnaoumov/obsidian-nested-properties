@@ -503,6 +503,7 @@ export class NestedPropertyRendererComponent extends Component {
         .setIcon('lucide-scissors')
         .setSection('action')
         .onClick(convertAsyncToSync(async () => {
+          // eslint-disable-next-line n/no-unsupported-features/node-builtins -- navigator.clipboard is the Web Clipboard API, available in Obsidian's Electron renderer; the rule incorrectly flags it as a Node experimental builtin.
           await navigator.clipboard.writeText(JSON.stringify({ [label]: value }));
           onDelete();
         }));
@@ -512,6 +513,7 @@ export class NestedPropertyRendererComponent extends Component {
         .setIcon('lucide-copy')
         .setSection('action')
         .onClick(convertAsyncToSync(async () => {
+          // eslint-disable-next-line n/no-unsupported-features/node-builtins -- navigator.clipboard is the Web Clipboard API, available in Obsidian's Electron renderer; the rule incorrectly flags it as a Node experimental builtin.
           await navigator.clipboard.writeText(JSON.stringify({ [label]: value }));
         }));
     });
@@ -521,6 +523,7 @@ export class NestedPropertyRendererComponent extends Component {
         .setSection('action')
         .onClick(convertAsyncToSync(async () => {
           try {
+            // eslint-disable-next-line n/no-unsupported-features/node-builtins -- navigator.clipboard is the Web Clipboard API, available in Obsidian's Electron renderer; the rule incorrectly flags it as a Node experimental builtin.
             const text = await navigator.clipboard.readText();
             const parsed = JSON.parse(text);
             if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
