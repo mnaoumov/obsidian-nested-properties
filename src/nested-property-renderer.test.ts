@@ -1,6 +1,7 @@
 import type {
   PropertyRenderContext,
-  PropertyWidget
+  PropertyWidget,
+  TypeInfo
 } from '@obsidian-typings/obsidian-public-latest';
 import type { App } from 'obsidian';
 
@@ -54,16 +55,24 @@ interface MockDomElement {
 
 type MockFn = ReturnType<typeof vi.fn>;
 
+// The only allowed thin stubs are kept here. MockHTMLElementBase / MockHTMLInputElementBase back the
+// Hand-rolled DOM elements (createMockEl) so instanceof HTMLElement / HTMLInputElement resolve.
+// MarkdownViewBase supplies the metadataEditor surface the test-mocks MarkdownView lacks. The Menu /
+// MenuItem capture infrastructure stands in for the test-mocks Menu, which does not implement
+// AddSections, and MenuItem, which exposes no dom — both used by the renderer. These are all Obsidian
+// API surfaces, not dev-utils classes. The dev-utils classes/functions (MonkeyAroundComponent,
+// ConvertAsyncToSync, ensureNonNullable, castTo / extractDefaultExportInterop) are NOT mocked — the
+// Renderer drives the REAL implementations.
 const hoisted = vi.hoisted(() => {
   class MockHTMLElementBase {
     public readonly isMockElement = true;
   }
   class MockHTMLInputElementBase extends MockHTMLElementBase {}
 
-  class FloatingScrollbarBase {
-    public update = vi.fn();
-  }
-
+  // The test-mocks MarkdownView exposes no metadataEditor; this thin Obsidian-API stub provides the
+  // Serialize / synchronize surface the renderer's reloadAllProperties touches. The renderer reads
+  // MarkdownView from obsidian (overridden to this class below), so leaf.view instanceof MarkdownView
+  // Resolves against the same constructor.
   class MarkdownViewBase {
     public metadataEditor = {
       serialize: vi.fn(() => ({ key: 'val' })),
@@ -143,47 +152,10 @@ const hoisted = vi.hoisted(() => {
 
   const setIconMock = vi.fn();
 
-  class FloatingScrollbarMock extends FloatingScrollbarBase {}
-
   let typeChangeModalWaitResult = true;
   class TypeChangeModalMock {
     public open = vi.fn();
     public waitForResult = vi.fn(() => Promise.resolve(typeChangeModalWaitResult));
-  }
-
-  type GenericFn = (...args: unknown[]) => unknown;
-
-  interface MockPatchHandlerParams {
-    fallback(): unknown;
-    readonly originalArgs: unknown[];
-    readonly originalMethod: GenericFn;
-    readonly originalMethodBound: GenericFn;
-    readonly originalThis: unknown;
-  }
-
-  interface MockRegisterMethodPatchParams {
-    readonly methodName: string;
-    readonly obj: Record<string, GenericFn>;
-    patchHandler(params: MockPatchHandlerParams): unknown;
-  }
-
-  const registerMethodPatchMock = vi.fn(
-    ({ methodName, obj, patchHandler }: MockRegisterMethodPatchParams): void => {
-      const original = obj[methodName] ?? vi.fn();
-      obj[methodName] = (...args: unknown[]): unknown => {
-        return patchHandler({
-          fallback: (): unknown => original.apply(obj, args),
-          originalArgs: args,
-          originalMethod: original,
-          originalMethodBound: original.bind(obj),
-          originalThis: obj
-        });
-      };
-    }
-  );
-
-  class MonkeyAroundComponentBase {
-    public registerMethodPatch = registerMethodPatchMock;
   }
 
   return {
@@ -191,7 +163,6 @@ const hoisted = vi.hoisted(() => {
       typeChangeModalWaitResult = val;
     },
     createMenuItem,
-    FloatingScrollbarMock,
     MarkdownViewBase,
     MenuBase,
     menuItems,
@@ -203,14 +174,17 @@ const hoisted = vi.hoisted(() => {
     },
     MockHTMLElementBase,
     MockHTMLInputElementBase,
-    MonkeyAroundComponentBase,
-    registerMethodPatchMock,
     setIconMock,
     submenuItems,
     TypeChangeModalMock
   };
 });
 
+// Stub only Obsidian-API surfaces the test-mocks under-implement for this renderer. setIcon is a no-op
+// In the test-mock for unregistered icons, so it is spied to keep the icon-name assertions observable.
+// Menu / MarkdownView are stubbed per the hoisted comment above, and moment is the validity probe used
+// By the value-conversion path. Everything else (Component, DOM helpers, etc.) comes from the real
+// Test-mocks obsidian.
 vi.mock('obsidian', async (importOriginal) => ({
   ...await importOriginal<typeof import('obsidian')>(),
   MarkdownView: hoisted.MarkdownViewBase,
@@ -221,36 +195,37 @@ vi.mock('obsidian', async (importOriginal) => ({
   setIcon: hoisted.setIconMock
 }));
 
-vi.mock('obsidian-dev-utils/async', () => ({
-  convertAsyncToSync: <T extends (...args: unknown[]) => unknown>(fn: T): T => fn
-}));
+interface ObsidianComponentModule {
+  Component: new () => UpdatableComponent;
+}
 
-vi.mock('obsidian-dev-utils/obsidian/components/monkey-around-component', () => ({
-  MonkeyAroundComponent: hoisted.MonkeyAroundComponentBase
-}));
+interface UpdatableComponent {
+  update(): void;
+}
 
-vi.mock('obsidian-dev-utils/type-guards', () => ({
-  ensureNonNullable: <T>(val: T): T => val
-}));
-
-vi.mock('./floating-scrollbar.ts', () => ({
-  FloatingScrollbarComponent: hoisted.FloatingScrollbarMock
-}));
+vi.mock('./floating-scrollbar.ts', async () => {
+  const { Component } = await vi.importActual<ObsidianComponentModule>('obsidian');
+  // A loadable stub: FloatingScrollbarComponent is passed to addChild, which eager-loads it, so the
+  // Stub must return a real Component. A non-arrow function is required for a new-invoked mock. The
+  // Renderer calls .update() on the stored instance, so attach a no-op update to the real Component
+  // Instance (the test-mocks Component is a strict proxy that throws on unknown access).
+  // eslint-disable-next-line prefer-arrow-callback -- A new-invoked mock must return a fresh real Component.
+  const FloatingScrollbarComponent = vi.fn(function floatingScrollbarStub() {
+    const component = new Component();
+    component.update = vi.fn();
+    return component;
+  });
+  return { FloatingScrollbarComponent };
+});
 
 vi.mock('./type-change-modal.ts', () => ({
   TypeChangeModal: hoisted.TypeChangeModalMock
 }));
 
-vi.mock('obsidian-dev-utils/object-utils', () => ({
-  castTo: (v: unknown): unknown => v,
-  extractDefaultExportInterop: <T>(m: T): T => m
-}));
+// eslint-disable-next-line import-x/first, import-x/imports-first -- vi.mock must precede imports.
+import { FloatingScrollbarComponent } from './floating-scrollbar.ts';
 
-type GetTypeInfoFn = (p: string, v: unknown) => GetTypeInfoResult;
-
-interface GetTypeInfoResult {
-  readonly inferred: PropertyWidget;
-}
+type GetTypeInfoFn = (p: string, v: unknown) => TypeInfo;
 
 interface MockApp {
   metadataTypeManager: MockMetadataTypeManager;
@@ -270,6 +245,7 @@ interface MockWorkspace {
 interface RendererTestAccess {
   cleanups__: (() => unknown)[];
   expandedPaths: Set<string>;
+  loaded__: boolean;
   pendingFocusKey: null | string;
   widgetTypeOverrides: Map<string, string>;
 }
@@ -424,47 +400,73 @@ describe('NestedPropertyRenderer', () => {
     hoisted.submenuItems.length = 0;
     hoisted.menuOnHideCallback.set(null);
     hoisted.setIconMock.mockClear();
-    hoisted.registerMethodPatchMock.mockClear();
     hoisted.changeTypeChangeModalResult(true);
+    vi.mocked(FloatingScrollbarComponent).mockClear();
 
     renderer = new NestedPropertyRendererComponent(castTo<App>(mockApp));
   });
 
   afterEach(() => {
+    // Unload the renderer so the REAL `MonkeyAroundComponent` uninstalls its prototype/method patches
+    // (and the registered cleanup deletes the widgets) — otherwise the real patches leak across tests.
+    if (testAccess(renderer).loaded__) {
+      renderer.unload();
+    }
     vi.useRealTimers();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
+  // Drives the REAL component lifecycle: load() runs onload(), eager-loads the real MonkeyAroundComponent
+  // Plus the stubbed FloatingScrollbarComponent children, and applies the three real method patches to
+  // The mock metadataTypeManager, the multitext widget, and the unknown widget.
+  function loadRenderer(): void {
+    renderer.load();
+  }
+
   describe('onload', () => {
     it('should register mixedListWidget and objectWidget on metadataTypeManager', () => {
-      renderer.onload();
+      loadRenderer();
 
       expect(mockApp.metadataTypeManager.registeredTypeWidgets['list']).toBeDefined();
       expect(mockApp.metadataTypeManager.registeredTypeWidgets['object']).toBeDefined();
     });
 
     it('should register patches for listWidget.validate, getTypeInfo, and unknownWidget.render', () => {
-      renderer.onload();
+      loadRenderer();
 
-      expect(hoisted.registerMethodPatchMock).toHaveBeenCalledTimes(3);
+      // Assert the three real patches were applied by invoking the really-patched objects:
+      //  - listWidget.validate now also returns true for simple arrays.
+      expect(multitextWidget.validate([1, 2])).toBe(true);
+      //  - getTypeInfo now infers the object widget for plain objects when the original returns unknown.
+      getTypeInfoOriginal.mockImplementation(() => ({
+        expected: unknownWidget,
+        inferred: { ...unknownWidget, type: 'unknown' }
+      }));
+      const typeInfo = (mockApp.metadataTypeManager.getTypeInfo as GetTypeInfoFn)('prop', { a: 1 });
+      expect(typeInfo.inferred.type).toBe('object');
+      //  - unknownWidget.render now delegates to the object widget for objects.
+      const el = createMockEl();
+      const result = unknownWidget.render(castTo<HTMLElement>(el), { a: 1 }, createMockCtx());
+      expect(result.type).toBe('object');
     });
 
     it('should create FloatingScrollbar as child', () => {
-      renderer.onload();
+      loadRenderer();
 
-      expect(hoisted.registerMethodPatchMock).toHaveBeenCalled();
+      // The real lifecycle eager-loads the (loadable) FloatingScrollbar stub as a child.
+      expect(vi.mocked(FloatingScrollbarComponent)).toHaveBeenCalledTimes(1);
     });
 
     it('should call reloadAllProperties on load', () => {
       const spy = vi.spyOn(renderer, 'reloadAllProperties');
-      renderer.onload();
+      loadRenderer();
 
       expect(spy).toHaveBeenCalled();
     });
 
     it('should register cleanup callback that deletes widgets and reloads', () => {
-      renderer.onload();
+      loadRenderer();
 
       const mockRemoveEl = createMockEl();
       vi.spyOn(activeDocument, 'querySelectorAll').mockImplementation(() => asNodeList([mockRemoveEl]));
@@ -479,7 +481,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should validate mixedListWidget correctly', () => {
-      renderer.onload();
+      loadRenderer();
 
       const w = getWidget('list');
       expect(w.validate([1, 2])).toBe(true);
@@ -488,7 +490,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should validate objectWidget correctly', () => {
-      renderer.onload();
+      loadRenderer();
 
       const w = getWidget('object');
       expect(w.validate({ a: 1 })).toBe(true);
@@ -498,12 +500,12 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should name mixedListWidget as Mixed list', () => {
-      renderer.onload();
+      loadRenderer();
       expect(getWidget('list').name()).toBe('Mixed list');
     });
 
     it('should name objectWidget as Object', () => {
-      renderer.onload();
+      loadRenderer();
       expect(getWidget('object').name()).toBe('Object');
     });
   });
@@ -531,7 +533,7 @@ describe('NestedPropertyRenderer', () => {
 
   describe('validateListWidget', () => {
     it('should return true when next returns true', () => {
-      renderer.onload();
+      loadRenderer();
 
       const result = multitextWidget.validate(['a', 'b']);
       expect(result).toBe(true);
@@ -541,7 +543,7 @@ describe('NestedPropertyRenderer', () => {
       // Save original and override
       const origValidate = multitextWidget.validate;
       multitextWidget.validate = vi.fn(() => false);
-      renderer.onload();
+      loadRenderer();
 
       const result = multitextWidget.validate(['a', 'b']);
       expect(result).toBe(true);
@@ -552,7 +554,7 @@ describe('NestedPropertyRenderer', () => {
     it('should return false when next returns false and not simple array', () => {
       const origValidate = multitextWidget.validate;
       multitextWidget.validate = vi.fn(() => false);
-      renderer.onload();
+      loadRenderer();
 
       const result = multitextWidget.validate({ a: 1 });
       expect(result).toBe(false);
@@ -563,7 +565,7 @@ describe('NestedPropertyRenderer', () => {
 
   describe('getTypeInfo', () => {
     it('should return as-is when inferred type is not unknown', () => {
-      renderer.onload();
+      loadRenderer();
 
       const result = (mockApp.metadataTypeManager.getTypeInfo as GetTypeInfoFn)('prop', 'hello');
       expect(result.inferred).toBe(textWidget);
@@ -574,7 +576,7 @@ describe('NestedPropertyRenderer', () => {
         expected: unknownWidget,
         inferred: unknownWidget
       }));
-      renderer.onload();
+      loadRenderer();
 
       const result = (mockApp.metadataTypeManager.getTypeInfo as GetTypeInfoFn)('prop', 'simple-string');
       expect(result.inferred.type).toBe('unknown');
@@ -585,7 +587,7 @@ describe('NestedPropertyRenderer', () => {
         expected: unknownWidget,
         inferred: { ...unknownWidget, type: 'unknown' }
       }));
-      renderer.onload();
+      loadRenderer();
 
       const result = (mockApp.metadataTypeManager.getTypeInfo as GetTypeInfoFn)('prop', ['a', 'b']);
       expect(result.inferred.type).toBe('multitext');
@@ -596,7 +598,7 @@ describe('NestedPropertyRenderer', () => {
         expected: unknownWidget,
         inferred: { ...unknownWidget, type: 'unknown' }
       }));
-      renderer.onload();
+      loadRenderer();
 
       const result = (mockApp.metadataTypeManager.getTypeInfo as GetTypeInfoFn)('prop', [1, { a: 2 }]);
       expect(result.inferred.type).toBe('list');
@@ -607,7 +609,7 @@ describe('NestedPropertyRenderer', () => {
         expected: unknownWidget,
         inferred: { ...unknownWidget, type: 'unknown' }
       }));
-      renderer.onload();
+      loadRenderer();
 
       const result = (mockApp.metadataTypeManager.getTypeInfo as GetTypeInfoFn)('prop', { a: 1 });
       expect(result.inferred.type).toBe('object');
@@ -616,7 +618,7 @@ describe('NestedPropertyRenderer', () => {
 
   describe('renderUnknownWidget', () => {
     it('should render with listWidget for simple arrays and update icon', () => {
-      renderer.onload();
+      loadRenderer();
       hoisted.setIconMock.mockClear();
 
       const el = createMockEl();
@@ -636,7 +638,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should render with mixedListWidget for mixed arrays', () => {
-      renderer.onload();
+      loadRenderer();
 
       const el = createMockEl();
       const ctx = createMockCtx();
@@ -645,7 +647,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should render with objectWidget for objects', () => {
-      renderer.onload();
+      loadRenderer();
 
       const el = createMockEl();
       const ctx = createMockCtx();
@@ -656,7 +658,7 @@ describe('NestedPropertyRenderer', () => {
     it('should call next for primitive values', () => {
       const origRender = unknownWidget.render;
       unknownWidget.render = vi.fn(() => ({ focus: vi.fn(), type: 'unknown' }));
-      renderer.onload();
+      loadRenderer();
 
       const el = createMockEl();
       const ctx = createMockCtx();
@@ -666,7 +668,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle missing icon element for simple arrays', () => {
-      renderer.onload();
+      loadRenderer();
 
       const el = createMockEl();
       const propertyEl = createMockEl({ querySelector: vi.fn(() => null) });
@@ -677,7 +679,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle missing property element for simple arrays', () => {
-      renderer.onload();
+      loadRenderer();
 
       const el = createMockEl();
       el.closest.mockReturnValue(null);
@@ -689,7 +691,7 @@ describe('NestedPropertyRenderer', () => {
 
   describe('renderComplexWidget', () => {
     it('should normalize non-array value to empty array for list widget type', () => {
-      renderer.onload();
+      loadRenderer();
 
       const el = createMockEl();
       const ctx = createMockCtx();
@@ -698,7 +700,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should normalize array value to empty object for object widget type', () => {
-      renderer.onload();
+      loadRenderer();
 
       const el = createMockEl();
       const ctx = createMockCtx();
@@ -707,7 +709,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should normalize non-complex value to empty object for object widget type', () => {
-      renderer.onload();
+      loadRenderer();
 
       const el = createMockEl();
       const ctx = createMockCtx();
@@ -716,7 +718,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should set up collapsible UI with collapse button', () => {
-      renderer.onload();
+      loadRenderer();
 
       const collapseBtn = createMockEl();
       const keyEl = createMockEl({ querySelector: vi.fn(() => null) });
@@ -745,7 +747,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle collapse button click toggling', () => {
-      renderer.onload();
+      loadRenderer();
 
       const collapseBtn = createMockEl();
       const keyEl = createMockEl({ querySelector: vi.fn(() => null) });
@@ -779,7 +781,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should not create collapse button if one already exists', () => {
-      renderer.onload();
+      loadRenderer();
 
       const existingBtn = createMockEl();
       const keyEl = createMockEl({ querySelector: vi.fn(() => existingBtn) });
@@ -805,7 +807,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should return focus/type component', () => {
-      renderer.onload();
+      loadRenderer();
 
       const el = createMockEl();
       const ctx = createMockCtx();
@@ -817,7 +819,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should update icon for list widget type', () => {
-      renderer.onload();
+      loadRenderer();
 
       const existingIcon = createMockEl();
       const propertyEl = createMockEl({
@@ -839,7 +841,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should update icon for object widget type', () => {
-      renderer.onload();
+      loadRenderer();
 
       const existingIcon = createMockEl();
       const propertyEl = createMockEl({
@@ -861,7 +863,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle propertyEl being null', () => {
-      renderer.onload();
+      loadRenderer();
 
       const el = createMockEl();
       el.closest.mockReturnValue(null);
@@ -872,7 +874,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle missing keyEl', () => {
-      renderer.onload();
+      loadRenderer();
 
       const propertyEl = createMockEl({
         querySelector: vi.fn((selector: string) => {
@@ -894,7 +896,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle missing existingIcon', () => {
-      renderer.onload();
+      loadRenderer();
 
       const keyEl = createMockEl({ querySelector: vi.fn(() => null) });
       const propertyEl = createMockEl({
@@ -920,7 +922,7 @@ describe('NestedPropertyRenderer', () => {
 
   describe('renderEntry', () => {
     it('should render complex value with collapse UI', () => {
-      renderer.onload();
+      loadRenderer();
 
       const el = createMockEl();
       const ctx = createMockCtx();
@@ -929,7 +931,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should render simple value with widget', () => {
-      renderer.onload();
+      loadRenderer();
 
       const el = createMockEl();
       const ctx = createMockCtx();
@@ -938,7 +940,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle contextmenu event on complex entry', () => {
-      renderer.onload();
+      loadRenderer();
 
       const containerEl = createMockEl();
       const propertyDiv = createMockEl();
@@ -955,7 +957,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle contextmenu event on simple entry', () => {
-      renderer.onload();
+      loadRenderer();
 
       const propertyDiv = createMockEl();
       const containerEl = createMockEl();
@@ -974,7 +976,7 @@ describe('NestedPropertyRenderer', () => {
 
   describe('renderArray', () => {
     it('should render array items and add item button', () => {
-      renderer.onload();
+      loadRenderer();
 
       const el = createMockEl();
       const ctx = createMockCtx();
@@ -983,7 +985,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should call onArrayChange when array item value changes', () => {
-      renderer.onload();
+      loadRenderer();
 
       const el = createMockEl();
       const onChange = vi.fn();
@@ -1003,7 +1005,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should call onArrayChange when array item is deleted via menu', () => {
-      renderer.onload();
+      loadRenderer();
 
       const entryPropertyEl = createMockEl();
       const containerEl = createMockEl();
@@ -1034,7 +1036,7 @@ describe('NestedPropertyRenderer', () => {
 
   describe('renderObject', () => {
     it('should render object entries and add property button', () => {
-      renderer.onload();
+      loadRenderer();
 
       const el = createMockEl();
       const ctx = createMockCtx();
@@ -1043,7 +1045,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle object value change', () => {
-      renderer.onload();
+      loadRenderer();
 
       const el = createMockEl();
       const onChange = vi.fn();
@@ -1053,7 +1055,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle object property deletion', () => {
-      renderer.onload();
+      loadRenderer();
 
       const el = createMockEl();
       const onChange = vi.fn();
@@ -1065,7 +1067,7 @@ describe('NestedPropertyRenderer', () => {
 
   describe('showNestedPropertyMenu', () => {
     it('should create menu with type submenu and action items', () => {
-      renderer.onload();
+      loadRenderer();
 
       hoisted.menuItems.length = 0;
       triggerContextMenu();
@@ -1074,7 +1076,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle cut action', async () => {
-      renderer.onload();
+      loadRenderer();
 
       hoisted.menuItems.length = 0;
       triggerContextMenu();
@@ -1088,7 +1090,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle copy action', async () => {
-      renderer.onload();
+      loadRenderer();
 
       hoisted.menuItems.length = 0;
       triggerContextMenu();
@@ -1102,7 +1104,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle paste action with valid JSON object', async () => {
-      renderer.onload();
+      loadRenderer();
 
       vi.spyOn(navigator.clipboard, 'readText').mockResolvedValue('{"key": "pasted_value"}');
       hoisted.menuItems.length = 0;
@@ -1116,7 +1118,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle paste action with invalid JSON', async () => {
-      renderer.onload();
+      loadRenderer();
 
       vi.spyOn(navigator.clipboard, 'readText').mockResolvedValue('not-json');
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -1134,7 +1136,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle paste action with array JSON', async () => {
-      renderer.onload();
+      loadRenderer();
 
       vi.spyOn(navigator.clipboard, 'readText').mockResolvedValue('[1, 2, 3]');
       hoisted.menuItems.length = 0;
@@ -1148,7 +1150,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle paste action with null JSON', async () => {
-      renderer.onload();
+      loadRenderer();
 
       vi.spyOn(navigator.clipboard, 'readText').mockResolvedValue('null');
       hoisted.menuItems.length = 0;
@@ -1162,7 +1164,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle paste action with empty object', async () => {
-      renderer.onload();
+      loadRenderer();
 
       vi.spyOn(navigator.clipboard, 'readText').mockResolvedValue('{}');
       hoisted.menuItems.length = 0;
@@ -1176,7 +1178,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle remove action', () => {
-      renderer.onload();
+      loadRenderer();
 
       hoisted.menuItems.length = 0;
       triggerContextMenu();
@@ -1189,7 +1191,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should debounce menu when opened too quickly', () => {
-      renderer.onload();
+      loadRenderer();
 
       hoisted.menuItems.length = 0;
       triggerContextMenu();
@@ -1210,7 +1212,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle widget with reservedKeys that does not contain label', () => {
-      renderer.onload();
+      loadRenderer();
 
       const reservedWidget: PropertyWidget = {
         icon: 'lucide-reserved',
@@ -1228,7 +1230,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle type submenu with checked state for current widget', () => {
-      renderer.onload();
+      loadRenderer();
 
       hoisted.menuItems.length = 0;
       hoisted.submenuItems.length = 0;
@@ -1242,7 +1244,7 @@ describe('NestedPropertyRenderer', () => {
 
   describe('changeType via menu', () => {
     it('should convert and reload when converted equals value', async () => {
-      renderer.onload();
+      loadRenderer();
 
       hoisted.changeTypeChangeModalResult(true);
       hoisted.menuItems.length = 0;
@@ -1259,7 +1261,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should blur active element when changing type', async () => {
-      renderer.onload();
+      loadRenderer();
 
       const blurMock = vi.fn();
       const mockActiveElement = { blur: blurMock };
@@ -1286,7 +1288,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should not blur when active element is not HTMLElement', async () => {
-      renderer.onload();
+      loadRenderer();
 
       vi.stubGlobal('activeDocument', {
         activeElement: 'not-html-element',
@@ -1308,7 +1310,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should show modal and cancel for lossy conversion', async () => {
-      renderer.onload();
+      loadRenderer();
 
       hoisted.changeTypeChangeModalResult(false);
       hoisted.menuItems.length = 0;
@@ -1326,7 +1328,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should call onValueChange when converted differs from value', async () => {
-      renderer.onload();
+      loadRenderer();
 
       hoisted.changeTypeChangeModalResult(true);
       hoisted.menuItems.length = 0;
@@ -1348,7 +1350,7 @@ describe('NestedPropertyRenderer', () => {
 
   describe('getWidget', () => {
     it('should fall through when override widget not found in registry', () => {
-      renderer.onload();
+      loadRenderer();
 
       // Path format: rootPath.label = "sourcePath:key.entryKey"
       testAccess(renderer).widgetTypeOverrides.set('test.md:testKey.test', 'nonexistent');
@@ -1360,7 +1362,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should return widget from getTypeInfo when no override', () => {
-      renderer.onload();
+      loadRenderer();
 
       const el = createMockEl();
       const ctx = createMockCtx();
@@ -1371,7 +1373,7 @@ describe('NestedPropertyRenderer', () => {
 
   describe('renderAddItemButton', () => {
     it('should add empty string to array on click', () => {
-      renderer.onload();
+      loadRenderer();
 
       const addBtn = createMockEl();
       const containerEl = createMockEl();
@@ -1398,7 +1400,7 @@ describe('NestedPropertyRenderer', () => {
 
   describe('renderAddPropertyButton', () => {
     it('should create input on click and handle Enter key', () => {
-      renderer.onload();
+      loadRenderer();
 
       const input = createMockEl();
       input.value = 'newKey';
@@ -1428,7 +1430,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle Tab key with focus pending', () => {
-      renderer.onload();
+      loadRenderer();
 
       const input = createMockEl();
       input.value = 'newTabKey';
@@ -1458,7 +1460,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle Escape key to restore button', () => {
-      renderer.onload();
+      loadRenderer();
 
       const input = createMockEl();
       input.value = 'test';
@@ -1489,7 +1491,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle blur event when connected', () => {
-      renderer.onload();
+      loadRenderer();
 
       const input = createMockEl();
       input.value = 'blurKey';
@@ -1520,7 +1522,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should not call addKey on blur when not connected', () => {
-      renderer.onload();
+      loadRenderer();
 
       const input = createMockEl();
       input.value = 'disconnectedKey';
@@ -1552,7 +1554,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should restore button when key is empty', () => {
-      renderer.onload();
+      loadRenderer();
 
       const input = createMockEl();
       input.value = '   ';
@@ -1583,7 +1585,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should restore button when key already exists in object', () => {
-      renderer.onload();
+      loadRenderer();
 
       const input = createMockEl();
       input.value = 'existing';
@@ -1615,7 +1617,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle input.remove throwing in Enter handler', () => {
-      renderer.onload();
+      loadRenderer();
 
       const input = createMockEl();
       input.value = 'newKey2';
@@ -1650,7 +1652,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should propagate other key events', () => {
-      renderer.onload();
+      loadRenderer();
 
       const input = createMockEl();
       input.value = 'test';
@@ -1683,7 +1685,7 @@ describe('NestedPropertyRenderer', () => {
 
   describe('injectHeaderButtons', () => {
     it('should return early if header actions already exist', () => {
-      renderer.onload();
+      loadRenderer();
 
       const el = createMockEl();
       const containerEl = createMockEl({
@@ -1706,7 +1708,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should return early if no collapsible elements exist', () => {
-      renderer.onload();
+      loadRenderer();
 
       const el = createMockEl();
       const containerEl = createMockEl({
@@ -1732,7 +1734,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should return early if no heading element exists', () => {
-      renderer.onload();
+      loadRenderer();
 
       const el = createMockEl();
       const containerEl = createMockEl({
@@ -1761,7 +1763,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should create toggle button and handle expand all', () => {
-      renderer.onload();
+      loadRenderer();
 
       const toggleButton = createMockEl();
       const headingEl = createMockEl();
@@ -1802,7 +1804,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle collapse all when not all collapsed', () => {
-      renderer.onload();
+      loadRenderer();
 
       const toggleButton = createMockEl();
       const headingEl = createMockEl();
@@ -1843,7 +1845,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle empty collapsibles list for toggle', () => {
-      renderer.onload();
+      loadRenderer();
 
       const toggleButton = createMockEl();
       const headingEl = createMockEl();
@@ -1882,7 +1884,7 @@ describe('NestedPropertyRenderer', () => {
 
   describe('collapseAllIn and expandAllIn', () => {
     it('should handle expandAllIn with elements without data-path attribute', () => {
-      renderer.onload();
+      loadRenderer();
 
       const collapsibleEl = createMockEl();
       collapsibleEl.getAttribute.mockReturnValue(null);
@@ -1927,7 +1929,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle elements without data-path attribute in collapseAllIn', () => {
-      renderer.onload();
+      loadRenderer();
 
       const collapsibleEl = createMockEl();
       collapsibleEl.getAttribute.mockReturnValue(null);
@@ -1970,7 +1972,7 @@ describe('NestedPropertyRenderer', () => {
 
   describe('createSummary', () => {
     it('should create summary with array text for arrays', () => {
-      renderer.onload();
+      loadRenderer();
 
       const el = createMockEl();
       const propertyEl = createMockEl({ querySelector: vi.fn(() => null) });
@@ -1983,7 +1985,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should create summary with object text for objects', () => {
-      renderer.onload();
+      loadRenderer();
 
       const el = createMockEl();
       const propertyEl = createMockEl({ querySelector: vi.fn(() => null) });
@@ -1996,7 +1998,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should expand on summary click', () => {
-      renderer.onload();
+      loadRenderer();
 
       const summary = createMockEl();
       const el = createMockEl();
@@ -2016,7 +2018,7 @@ describe('NestedPropertyRenderer', () => {
 
   describe('updateToggleButton', () => {
     it('should set expand icon when all collapsed', () => {
-      renderer.onload();
+      loadRenderer();
 
       const toggleButton = createMockEl();
       const headingEl = createMockEl();
@@ -2055,7 +2057,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should set collapse icon when not all collapsed', () => {
-      renderer.onload();
+      loadRenderer();
 
       const toggleButton = createMockEl();
       const headingEl = createMockEl();
@@ -2096,7 +2098,7 @@ describe('NestedPropertyRenderer', () => {
 
   describe('renderComplexWidget setTimeout', () => {
     it('should handle null metadataContainerEl in setTimeout', () => {
-      renderer.onload();
+      loadRenderer();
 
       const containerEl = createMockEl({ closest: vi.fn(() => null) });
       const el = createMockEl();
@@ -2108,7 +2110,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle metadataContainerEl that is not HTMLElement', () => {
-      renderer.onload();
+      loadRenderer();
 
       const containerEl = createMockEl({ closest: vi.fn(() => 'not-html-element') });
       const el = createMockEl();
@@ -2120,7 +2122,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle pending focus key with matching input', () => {
-      renderer.onload();
+      loadRenderer();
 
       const focusTarget = createMockEl();
       const valueEl = createMockEl({ querySelector: vi.fn(() => focusTarget) });
@@ -2148,7 +2150,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should click valueEl when no focusable target is found', () => {
-      renderer.onload();
+      loadRenderer();
 
       const valueEl = createMockEl({ querySelector: vi.fn(() => null) });
       const propEl = createMockEl({ querySelector: vi.fn(() => valueEl) });
@@ -2175,7 +2177,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle input that does not match pending key', () => {
-      renderer.onload();
+      loadRenderer();
 
       const input = createMockEl();
       input.value = 'otherKey';
@@ -2197,7 +2199,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle input that is not HTMLInputElement', () => {
-      renderer.onload();
+      loadRenderer();
 
       const input = createMockEl();
       input.instanceOf.mockReturnValue(false);
@@ -2218,7 +2220,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle input with null prop from closest', () => {
-      renderer.onload();
+      loadRenderer();
 
       const input = createMockEl();
       input.value = 'target';
@@ -2241,7 +2243,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should handle prop with no valueEl from querySelector', () => {
-      renderer.onload();
+      loadRenderer();
 
       const propEl = createMockEl({ querySelector: vi.fn(() => null) });
       const input = createMockEl();
@@ -2267,7 +2269,7 @@ describe('NestedPropertyRenderer', () => {
 
   describe('renderEntry with type override', () => {
     it('should treat entry as complex when typeOverride is list', () => {
-      renderer.onload();
+      loadRenderer();
 
       testAccess(renderer).widgetTypeOverrides.set('test.md:testKey.myProp', 'list');
 
@@ -2278,7 +2280,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should treat entry as complex when typeOverride is object', () => {
-      renderer.onload();
+      loadRenderer();
 
       testAccess(renderer).widgetTypeOverrides.set('test.md:testKey.myProp', 'object');
 
@@ -2291,7 +2293,7 @@ describe('NestedPropertyRenderer', () => {
 
   describe('renderEntry nested collapse button', () => {
     it('should toggle collapse state on nested entry collapse button click', () => {
-      renderer.onload();
+      loadRenderer();
 
       const collapseBtn = createMockEl();
       const iconEl = createMockEl();
@@ -2352,7 +2354,7 @@ describe('NestedPropertyRenderer', () => {
 
   describe('renderKeyEl', () => {
     it('should render key element with icon click handler', () => {
-      renderer.onload();
+      loadRenderer();
 
       const el = createMockEl();
       const ctx = createMockCtx();
@@ -2361,7 +2363,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should trigger showNestedPropertyMenu on icon click when onValueChange and onDelete are provided', () => {
-      renderer.onload();
+      loadRenderer();
 
       // Render an object with a simple value entry
       // The renderEntry for simple values calls renderKeyEl with onValueChange and onDelete
@@ -2400,7 +2402,7 @@ describe('NestedPropertyRenderer', () => {
 
   describe('renderEntry complex icon click', () => {
     it('should trigger showNestedPropertyMenu on complex entry icon click', () => {
-      renderer.onload();
+      loadRenderer();
 
       const iconEl = createMockEl();
       const collapseBtn = createMockEl();
@@ -2457,7 +2459,7 @@ describe('NestedPropertyRenderer', () => {
 
   describe('changeType full flow', () => {
     it('should complete changeType and call onValueChange when converted differs', async () => {
-      renderer.onload();
+      loadRenderer();
 
       hoisted.changeTypeChangeModalResult(true);
 
@@ -2539,7 +2541,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should return early when modal is cancelled for lossy conversion', async () => {
-      renderer.onload();
+      loadRenderer();
 
       hoisted.changeTypeChangeModalResult(false);
 
@@ -2611,7 +2613,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should set widget type override and reload when converted equals value', async () => {
-      renderer.onload();
+      loadRenderer();
 
       hoisted.changeTypeChangeModalResult(true);
 
@@ -2685,7 +2687,7 @@ describe('NestedPropertyRenderer', () => {
 
   describe('renderComplexWidget expanded path', () => {
     it('should not add is-collapsed when path is already expanded', () => {
-      renderer.onload();
+      loadRenderer();
 
       // First render to expand the path
       const rootPath = 'test.md:testKey';
@@ -2709,7 +2711,7 @@ describe('NestedPropertyRenderer', () => {
 
   describe('renderEntry expanded nested path', () => {
     it('should not add is-collapsed class when nested path is already expanded', () => {
-      renderer.onload();
+      loadRenderer();
 
       // Pre-expand the path
       const nestedPath = 'test.md:testKey.nested';
@@ -2737,7 +2739,7 @@ describe('NestedPropertyRenderer', () => {
 
   describe('getWidget with existing override', () => {
     it('should return the override widget when it exists in registry', () => {
-      renderer.onload();
+      loadRenderer();
 
       // Set up a valid widget type override that exists in the registry
       testAccess(renderer).widgetTypeOverrides.set('test.md:testKey.myProp', 'text');
