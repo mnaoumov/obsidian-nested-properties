@@ -249,7 +249,7 @@ vi.mock('obsidian-dev-utils/object-utils', () => ({
 type GetTypeInfoFn = (p: string, v: unknown) => GetTypeInfoResult;
 
 interface GetTypeInfoResult {
-  inferred: PropertyWidget;
+  readonly inferred: PropertyWidget;
 }
 
 interface MockApp {
@@ -329,7 +329,7 @@ let mockApp: MockApp;
 
 interface RenderWidgetResult {
   focus(): void;
-  type: string;
+  readonly type: string;
 }
 
 function createMockCtx(overrides?: Partial<PropertyRenderContext>): PropertyRenderContext {

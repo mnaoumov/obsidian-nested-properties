@@ -1,25 +1,9 @@
 import {
   describe,
   expect,
-  it,
-  vi
+  it
 } from 'vitest';
 
-const momentMock = vi.hoisted(() =>
-  vi.fn((inp?: string) => ({
-    isValid: (): boolean => inp !== undefined && !isNaN(Date.parse(inp))
-  }))
-);
-
-vi.mock('obsidian', () => ({
-  moment: momentMock
-}));
-
-vi.mock('obsidian-dev-utils/object-utils', () => ({
-  extractDefaultExportInterop: <T>(m: T): T => m
-}));
-
-// eslint-disable-next-line import-x/first, import-x/imports-first -- vi.mock must precede imports.
 import {
   convertValue,
   isComplexValue,
@@ -188,7 +172,6 @@ describe('convertValue', () => {
     });
 
     it('should return null for invalid date', () => {
-      momentMock.mockReturnValueOnce({ isValid: (): boolean => false });
       expect(convertValue('not-a-date', 'date')).toBeNull();
     });
 

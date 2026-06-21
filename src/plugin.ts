@@ -8,8 +8,7 @@ import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin';
 import { NestedPropertyRendererComponent } from './nested-property-renderer.ts';
 
 export class Plugin extends PluginBase {
-  public constructor(app: App, manifest: PluginManifest) {
-    super(app, manifest);
-    this.addChild(new NestedPropertyRendererComponent(app));
+ protected override onloadImpl(): void {
+    this.addChild(new NestedPropertyRendererComponent(this.app));
   }
 }

@@ -8,8 +8,7 @@ const ARROW_SCROLL_PX = 40;
 const MIN_THUMB_WIDTH_PX = 30;
 const SCROLLBAR_HIT_ZONE_PX = 16;
 
-const ROOT_PROPERTY_SELECTOR =
-  '.metadata-property:not(.nested-properties-container .metadata-property):has(> .metadata-property-value > .nested-properties-container):not(.is-collapsed)';
+const ROOT_PROPERTY_SELECTOR = '.metadata-property:not(.nested-properties-container .metadata-property):has(> .metadata-property-value > .nested-properties-container):not(.is-collapsed)';
 
 export class FloatingScrollbarComponent extends Component {
   private activeEl: HTMLElement | null = null;
