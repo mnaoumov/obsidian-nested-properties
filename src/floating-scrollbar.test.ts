@@ -1,399 +1,325 @@
+import type { App } from 'obsidian';
+
 import { castTo } from 'obsidian-dev-utils/object-utils';
+import { App as AppCls } from 'obsidian-test-mocks/obsidian';
 import {
   afterEach,
   beforeEach,
   describe,
   expect,
-  it,
-  vi
+  it
 } from 'vitest';
 
-interface CapturedCallbacks {
-  docKeydown: ((e: Partial<KeyboardEvent>) => void) | null;
-  docMousemove: ((e: Partial<MouseEvent>) => void) | null;
-  docScroll: (() => void) | null;
-  docWheel: ((e: Partial<WheelEvent>) => void) | null;
-  windowsHandler: (() => void) | null;
-}
-
-interface MockClassList {
-  add: MockFn;
-  remove: MockFn;
-  toggle: MockFn;
-}
-
-interface MockDocumentBody {
-  appendChild: MockFn;
-}
-
-interface MockDomElement {
-  addEventListener: MockFn;
-  appendChild: MockFn;
-  classList: MockClassList;
-  clientWidth: number;
-  closest: MockFn;
-  createDiv: MockFn;
-  getBoundingClientRect: MockFn;
-  isContentEditable: boolean;
-  offsetHeight: number;
-  remove: MockFn;
-  removeEventListener: MockFn;
-  scrollLeft: number;
-  scrollWidth: number;
-  style: MockStyle;
-}
-
-type MockFn = ReturnType<typeof vi.fn>;
-
-interface MockStyle {
-  setProperty: MockFn;
-}
-
-class MockHTMLElementClass {
-  public isContentEditable = false;
-}
-class MockHTMLInputElementClass extends MockHTMLElementClass {}
-class MockHTMLTextAreaElementClass extends MockHTMLElementClass {}
-
-const hoisted = vi.hoisted(() => {
-  type EventHandler = (...args: unknown[]) => void;
-
-  const capturedCallbacks: CapturedCallbacks = {
-    docKeydown: null,
-    docMousemove: null,
-    docScroll: null,
-    docWheel: null,
-    windowsHandler: null
-  };
-
-  class AllWindowsEventHandlerBase {
-    public registerAllDocumentsDomEvent(event: string, handler: EventHandler, _options?: unknown): void {
-      if (event === 'keydown') {
-        capturedCallbacks.docKeydown = handler;
-      } else if (event === 'scroll') {
-        capturedCallbacks.docScroll = handler;
-      } else if (event === 'wheel') {
-        capturedCallbacks.docWheel = handler;
-      } else if (event === 'mousemove') {
-        capturedCallbacks.docMousemove = handler;
-      }
-    }
-
-    public registerAllWindowsHandler(handler: () => void): void {
-      capturedCallbacks.windowsHandler = handler;
-    }
-  }
-
-  return { AllWindowsEventHandlerBase, capturedCallbacks };
-});
-
-vi.mock('obsidian-dev-utils/obsidian/components/all-windows-event-component', () => ({
-  AllWindowsEventComponent: hoisted.AllWindowsEventHandlerBase
-}));
-
-// eslint-disable-next-line import-x/first, import-x/imports-first -- vi.mock must precede imports.
 import { FloatingScrollbarComponent } from './floating-scrollbar.ts';
 
-function createMockElement(overrides?: Partial<MockDomElement>): MockDomElement {
-  const el: MockDomElement = {
-    addEventListener: vi.fn(),
-    appendChild: vi.fn(),
-    classList: {
-      add: vi.fn(),
-      remove: vi.fn(),
-      toggle: vi.fn()
-    },
-    clientWidth: 100,
-    closest: vi.fn(() => null),
-    createDiv: vi.fn(),
-    getBoundingClientRect: vi.fn(() => ({ bottom: 0, height: 0, left: 0, right: 0, top: 0, width: 100 })),
-    isContentEditable: false,
-    offsetHeight: 0,
-    remove: vi.fn(),
-    removeEventListener: vi.fn(),
-    scrollLeft: 0,
-    scrollWidth: 100,
-    style: {
-      setProperty: vi.fn()
-    }
-  };
-  if (overrides) {
-    Object.assign(el, overrides);
-  }
-  return el;
+interface ElementMetrics {
+  clientWidth?: number;
+  rect?: Partial<DOMRect>;
+  scrollLeft?: number;
+  scrollWidth?: number;
 }
 
-function createMockEvent(overrides?: Record<string, unknown>): Record<string, unknown> {
-  return {
-    clientX: 0,
-    clientY: 0,
-    deltaX: 0,
-    deltaY: 0,
-    key: '',
-    preventDefault: vi.fn(),
-    stopPropagation: vi.fn(),
-    target: null,
-    ...overrides
+interface ObsidianDevUtilsStateHolder {
+  obsidianDevUtilsState: Partial<Record<string, unknown>>;
+}
+
+interface ScrollbarInternals {
+  syncThumb(): void;
+}
+
+const VIEWPORT_HEIGHT_PX = 800;
+
+const loadedScrollbars: FloatingScrollbarComponent[] = [];
+
+function applyMetrics(el: HTMLElement, metrics?: ElementMetrics): void {
+  Object.defineProperty(el, 'clientWidth', { configurable: true, value: metrics?.clientWidth ?? DEFAULT_CLIENT_WIDTH });
+  Object.defineProperty(el, 'scrollWidth', { configurable: true, value: metrics?.scrollWidth ?? DEFAULT_SCROLL_WIDTH });
+  el.scrollLeft = metrics?.scrollLeft ?? 0;
+  const rect = metrics?.rect ?? DEFAULT_RECT;
+  el.getBoundingClientRect = (): DOMRect => {
+    return castTo<DOMRect>({
+      bottom: 0,
+      height: 0,
+      left: 0,
+      right: 0,
+      top: 0,
+      width: 0,
+      x: 0,
+      y: 0,
+      ...rect
+    });
   };
 }
+
+function createApp(): App {
+  const appMock = AppCls.createConfigured__();
+  // Seed the shared dev-utils state on the app, mirroring the sibling plugin tests.
+  // The real `AllWindowsEventComponent` added by the component under test reads it via
+  // `getObsidianDevUtilsState`, so seeding lets the real component run instead of a mock.
+  castTo<ObsidianDevUtilsStateHolder>(appMock).obsidianDevUtilsState = {};
+  return appMock.asOriginalType__();
+}
+
+function createPropertyEl(metrics?: ElementMetrics): HTMLElement {
+  const prop = activeDocument.createElement('div');
+  prop.className = 'metadata-property';
+  const value = activeDocument.createElement('div');
+  value.className = 'metadata-property-value';
+  const nested = activeDocument.createElement('div');
+  nested.className = 'nested-properties-container';
+  value.appendChild(nested);
+  prop.appendChild(value);
+  activeDocument.body.appendChild(prop);
+  applyMetrics(prop, metrics);
+  return prop;
+}
+
+function createScrollbar(app: App): FloatingScrollbarComponent {
+  const scrollbar = new FloatingScrollbarComponent(app);
+  loadedScrollbars.push(scrollbar);
+  scrollbar.load();
+  return scrollbar;
+}
+
+const DEFAULT_CLIENT_WIDTH = 100;
+const DEFAULT_SCROLL_WIDTH = 100;
+const DEFAULT_RECT: Partial<DOMRect> = { bottom: 850, left: 0, top: 750, width: 100 };
 
 describe('FloatingScrollbar', () => {
+  let app: App;
   let scrollbar: FloatingScrollbarComponent;
-  let mockTrack: MockDomElement;
-  let mockThumb: MockDomElement;
-  let mockDocument: Record<string, unknown>;
-  let documentEventListeners: Map<string, ((...args: unknown[]) => void)[]>;
 
   beforeEach(() => {
-    vi.stubGlobal('HTMLElement', MockHTMLElementClass);
-    vi.stubGlobal('HTMLInputElement', MockHTMLInputElementClass);
-    vi.stubGlobal('HTMLTextAreaElement', MockHTMLTextAreaElementClass);
-
-    mockThumb = createMockElement();
-    mockTrack = createMockElement({
-      createDiv: vi.fn(() => mockThumb)
-    });
-
-    vi.stubGlobal('createDiv', vi.fn(() => mockTrack));
-
-    documentEventListeners = new Map();
-    mockDocument = {
-      activeElement: null,
-      addEventListener: vi.fn((event: string, handler: (...args: unknown[]) => void) => {
-        if (!documentEventListeners.has(event)) {
-          documentEventListeners.set(event, []);
-        }
-        documentEventListeners.get(event)?.push(handler);
-      }),
-      body: { appendChild: vi.fn() },
-      querySelector: vi.fn(() => null),
-      querySelectorAll: vi.fn(() => []),
-      removeEventListener: vi.fn((event: string, handler: (...args: unknown[]) => void) => {
-        const handlers = documentEventListeners.get(event);
-        if (handlers) {
-          const idx = handlers.indexOf(handler);
-          if (idx >= 0) {
-            handlers.splice(idx, 1);
-          }
-        }
-      })
-    };
-    vi.stubGlobal('activeDocument', mockDocument);
-    vi.stubGlobal('activeWindow', { innerHeight: 800 });
-
-    scrollbar = new FloatingScrollbarComponent(castTo({}));
-
-    hoisted.capturedCallbacks.docKeydown = null;
-    hoisted.capturedCallbacks.docMousemove = null;
-    hoisted.capturedCallbacks.docScroll = null;
-    hoisted.capturedCallbacks.docWheel = null;
-    hoisted.capturedCallbacks.windowsHandler = null;
+    Object.defineProperty(activeWindow, 'innerHeight', { configurable: true, value: VIEWPORT_HEIGHT_PX });
+    activeDocument.body.innerHTML = '';
+    app = createApp();
+    scrollbar = createScrollbar(app);
   });
 
   afterEach(() => {
-    vi.unstubAllGlobals();
+    while (loadedScrollbars.length > 0) {
+      loadedScrollbars.pop()?.unload();
+    }
+    activeDocument.body.innerHTML = '';
   });
 
   describe('onload', () => {
     it('should create track and thumb elements', () => {
-      scrollbar.onload();
+      const track = getTrack();
+      const thumb = track.querySelector('.nested-properties-floating-scrollbar-thumb');
 
-      expect(createDiv).toHaveBeenCalledWith('nested-properties-floating-scrollbar');
-      expect(mockTrack.createDiv).toHaveBeenCalledWith('nested-properties-floating-scrollbar-thumb');
-      expect((mockDocument['body'] as MockDocumentBody).appendChild).toHaveBeenCalledWith(mockTrack);
+      expect(track).not.toBeNull();
+      expect(thumb).not.toBeNull();
+      expect(track.parentElement).toBe(activeDocument.body);
     });
 
     it('should register all event handlers', () => {
-      scrollbar.onload();
+      // Driving a real `wheel` event through the registered track handler proves the wiring.
+      // The handler scrolls the active element, which is the observable effect we assert on.
+      // We do not capture the registered callback into an array.
+      const activeEl = createPropertyEl({ scrollLeft: 0, scrollWidth: 200 });
+      scrollbar.update();
+      const track = getTrack();
 
-      expect(getTrackHandler('wheel')).toBeDefined();
-      expect(getTrackHandler('mousedown')).toBeDefined();
-      expect(hoisted.capturedCallbacks.docKeydown).not.toBeNull();
-      expect(hoisted.capturedCallbacks.docScroll).not.toBeNull();
-      expect(hoisted.capturedCallbacks.docWheel).not.toBeNull();
-      expect(hoisted.capturedCallbacks.docMousemove).not.toBeNull();
-      expect(hoisted.capturedCallbacks.windowsHandler).not.toBeNull();
+      track.dispatchEvent(new WheelEvent('wheel', { cancelable: true, deltaY: 25 }));
+
+      expect(activeEl.scrollLeft).toBe(25);
     });
   });
 
   describe('onunload', () => {
     it('should clean up track and thumb', () => {
-      scrollbar.onload();
-      scrollbar.onunload();
+      const track = getTrack();
 
-      expect(mockTrack.remove).toHaveBeenCalled();
+      scrollbar.unload();
+
+      expect(track.parentElement).toBeNull();
     });
 
     it('should remove scroll listener from activeEl', () => {
-      scrollbar.onload();
+      const activeEl = createPropertyEl({ clientWidth: 100, scrollLeft: 50, scrollWidth: 200 });
+      const track = getTrack();
+      Object.defineProperty(track, 'clientWidth', { configurable: true, value: 200 });
+      scrollbar.update();
 
-      const activeEl = createMockElement({ scrollWidth: 200 });
-      setupActiveElement(activeEl);
+      const thumb = getThumb();
+      // While loaded, the component's scroll listener (syncThumb) updates the thumb on every scroll.
+      thumb.style.removeProperty('--thumb-left');
+      activeEl.dispatchEvent(new Event('scroll'));
+      expect(thumb.style.getPropertyValue('--thumb-left')).not.toBe('');
 
-      scrollbar.onunload();
+      // After unload, the component must have removed its scroll listener.
+      // So a subsequent scroll no longer updates the (now-detached) thumb.
+      scrollbar.unload();
+      thumb.style.removeProperty('--thumb-left');
+      activeEl.dispatchEvent(new Event('scroll'));
 
-      expect(activeEl.removeEventListener).toHaveBeenCalledWith('scroll', expect.anything());
+      expect(thumb.style.getPropertyValue('--thumb-left')).toBe('');
+      expect(getTrackOrNull()).toBeNull();
     });
 
     it('should handle onunload when no activeEl exists', () => {
-      scrollbar.onload();
-      scrollbar.onunload();
+      const track = getTrack();
+
+      scrollbar.unload();
 
       // Should not throw
-      expect(mockTrack.remove).toHaveBeenCalled();
+      expect(track.parentElement).toBeNull();
     });
   });
 
   describe('update', () => {
     it('should return early when track is null', () => {
+      scrollbar.unload();
+
+      // No track, so update is a no-op and must not throw.
       scrollbar.update();
 
-      // No errors, no querySelector calls
-      expect(mockDocument['querySelector']).not.toHaveBeenCalled();
+      expect(getTrackOrNull()).toBeNull();
     });
 
     it('should use status bar offset height', () => {
-      scrollbar.onload();
-      const statusBar = new MockHTMLElementClass();
-      Object.assign(statusBar, { offsetHeight: 30 });
-      (mockDocument['querySelector'] as ReturnType<typeof vi.fn>).mockReturnValue(statusBar);
-      (mockDocument['querySelectorAll'] as ReturnType<typeof vi.fn>).mockReturnValue([]);
+      const STATUS_BAR_HEIGHT_PX = 30;
+      const statusBar = activeDocument.createElement('div');
+      statusBar.className = 'status-bar';
+      Object.defineProperty(statusBar, 'offsetHeight', { configurable: true, value: STATUS_BAR_HEIGHT_PX });
+      activeDocument.body.appendChild(statusBar);
 
       scrollbar.update();
 
-      expect(mockTrack.classList.remove).toHaveBeenCalledWith('is-visible');
+      // No matching property element, so the track is hidden; the status-bar offset path is exercised.
+      expect(getTrack().classList.contains('is-visible')).toBe(false);
     });
 
     it('should use zero offset when no status bar', () => {
-      scrollbar.onload();
-      (mockDocument['querySelector'] as ReturnType<typeof vi.fn>).mockReturnValue(null);
-      (mockDocument['querySelectorAll'] as ReturnType<typeof vi.fn>).mockReturnValue([]);
-
       scrollbar.update();
 
-      expect(mockTrack.classList.remove).toHaveBeenCalledWith('is-visible');
+      expect(getTrack().classList.contains('is-visible')).toBe(false);
     });
 
     it('should skip elements with no overflow', () => {
-      scrollbar.onload();
-      (mockDocument['querySelector'] as ReturnType<typeof vi.fn>).mockReturnValue(null);
-
-      const noOverflow = createMockElement({ clientWidth: 100, scrollWidth: 100 });
-      (mockDocument['querySelectorAll'] as ReturnType<typeof vi.fn>).mockReturnValue([noOverflow]);
+      createPropertyEl({ clientWidth: 100, scrollWidth: 100 });
 
       scrollbar.update();
 
-      expect(mockTrack.classList.remove).toHaveBeenCalledWith('is-visible');
+      expect(getTrack().classList.contains('is-visible')).toBe(false);
     });
 
     it('should find element partially below visible bottom', () => {
-      scrollbar.onload();
-      (mockDocument['querySelector'] as ReturnType<typeof vi.fn>).mockReturnValue(null);
-
-      const overflowEl = createMockElement({ clientWidth: 100, scrollWidth: 200 });
-      overflowEl.getBoundingClientRect.mockReturnValue({ bottom: 850, left: 10, top: 750, width: 300 });
-      (mockDocument['querySelectorAll'] as ReturnType<typeof vi.fn>).mockReturnValue([overflowEl]);
+      createPropertyEl({
+        clientWidth: 100,
+        rect: { bottom: 850, left: 10, top: 750, width: 300 },
+        scrollWidth: 200
+      });
 
       scrollbar.update();
 
-      expect(mockTrack.classList.add).toHaveBeenCalledWith('is-visible');
-      expect(mockTrack.style.setProperty).toHaveBeenCalledWith('--track-left', '10px');
-      expect(mockTrack.style.setProperty).toHaveBeenCalledWith('--track-width', '300px');
+      const track = getTrack();
+      expect(track.classList.contains('is-visible')).toBe(true);
+      expect(track.style.getPropertyValue('--track-left')).toBe('10px');
+      expect(track.style.getPropertyValue('--track-width')).toBe('300px');
     });
 
     it('should skip element fully above visible bottom', () => {
-      scrollbar.onload();
-      (mockDocument['querySelector'] as ReturnType<typeof vi.fn>).mockReturnValue(null);
-
-      const el = createMockElement({ clientWidth: 100, scrollWidth: 200 });
-      el.getBoundingClientRect.mockReturnValue({ bottom: 700, top: 600 });
-      (mockDocument['querySelectorAll'] as ReturnType<typeof vi.fn>).mockReturnValue([el]);
+      createPropertyEl({
+        clientWidth: 100,
+        rect: { bottom: 700, top: 600 },
+        scrollWidth: 200
+      });
 
       scrollbar.update();
 
-      expect(mockTrack.classList.remove).toHaveBeenCalledWith('is-visible');
+      expect(getTrack().classList.contains('is-visible')).toBe(false);
     });
 
     it('should remove activeEl when no best element found', () => {
-      scrollbar.onload();
-      (mockDocument['querySelector'] as ReturnType<typeof vi.fn>).mockReturnValue(null);
-
-      const el = createMockElement({ clientWidth: 100, scrollWidth: 200 });
-      el.getBoundingClientRect.mockReturnValue({ bottom: 850, left: 0, top: 750, width: 100 });
-      (mockDocument['querySelectorAll'] as ReturnType<typeof vi.fn>).mockReturnValue([el]);
+      const el = createPropertyEl({
+        clientWidth: 100,
+        rect: { bottom: 850, left: 0, top: 750, width: 100 },
+        scrollWidth: 200
+      });
       scrollbar.update();
 
-      expect(el.addEventListener).toHaveBeenCalledWith('scroll', expect.anything());
+      // The element became the active element: scrolling it now syncs the thumb.
+      const track = getTrack();
+      expect(track.classList.contains('is-visible')).toBe(true);
 
-      (mockDocument['querySelectorAll'] as ReturnType<typeof vi.fn>).mockReturnValue([]);
+      el.remove();
       scrollbar.update();
 
-      expect(el.removeEventListener).toHaveBeenCalledWith('scroll', expect.anything());
-      expect(mockTrack.classList.remove).toHaveBeenCalledWith('is-visible');
+      expect(track.classList.contains('is-visible')).toBe(false);
     });
 
     it('should swap activeEl listeners when best changes', () => {
-      scrollbar.onload();
-      (mockDocument['querySelector'] as ReturnType<typeof vi.fn>).mockReturnValue(null);
-
-      const el1 = createMockElement({ clientWidth: 100, scrollWidth: 200 });
-      el1.getBoundingClientRect.mockReturnValue({ bottom: 850, left: 0, top: 750, width: 100 });
-      (mockDocument['querySelectorAll'] as ReturnType<typeof vi.fn>).mockReturnValue([el1]);
+      const el1 = createPropertyEl({
+        clientWidth: 100,
+        rect: { bottom: 850, left: 0, top: 750, width: 100 },
+        scrollLeft: 50,
+        scrollWidth: 200
+      });
       scrollbar.update();
+      const track = getTrack();
+      Object.defineProperty(track, 'clientWidth', { configurable: true, value: 200 });
+      const thumb = getThumb();
+      expect(track.style.getPropertyValue('--track-width')).toBe('100px');
 
-      expect(el1.addEventListener).toHaveBeenCalledWith('scroll', expect.anything());
-
-      const el2 = createMockElement({ clientWidth: 100, scrollWidth: 200 });
-      el2.getBoundingClientRect.mockReturnValue({ bottom: 850, left: 0, top: 750, width: 100 });
-      (mockDocument['querySelectorAll'] as ReturnType<typeof vi.fn>).mockReturnValue([el2]);
+      el1.remove();
+      const el2 = createPropertyEl({
+        clientWidth: 100,
+        rect: { bottom: 850, left: 0, top: 750, width: 250 },
+        scrollLeft: 50,
+        scrollWidth: 200
+      });
       scrollbar.update();
+      expect(track.style.getPropertyValue('--track-width')).toBe('250px');
 
-      expect(el1.removeEventListener).toHaveBeenCalledWith('scroll', expect.anything());
-      expect(el2.addEventListener).toHaveBeenCalledWith('scroll', expect.anything());
+      // The old element's scroll listener was removed, so scrolling it no longer updates the thumb.
+      thumb.style.removeProperty('--thumb-left');
+      el1.dispatchEvent(new Event('scroll'));
+      expect(thumb.style.getPropertyValue('--thumb-left')).toBe('');
+
+      // The new element's scroll listener was added, so scrolling it updates the thumb.
+      el2.dispatchEvent(new Event('scroll'));
+      expect(thumb.style.getPropertyValue('--thumb-left')).not.toBe('');
     });
   });
 
   describe('track wheel handler', () => {
     it('should do nothing without activeEl', () => {
-      scrollbar.onload();
-      const event = createMockEvent({ deltaY: 10 });
+      const event = new WheelEvent('wheel', { cancelable: true, deltaY: 10 });
 
-      getTrackHandler('wheel')?.(event);
+      getTrack().dispatchEvent(event);
 
-      expect(event['preventDefault']).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
     });
 
     it('should do nothing when activeEl is not scrollable', () => {
-      scrollbar.onload();
-      const activeEl = createMockElement({ clientWidth: 100, scrollWidth: 100 });
-      setupActiveElement(activeEl);
+      createPropertyEl({ clientWidth: 100, scrollWidth: 100 });
+      scrollbar.update();
 
-      const event = createMockEvent({ deltaY: 10 });
-      getTrackHandler('wheel')?.(event);
+      const event = new WheelEvent('wheel', { cancelable: true, deltaY: 10 });
+      getTrack().dispatchEvent(event);
 
-      expect(event['preventDefault']).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
     });
 
     it('should scroll activeEl by deltaY', () => {
-      scrollbar.onload();
-      const activeEl = createMockElement({ clientWidth: 100, scrollLeft: 0, scrollWidth: 200 });
-      setupActiveElement(activeEl);
+      const activeEl = createPropertyEl({ clientWidth: 100, scrollLeft: 0, scrollWidth: 200 });
+      scrollbar.update();
 
-      const event = createMockEvent({ deltaX: 0, deltaY: 50 });
-      getTrackHandler('wheel')?.(event);
+      const event = new WheelEvent('wheel', { cancelable: true, deltaX: 0, deltaY: 50 });
+      getTrack().dispatchEvent(event);
 
       expect(activeEl.scrollLeft).toBe(50);
-      expect(event['preventDefault']).toHaveBeenCalled();
-      expect(event['stopPropagation']).toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(true);
     });
 
     it('should scroll activeEl by deltaX when present', () => {
-      scrollbar.onload();
-      const activeEl = createMockElement({ clientWidth: 100, scrollLeft: 0, scrollWidth: 200 });
-      setupActiveElement(activeEl);
+      const activeEl = createPropertyEl({ clientWidth: 100, scrollLeft: 0, scrollWidth: 200 });
+      scrollbar.update();
 
-      const event = createMockEvent({ deltaX: 30, deltaY: 50 });
-      getTrackHandler('wheel')?.(event);
+      const event = new WheelEvent('wheel', { cancelable: true, deltaX: 30, deltaY: 50 });
+      getTrack().dispatchEvent(event);
 
       expect(activeEl.scrollLeft).toBe(30);
     });
@@ -401,393 +327,399 @@ describe('FloatingScrollbar', () => {
 
   describe('keydown handler', () => {
     it('should do nothing without activeEl', () => {
-      scrollbar.onload();
-      const event = createMockEvent({ key: 'ArrowLeft' });
+      const event = new KeyboardEvent('keydown', { cancelable: true, key: 'ArrowLeft' });
 
-      hoisted.capturedCallbacks.docKeydown?.(event);
+      activeDocument.dispatchEvent(event);
 
-      expect(event['preventDefault']).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
     });
 
     it('should do nothing for non-arrow keys', () => {
-      scrollbar.onload();
-      const activeEl = createMockElement({ clientWidth: 100, scrollWidth: 200 });
-      setupActiveElement(activeEl);
+      createPropertyEl({ clientWidth: 100, scrollWidth: 200 });
+      scrollbar.update();
 
-      const event = createMockEvent({ key: 'Enter' });
-      hoisted.capturedCallbacks.docKeydown?.(event);
+      const event = new KeyboardEvent('keydown', { cancelable: true, key: 'Enter' });
+      activeDocument.dispatchEvent(event);
 
-      expect(event['preventDefault']).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
     });
 
     it('should do nothing when an input is focused', () => {
-      scrollbar.onload();
-      const activeEl = createMockElement({ clientWidth: 100, scrollWidth: 200 });
-      setupActiveElement(activeEl);
+      const activeEl = createPropertyEl({ clientWidth: 100, scrollLeft: 0, scrollWidth: 200 });
+      scrollbar.update();
 
-      mockDocument['activeElement'] = new MockHTMLInputElementClass();
-      const event = createMockEvent({ key: 'ArrowLeft' });
-      hoisted.capturedCallbacks.docKeydown?.(event);
+      const input = activeDocument.createElement('input');
+      activeDocument.body.appendChild(input);
+      input.focus();
 
-      expect(event['preventDefault']).not.toHaveBeenCalled();
+      const event = new KeyboardEvent('keydown', { cancelable: true, key: 'ArrowLeft' });
+      activeDocument.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(false);
+      expect(activeEl.scrollLeft).toBe(0);
     });
 
     it('should do nothing when a textarea is focused', () => {
-      scrollbar.onload();
-      const activeEl = createMockElement({ clientWidth: 100, scrollWidth: 200 });
-      setupActiveElement(activeEl);
+      const activeEl = createPropertyEl({ clientWidth: 100, scrollLeft: 0, scrollWidth: 200 });
+      scrollbar.update();
 
-      mockDocument['activeElement'] = new MockHTMLTextAreaElementClass();
-      const event = createMockEvent({ key: 'ArrowLeft' });
-      hoisted.capturedCallbacks.docKeydown?.(event);
+      const textarea = activeDocument.createElement('textarea');
+      activeDocument.body.appendChild(textarea);
+      textarea.focus();
 
-      expect(event['preventDefault']).not.toHaveBeenCalled();
+      const event = new KeyboardEvent('keydown', { cancelable: true, key: 'ArrowLeft' });
+      activeDocument.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(false);
+      expect(activeEl.scrollLeft).toBe(0);
     });
 
     it('should do nothing when a contentEditable element is focused', () => {
-      scrollbar.onload();
-      const activeEl = createMockElement({ clientWidth: 100, scrollWidth: 200 });
-      setupActiveElement(activeEl);
+      const activeEl = createPropertyEl({ clientWidth: 100, scrollLeft: 0, scrollWidth: 200 });
+      scrollbar.update();
 
-      const editableEl = new MockHTMLElementClass();
-      editableEl.isContentEditable = true;
-      mockDocument['activeElement'] = editableEl;
+      const editableEl = activeDocument.createElement('div');
+      // Jsdom does not compute `isContentEditable`, so make the real element report it directly.
+      Object.defineProperty(editableEl, 'isContentEditable', { configurable: true, value: true });
+      editableEl.tabIndex = 0;
+      activeDocument.body.appendChild(editableEl);
+      editableEl.focus();
 
-      const event = createMockEvent({ key: 'ArrowLeft' });
-      hoisted.capturedCallbacks.docKeydown?.(event);
+      const event = new KeyboardEvent('keydown', { cancelable: true, key: 'ArrowLeft' });
+      activeDocument.dispatchEvent(event);
 
-      expect(event['preventDefault']).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
+      expect(activeEl.scrollLeft).toBe(0);
     });
 
     it('should scroll left on ArrowLeft', () => {
-      scrollbar.onload();
-      const activeEl = createMockElement({ clientWidth: 100, scrollLeft: 100, scrollWidth: 200 });
-      setupActiveElement(activeEl);
+      const ARROW_SCROLL_PX = 40;
+      const INITIAL_SCROLL_LEFT = 100;
+      const activeEl = createPropertyEl({ clientWidth: 100, scrollLeft: INITIAL_SCROLL_LEFT, scrollWidth: 200 });
+      scrollbar.update();
 
-      mockDocument['activeElement'] = null;
-      const event = createMockEvent({ key: 'ArrowLeft' });
-      hoisted.capturedCallbacks.docKeydown?.(event);
+      const event = new KeyboardEvent('keydown', { cancelable: true, key: 'ArrowLeft' });
+      activeDocument.dispatchEvent(event);
 
-      expect(activeEl.scrollLeft).toBe(60);
-      expect(event['preventDefault']).toHaveBeenCalled();
+      expect(activeEl.scrollLeft).toBe(INITIAL_SCROLL_LEFT - ARROW_SCROLL_PX);
+      expect(event.defaultPrevented).toBe(true);
     });
 
     it('should scroll right on ArrowRight', () => {
-      scrollbar.onload();
-      const activeEl = createMockElement({ clientWidth: 100, scrollLeft: 0, scrollWidth: 200 });
-      setupActiveElement(activeEl);
+      const ARROW_SCROLL_PX = 40;
+      const activeEl = createPropertyEl({ clientWidth: 100, scrollLeft: 0, scrollWidth: 200 });
+      scrollbar.update();
 
-      mockDocument['activeElement'] = null;
-      const event = createMockEvent({ key: 'ArrowRight' });
-      hoisted.capturedCallbacks.docKeydown?.(event);
+      const event = new KeyboardEvent('keydown', { cancelable: true, key: 'ArrowRight' });
+      activeDocument.dispatchEvent(event);
 
-      expect(activeEl.scrollLeft).toBe(40);
-      expect(event['preventDefault']).toHaveBeenCalled();
+      expect(activeEl.scrollLeft).toBe(ARROW_SCROLL_PX);
+      expect(event.defaultPrevented).toBe(true);
     });
 
     it('should allow arrow keys when a non-editable HTMLElement is focused', () => {
-      scrollbar.onload();
-      const activeEl = createMockElement({ clientWidth: 100, scrollLeft: 0, scrollWidth: 200 });
-      setupActiveElement(activeEl);
+      const ARROW_SCROLL_PX = 40;
+      const activeEl = createPropertyEl({ clientWidth: 100, scrollLeft: 0, scrollWidth: 200 });
+      scrollbar.update();
 
-      const nonEditableEl = new MockHTMLElementClass();
-      nonEditableEl.isContentEditable = false;
-      mockDocument['activeElement'] = nonEditableEl;
+      const nonEditableEl = activeDocument.createElement('div');
+      nonEditableEl.tabIndex = 0;
+      activeDocument.body.appendChild(nonEditableEl);
+      nonEditableEl.focus();
 
-      const event = createMockEvent({ key: 'ArrowRight' });
-      hoisted.capturedCallbacks.docKeydown?.(event);
+      const event = new KeyboardEvent('keydown', { cancelable: true, key: 'ArrowRight' });
+      activeDocument.dispatchEvent(event);
 
-      expect(activeEl.scrollLeft).toBe(40);
+      expect(activeEl.scrollLeft).toBe(ARROW_SCROLL_PX);
     });
   });
 
   describe('native scrollbar wheel', () => {
     it('should do nothing when target is not HTMLElement', () => {
-      scrollbar.onload();
-      const event = createMockEvent({ target: null });
+      const event = new WheelEvent('wheel', { cancelable: true, deltaY: 10 });
+      // Dispatching on the document with no element target keeps `e.target` as the document.
+      activeDocument.dispatchEvent(event);
 
-      hoisted.capturedCallbacks.docWheel?.(event);
-
-      expect(event['preventDefault']).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
     });
 
     it('should do nothing when no matching property element', () => {
-      scrollbar.onload();
-      const target = new MockHTMLElementClass();
-      Object.assign(target, { closest: vi.fn(() => null) });
+      const target = activeDocument.createElement('div');
+      activeDocument.body.appendChild(target);
 
-      const event = createMockEvent({ target });
-      hoisted.capturedCallbacks.docWheel?.(event);
+      const event = new WheelEvent('wheel', { bubbles: true, cancelable: true });
+      target.dispatchEvent(event);
 
-      expect(event['preventDefault']).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
     });
 
     it('should do nothing when property element is not scrollable', () => {
-      scrollbar.onload();
-      const propEl = createMockElement({ clientWidth: 100, scrollWidth: 100 });
-      const target = new MockHTMLElementClass();
-      Object.assign(target, { closest: vi.fn(() => propEl) });
+      const propEl = createPropertyEl({ clientWidth: 100, scrollWidth: 100 });
+      const inner = activeDocument.createElement('span');
+      propEl.appendChild(inner);
 
-      const event = createMockEvent({ target });
-      hoisted.capturedCallbacks.docWheel?.(event);
+      const event = new WheelEvent('wheel', { bubbles: true, cancelable: true });
+      inner.dispatchEvent(event);
 
-      expect(event['preventDefault']).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
     });
 
     it('should do nothing when not near scrollbar', () => {
-      scrollbar.onload();
-      const propEl = createMockElement({ clientWidth: 100, scrollWidth: 200 });
-      propEl.getBoundingClientRect.mockReturnValue({ bottom: 500, left: 0, right: 100, top: 400 });
-      const target = new MockHTMLElementClass();
-      Object.assign(target, { closest: vi.fn(() => propEl) });
+      const propEl = createPropertyEl({
+        clientWidth: 100,
+        rect: { bottom: 500, left: 0, right: 100, top: 400 },
+        scrollWidth: 200
+      });
+      const inner = activeDocument.createElement('span');
+      propEl.appendChild(inner);
 
-      const event = createMockEvent({ clientY: 400, target });
-      hoisted.capturedCallbacks.docWheel?.(event);
+      const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, clientY: 400 });
+      inner.dispatchEvent(event);
 
-      expect(event['preventDefault']).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
     });
 
     it('should scroll when near scrollbar', () => {
-      scrollbar.onload();
-      const propEl = createMockElement({ clientWidth: 100, scrollLeft: 0, scrollWidth: 200 });
-      propEl.getBoundingClientRect.mockReturnValue({ bottom: 500, left: 0, right: 100, top: 400 });
-      const target = new MockHTMLElementClass();
-      Object.assign(target, { closest: vi.fn(() => propEl) });
+      const propEl = createPropertyEl({
+        clientWidth: 100,
+        rect: { bottom: 500, left: 0, right: 100, top: 400 },
+        scrollLeft: 0,
+        scrollWidth: 200
+      });
+      const inner = activeDocument.createElement('span');
+      propEl.appendChild(inner);
 
-      const event = createMockEvent({ clientY: 495, deltaY: 20, target });
-      hoisted.capturedCallbacks.docWheel?.(event);
+      const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, clientY: 495, deltaY: 20 });
+      inner.dispatchEvent(event);
 
       expect(propEl.scrollLeft).toBe(20);
-      expect(event['preventDefault']).toHaveBeenCalled();
-      expect(event['stopPropagation']).toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(true);
     });
   });
 
   describe('native scrollbar cursor', () => {
     it('should do nothing when target is not HTMLElement', () => {
-      scrollbar.onload();
-      const event = createMockEvent({ target: null });
+      const event = new MouseEvent('mousemove', { cancelable: true });
+      activeDocument.dispatchEvent(event);
 
-      hoisted.capturedCallbacks.docMousemove?.(event);
-
-      // No error thrown
+      // No error thrown, no class toggled.
+      expect(getTrack().classList.contains('is-visible')).toBe(false);
     });
 
     it('should do nothing when no matching property element', () => {
-      scrollbar.onload();
-      const target = new MockHTMLElementClass();
-      Object.assign(target, { closest: vi.fn(() => null) });
+      const target = activeDocument.createElement('div');
+      activeDocument.body.appendChild(target);
 
-      const event = createMockEvent({ target });
-      hoisted.capturedCallbacks.docMousemove?.(event);
+      const event = new MouseEvent('mousemove', { bubbles: true });
+      target.dispatchEvent(event);
+
+      expect(target.classList.contains('nested-properties-ew-resize')).toBe(false);
     });
 
     it('should do nothing when property element is not scrollable', () => {
-      scrollbar.onload();
-      const propEl = createMockElement({ clientWidth: 100, scrollWidth: 100 });
-      const target = new MockHTMLElementClass();
-      Object.assign(target, { closest: vi.fn(() => propEl) });
+      const propEl = createPropertyEl({ clientWidth: 100, scrollWidth: 100 });
+      const inner = activeDocument.createElement('span');
+      propEl.appendChild(inner);
 
-      const event = createMockEvent({ target });
-      hoisted.capturedCallbacks.docMousemove?.(event);
+      const event = new MouseEvent('mousemove', { bubbles: true });
+      inner.dispatchEvent(event);
 
-      expect(propEl.classList.toggle).not.toHaveBeenCalled();
+      expect(propEl.classList.contains('nested-properties-ew-resize')).toBe(false);
     });
 
     it('should toggle ew-resize class based on proximity', () => {
-      scrollbar.onload();
-      const propEl = createMockElement({ clientWidth: 100, scrollWidth: 200 });
-      propEl.getBoundingClientRect.mockReturnValue({ bottom: 500 });
-      const target = new MockHTMLElementClass();
-      Object.assign(target, { closest: vi.fn(() => propEl) });
+      const propEl = createPropertyEl({
+        clientWidth: 100,
+        rect: { bottom: 500 },
+        scrollWidth: 200
+      });
+      const inner = activeDocument.createElement('span');
+      propEl.appendChild(inner);
 
-      const event = createMockEvent({ clientY: 495, target });
-      hoisted.capturedCallbacks.docMousemove?.(event);
+      const event = new MouseEvent('mousemove', { bubbles: true, clientY: 495 });
+      inner.dispatchEvent(event);
 
-      expect(propEl.classList.toggle).toHaveBeenCalledWith('nested-properties-ew-resize', true);
+      expect(propEl.classList.contains('nested-properties-ew-resize')).toBe(true);
     });
 
     it('should toggle off when not near scrollbar', () => {
-      scrollbar.onload();
-      const propEl = createMockElement({ clientWidth: 100, scrollWidth: 200 });
-      propEl.getBoundingClientRect.mockReturnValue({ bottom: 500 });
-      const target = new MockHTMLElementClass();
-      Object.assign(target, { closest: vi.fn(() => propEl) });
+      const propEl = createPropertyEl({
+        clientWidth: 100,
+        rect: { bottom: 500 },
+        scrollWidth: 200
+      });
+      const inner = activeDocument.createElement('span');
+      propEl.appendChild(inner);
 
-      const event = createMockEvent({ clientY: 400, target });
-      hoisted.capturedCallbacks.docMousemove?.(event);
+      const event = new MouseEvent('mousemove', { bubbles: true, clientY: 400 });
+      inner.dispatchEvent(event);
 
-      expect(propEl.classList.toggle).toHaveBeenCalledWith('nested-properties-ew-resize', false);
+      expect(propEl.classList.contains('nested-properties-ew-resize')).toBe(false);
     });
   });
 
   describe('track mousedown (drag)', () => {
     it('should do nothing without activeEl', () => {
-      scrollbar.onload();
-      const event = createMockEvent();
+      const event = new MouseEvent('mousedown', { cancelable: true });
 
-      getTrackHandler('mousedown')?.(event);
+      getTrack().dispatchEvent(event);
 
-      expect(event['preventDefault']).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
     });
 
     it('should scroll to clicked position and set up drag listeners', () => {
-      scrollbar.onload();
-      const activeEl = createMockElement({ clientWidth: 100, scrollLeft: 0, scrollWidth: 200 });
-      setupActiveElement(activeEl);
+      const activeEl = createPropertyEl({ clientWidth: 100, scrollLeft: 0, scrollWidth: 200 });
+      scrollbar.update();
+      const track = getTrack();
+      track.getBoundingClientRect = (): DOMRect => castTo<DOMRect>({ left: 0, width: 200 });
 
-      mockTrack.getBoundingClientRect.mockReturnValue({ left: 0, width: 200 });
+      const event = new MouseEvent('mousedown', { cancelable: true, clientX: 100 });
+      track.dispatchEvent(event);
 
-      const event = createMockEvent({ clientX: 100 });
-      getTrackHandler('mousedown')?.(event);
-
-      expect(event['preventDefault']).toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(true);
+      // Click at ratio 0.5 over a maxScroll of 100 => scrollLeft 50.
       expect(activeEl.scrollLeft).toBe(50);
-      expect(mockDocument['addEventListener']).toHaveBeenCalledWith('mousemove', expect.anything());
-      expect(mockDocument['addEventListener']).toHaveBeenCalledWith('mouseup', expect.anything());
+
+      // Drag listeners were registered on the document: a mousemove now scrolls.
+      activeDocument.dispatchEvent(new MouseEvent('mousemove', { clientX: 150 }));
+      expect(activeEl.scrollLeft).toBe(75);
     });
 
     it('should scroll on mousemove during drag', () => {
-      scrollbar.onload();
-      const activeEl = createMockElement({ clientWidth: 100, scrollLeft: 0, scrollWidth: 200 });
-      setupActiveElement(activeEl);
+      const activeEl = createPropertyEl({ clientWidth: 100, scrollLeft: 0, scrollWidth: 200 });
+      scrollbar.update();
+      const track = getTrack();
+      track.getBoundingClientRect = (): DOMRect => castTo<DOMRect>({ left: 0, width: 200 });
 
-      mockTrack.getBoundingClientRect.mockReturnValue({ left: 0, width: 200 });
-
-      const mousedownEvent = createMockEvent({ clientX: 100 });
-      getTrackHandler('mousedown')?.(mousedownEvent);
-
-      const mousemoveHandlers = documentEventListeners.get('mousemove');
-      expect(mousemoveHandlers).toBeDefined();
-      const moveHandler = mousemoveHandlers?.at(0);
-      moveHandler?.({ clientX: 150 });
+      track.dispatchEvent(new MouseEvent('mousedown', { cancelable: true, clientX: 100 }));
+      activeDocument.dispatchEvent(new MouseEvent('mousemove', { clientX: 150 }));
 
       expect(activeEl.scrollLeft).toBe(75);
     });
 
     it('should remove drag listeners on mouseup', () => {
-      scrollbar.onload();
-      const activeEl = createMockElement({ clientWidth: 100, scrollLeft: 0, scrollWidth: 200 });
-      setupActiveElement(activeEl);
+      const activeEl = createPropertyEl({ clientWidth: 100, scrollLeft: 0, scrollWidth: 200 });
+      scrollbar.update();
+      const track = getTrack();
+      track.getBoundingClientRect = (): DOMRect => castTo<DOMRect>({ left: 0, width: 200 });
 
-      mockTrack.getBoundingClientRect.mockReturnValue({ left: 0, width: 200 });
+      track.dispatchEvent(new MouseEvent('mousedown', { cancelable: true, clientX: 100 }));
+      activeDocument.dispatchEvent(new MouseEvent('mouseup'));
 
-      const mousedownEvent = createMockEvent({ clientX: 100 });
-      getTrackHandler('mousedown')?.(mousedownEvent);
+      // After mouseup the drag listeners are removed, so a subsequent mousemove does not scroll.
+      activeEl.scrollLeft = 10;
+      activeDocument.dispatchEvent(new MouseEvent('mousemove', { clientX: 200 }));
 
-      const mouseupHandlers = documentEventListeners.get('mouseup');
-      expect(mouseupHandlers).toBeDefined();
-      const upHandler = mouseupHandlers?.at(0);
-      upHandler?.({});
-
-      expect(mockDocument['removeEventListener']).toHaveBeenCalledWith('mousemove', expect.anything());
-      expect(mockDocument['removeEventListener']).toHaveBeenCalledWith('mouseup', expect.anything());
+      expect(activeEl.scrollLeft).toBe(10);
     });
 
     it('should clamp scroll ratio to valid range', () => {
-      scrollbar.onload();
-      const activeEl = createMockElement({ clientWidth: 100, scrollLeft: 0, scrollWidth: 200 });
-      setupActiveElement(activeEl);
+      const MAX_SCROLL_PX = 100;
+      const activeEl = createPropertyEl({ clientWidth: 100, scrollLeft: 0, scrollWidth: 200 });
+      scrollbar.update();
+      const track = getTrack();
+      track.getBoundingClientRect = (): DOMRect => castTo<DOMRect>({ left: 0, width: 200 });
 
-      mockTrack.getBoundingClientRect.mockReturnValue({ left: 0, width: 200 });
-
-      const event = createMockEvent({ clientX: -50 });
-      getTrackHandler('mousedown')?.(event);
-
+      track.dispatchEvent(new MouseEvent('mousedown', { cancelable: true, clientX: -50 }));
       expect(activeEl.scrollLeft).toBe(0);
 
-      const event2 = createMockEvent({ clientX: 500 });
-      getTrackHandler('mousedown')?.(event2);
-
-      expect(activeEl.scrollLeft).toBe(100);
+      track.dispatchEvent(new MouseEvent('mousedown', { cancelable: true, clientX: 500 }));
+      expect(activeEl.scrollLeft).toBe(MAX_SCROLL_PX);
     });
   });
 
   describe('syncThumb', () => {
     it('should set thumb position based on scroll', () => {
-      scrollbar.onload();
-      const activeEl = createMockElement({ clientWidth: 100, scrollLeft: 50, scrollWidth: 200 });
-      setupActiveElement(activeEl);
-
-      Object.defineProperty(mockTrack, 'clientWidth', { configurable: true, value: 200 });
+      const activeEl = createPropertyEl({ clientWidth: 100, scrollLeft: 50, scrollWidth: 200 });
+      const track = getTrack();
+      Object.defineProperty(track, 'clientWidth', { configurable: true, value: 200 });
+      const thumb = getThumb();
 
       scrollbar.update();
 
-      expect(mockThumb.style.setProperty).toHaveBeenCalledWith('--thumb-width', expect.any(String));
-      expect(mockThumb.style.setProperty).toHaveBeenCalledWith('--thumb-left', expect.any(String));
+      expect(thumb.style.getPropertyValue('--thumb-width')).not.toBe('');
+      expect(thumb.style.getPropertyValue('--thumb-left')).not.toBe('');
+      expect(activeEl.scrollLeft).toBe(50);
     });
 
-    it('should early return when track/thumb/activeEl is null', () => {
-      scrollbar.onload();
-      const activeEl = createMockElement({ clientWidth: 100, scrollWidth: 200 });
-      setupActiveElement(activeEl);
+    it('should early return when activeEl is null', () => {
+      // The component is loaded (track and thumb exist) but `update()` never ran, so `activeEl` is
+      // Null. `syncThumb` must guard against that and leave the thumb untouched.
+      const thumb = getThumb();
+      thumb.style.removeProperty('--thumb-width');
 
-      const syncThumbFn = getScrollListener(activeEl);
-      scrollbar.onunload();
-      mockThumb.style.setProperty.mockClear();
+      castTo<ScrollbarInternals>(scrollbar).syncThumb();
 
-      syncThumbFn();
-
-      expect(mockThumb.style.setProperty).not.toHaveBeenCalled();
+      expect(thumb.style.getPropertyValue('--thumb-width')).toBe('');
     });
 
     it('should early return when maxScroll is zero', () => {
-      scrollbar.onload();
-      const activeEl = createMockElement({ clientWidth: 100, scrollWidth: 200 });
-      setupActiveElement(activeEl);
+      const activeEl = createPropertyEl({ clientWidth: 100, scrollWidth: 200 });
+      scrollbar.update();
+      const thumb = getThumb();
 
-      const syncThumbFn = getScrollListener(activeEl);
-      activeEl.scrollWidth = 100;
-      activeEl.clientWidth = 100;
-      mockThumb.style.setProperty.mockClear();
+      // The active element no longer overflows (scrollWidth == clientWidth), so maxScroll is zero and
+      // `syncThumb` must return before touching the thumb.
+      Object.defineProperty(activeEl, 'scrollWidth', { configurable: true, value: 100 });
+      thumb.style.removeProperty('--thumb-width');
 
-      syncThumbFn();
+      castTo<ScrollbarInternals>(scrollbar).syncThumb();
 
-      expect(mockThumb.style.setProperty).not.toHaveBeenCalled();
+      expect(thumb.style.getPropertyValue('--thumb-width')).toBe('');
     });
   });
 
   describe('scroll and windows handler callbacks', () => {
     it('should call update on scroll event', () => {
-      scrollbar.onload();
-      const updateSpy = vi.spyOn(scrollbar, 'update');
+      // A document scroll triggers update(), which makes the overflowing property element active.
+      // Update() then shows the track.
+      createPropertyEl({
+        clientWidth: 100,
+        rect: { bottom: 850, left: 0, top: 750, width: 100 },
+        scrollWidth: 200
+      });
 
-      hoisted.capturedCallbacks.docScroll?.();
+      activeDocument.dispatchEvent(new Event('scroll'));
 
-      expect(updateSpy).toHaveBeenCalled();
+      expect(getTrack().classList.contains('is-visible')).toBe(true);
     });
 
     it('should call update on windows handler', () => {
-      scrollbar.onload();
-      const updateSpy = vi.spyOn(scrollbar, 'update');
+      // The registered all-windows handler runs update() for the main window at load time.
+      // Create the overflowing property element first, then load a fresh component.
+      // Its windows handler then picks the element up and shows the track.
+      scrollbar.unload();
+      loadedScrollbars.pop();
+      createPropertyEl({
+        clientWidth: 100,
+        rect: { bottom: 850, left: 0, top: 750, width: 100 },
+        scrollWidth: 200
+      });
 
-      hoisted.capturedCallbacks.windowsHandler?.();
+      const freshScrollbar = createScrollbar(app);
 
-      expect(updateSpy).toHaveBeenCalled();
+      expect(freshScrollbar).toBeInstanceOf(FloatingScrollbarComponent);
+      expect(getTrack().classList.contains('is-visible')).toBe(true);
     });
   });
 
-  function getTrackHandler(event: string): ((...args: unknown[]) => void) | undefined {
-    const call = mockTrack.addEventListener.mock.calls.find(
-      (c: unknown[]) => c[0] === event
-    ) as [string, (...args: unknown[]) => void] | undefined;
-    return call?.[1];
+  function getTrackOrNull(): HTMLDivElement | null {
+    return activeDocument.body.querySelector<HTMLDivElement>('.nested-properties-floating-scrollbar');
   }
 
-  function getScrollListener(activeEl: MockDomElement): () => void {
-    const scrollCall = activeEl.addEventListener.mock.calls.find(
-      (call: unknown[]) => call[0] === 'scroll'
-    ) as [string, () => void] | undefined;
-    if (!scrollCall) {
-      throw new Error('No scroll listener found on activeEl');
+  function getTrack(): HTMLDivElement {
+    const track = getTrackOrNull();
+    if (!track) {
+      throw new Error('Track element not found');
     }
-    return scrollCall[1];
+    return track;
   }
 
-  function setupActiveElement(activeEl: MockDomElement): void {
-    (mockDocument['querySelector'] as ReturnType<typeof vi.fn>).mockReturnValue(null);
-    activeEl.getBoundingClientRect.mockReturnValue({ bottom: 850, left: 0, top: 750, width: 100 });
-    (mockDocument['querySelectorAll'] as ReturnType<typeof vi.fn>).mockReturnValue([activeEl]);
-    scrollbar.update();
+  function getThumb(): HTMLDivElement {
+    const thumb = getTrack().querySelector<HTMLDivElement>('.nested-properties-floating-scrollbar-thumb');
+    if (!thumb) {
+      throw new Error('Thumb element not found');
+    }
+    return thumb;
   }
 });
