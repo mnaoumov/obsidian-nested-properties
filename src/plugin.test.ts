@@ -1,41 +1,92 @@
 import type {
-  App,
+  App as AppOriginal,
   PluginManifest
 } from 'obsidian';
 
+import { App } from 'obsidian-test-mocks/obsidian';
 import {
+  beforeEach,
   describe,
   expect,
   it,
   vi
 } from 'vitest';
 
-const mockAddChild = vi.fn();
-
-vi.mock('obsidian-dev-utils/obsidian/plugin/plugin', () => {
-  class MockPluginBase {
-    public addChild = mockAddChild;
-  }
-  return { PluginBase: MockPluginBase };
-});
-
-vi.mock('./nested-property-renderer.ts', () => ({
-  NestedPropertyRendererComponent: vi.fn()
-}));
-
-// eslint-disable-next-line import-x/first, import-x/imports-first -- vi.mock must precede imports.
 import { NestedPropertyRendererComponent } from './nested-property-renderer.ts';
-// eslint-disable-next-line import-x/first, import-x/imports-first -- vi.mock must precede imports.
 import { Plugin } from './plugin.ts';
 
+// The real `PluginBase.onload()` loads dev-utils' own notice/context/debug components, which read a
+// Shared-state bag off the app via `getObsidianDevUtilsState`. The strict App mock has no such bag, so
+// Stub this one utility (return a fresh value wrapper per call) — mirroring dev-utils' own PluginBase test.
+vi.mock('obsidian-dev-utils/obsidian/app', async (importOriginal) => ({
+  ...await importOriginal<typeof import('obsidian-dev-utils/obsidian/app')>(),
+  getObsidianDevUtilsState: vi.fn((_app: unknown, _key: string, defaultValue: unknown) => ({ value: defaultValue }))
+}));
+
+// `NestedPropertyRendererComponent` is added via `addChild`, which eager-loads it, so its stub must be
+// Loadable — it returns a real `Component`. The instance that flows through `addChild` is the stub's
+// Return value (`mock.results[0].value`), not the discarded `this` (`mock.instances[0]`).
+interface ObsidianComponentModule {
+  Component: new () => object;
+}
+
+async function loadableComponentStub(): Promise<ReturnType<typeof vi.fn>> {
+  const { Component } = await vi.importActual<ObsidianComponentModule>('obsidian');
+  // Vitest requires a non-arrow function for a mock invoked with `new`; it must return a fresh real
+  // `Component`. Constructing a stub class directly would route `this` through vitest's mock proxy and
+  // Break the test-mocks `Component` constructor's own strict proxy.
+  // eslint-disable-next-line prefer-arrow-callback -- See above; an arrow cannot be used here.
+  return vi.fn(function componentStub() {
+    return new Component();
+  });
+}
+
+vi.mock('./nested-property-renderer.ts', async () => ({
+  NestedPropertyRendererComponent: await loadableComponentStub()
+}));
+
+const MockNestedPropertyRendererComponent = vi.mocked(NestedPropertyRendererComponent);
+
+const manifest: PluginManifest = {
+  author: 'test',
+  description: 'test',
+  id: 'nested-properties',
+  minAppVersion: '1.0.0',
+  name: 'Nested Properties',
+  version: '1.0.0'
+};
+
+let app: AppOriginal;
+
+function instanceOf(mock: ReturnType<typeof vi.fn>): unknown {
+  // The value that flows through `addChild` is the constructor's return value.
+  return mock.mock.results[0]?.value;
+}
+
 describe('Plugin', () => {
-  it('should add NestedPropertyRenderer as a child', () => {
-    const app = {} as App;
-    const manifest = {} as PluginManifest;
+  beforeEach(() => {
+    vi.clearAllMocks();
+    const appMock = App.createConfigured__();
+    appMock.workspace.onLayoutReady = vi.fn((cb: () => void) => {
+      cb();
+    });
+    app = appMock.asOriginalType__();
+  });
 
-    new Plugin(app, manifest);
+  describe('onload', () => {
+    it('should create NestedPropertyRendererComponent with app', async () => {
+      const plugin = new Plugin(app, manifest);
+      await plugin.onload();
 
-    expect(NestedPropertyRendererComponent).toHaveBeenCalledWith(app);
-    expect(mockAddChild).toHaveBeenCalledWith(expect.any(NestedPropertyRendererComponent));
+      expect(MockNestedPropertyRendererComponent).toHaveBeenCalledWith(app);
+    });
+
+    it('should add NestedPropertyRendererComponent as a child', async () => {
+      const plugin = new Plugin(app, manifest);
+      const addChildSpy = vi.spyOn(plugin, 'addChild');
+      await plugin.onload();
+
+      expect(addChildSpy).toHaveBeenCalledWith(instanceOf(MockNestedPropertyRendererComponent));
+    });
   });
 });
