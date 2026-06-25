@@ -1,9 +1,8 @@
 import type {
-  MetadataTypeManager,
+  MultitextPropertyWidgetComponent,
   PropertyRenderContext,
   PropertyWidget,
-  PropertyWidgetComponentBase,
-  TypeInfo
+  PropertyWidgetComponentBase
 } from '@obsidian-typings/obsidian-public-latest';
 import type { App } from 'obsidian';
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
@@ -15,10 +14,12 @@ import {
   setIcon
 } from 'obsidian';
 import { convertAsyncToSync } from 'obsidian-dev-utils/async';
-import { MonkeyAroundComponent } from 'obsidian-dev-utils/obsidian/components/monkey-around-component';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
 import { FloatingScrollbarComponent } from './floating-scrollbar.ts';
+import { MetadataTypeManagerGetTypeInfoPatchComponent } from './patches/metadata-type-manager-get-type-info-patch-component.ts';
+import { MultiTextPropertyWidgetPatchComponent } from './patches/multi-text-property-widget-patch-component.ts';
+import { UnknownWidgetRenderPatchComponent } from './patches/unknown-widget-render-patch-component.ts';
 import { TypeChangeModal } from './type-change-modal.ts';
 import {
   convertValue,
@@ -30,21 +31,17 @@ import {
 const LIST_WIDGET_TYPE = 'list';
 const OBJECT_WIDGET_TYPE = 'object';
 
-type GetTypeInfoFn = MetadataTypeManager['getTypeInfo'];
-type UnknownRenderFn = (el: HTMLElement, value: unknown, ctx: PropertyRenderContext) => PropertyWidgetComponentBase;
-type ValidateFn = PropertyWidget['validate'];
-
 export class NestedPropertyRendererComponent extends Component {
-  private _listWidget: null | PropertyWidget = null;
-  private _mixedListWidget: null | PropertyWidget = null;
-  private _objectWidget: null | PropertyWidget = null;
+  private _listWidget?: PropertyWidget<MultitextPropertyWidgetComponent>;
+  private _mixedListWidget?: PropertyWidget;
+  private _objectWidget?: PropertyWidget;
   private readonly expandedPaths = new Set<string>();
-  private floatingScrollbar: FloatingScrollbarComponent | null = null;
+  private floatingScrollbar?: FloatingScrollbarComponent;
   private lastMenuCloseTime = 0;
   private pendingFocusKey: null | string = null;
   private readonly widgetTypeOverrides = new Map<string, string>();
 
-  private get listWidget(): PropertyWidget {
+  private get listWidget(): PropertyWidget<MultitextPropertyWidgetComponent> {
     return ensureNonNullable(this._listWidget);
   }
 
@@ -82,41 +79,26 @@ export class NestedPropertyRendererComponent extends Component {
     this.app.metadataTypeManager.registeredTypeWidgets[OBJECT_WIDGET_TYPE] = this.objectWidget;
     this._listWidget = this.app.metadataTypeManager.registeredTypeWidgets.multitext;
 
-    const patch = this.addChild(new MonkeyAroundComponent());
-    patch.registerMethodPatch({
-      methodName: 'validate',
-      obj: this.listWidget,
-      patchHandler: ({
-        originalArgs: [value],
-        originalMethod
-      }) => {
-        return this.validateListWidget(originalMethod, value);
-      }
-    });
-
-    patch.registerMethodPatch({
-      methodName: 'getTypeInfo',
-      obj: this.app.metadataTypeManager,
-      patchHandler: ({
-        originalArgs: [property, value],
-        originalMethod
-      }) => {
-        return this.getTypeInfo(originalMethod, property, value);
-      }
-    });
+    this.addChild(new MultiTextPropertyWidgetPatchComponent(this.listWidget));
+    this.addChild(
+      new MetadataTypeManagerGetTypeInfoPatchComponent({
+        listWidget: this.listWidget,
+        metadataTypeManager: this.app.metadataTypeManager,
+        mixedListWidget: this.mixedListWidget,
+        objectWidget: this.objectWidget
+      })
+    );
 
     const unknownWidget = this.app.metadataTypeManager.getWidget('unknown');
 
-    patch.registerMethodPatch({
-      methodName: 'render',
-      obj: unknownWidget,
-      patchHandler: ({
-        originalArgs: [el, value, ctx],
-        originalMethod
-      }) => {
-        return this.renderUnknownWidget(originalMethod, el, value, ctx);
-      }
-    });
+    this.addChild(
+      new UnknownWidgetRenderPatchComponent({
+        listWidget: this.listWidget,
+        mixedListWidget: this.mixedListWidget,
+        objectWidget: this.objectWidget,
+        unknownWidget
+      })
+    );
 
     this.register(() => {
       // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- Unregister widget on unload.
@@ -131,16 +113,6 @@ export class NestedPropertyRendererComponent extends Component {
 
     this.floatingScrollbar = this.addChild(new FloatingScrollbarComponent(this.app));
     this.reloadAllProperties();
-  }
-
-  public reloadAllProperties(): void {
-    for (const leaf of this.app.workspace.getLeavesOfType('markdown')) {
-      if (leaf.view instanceof MarkdownView) {
-        const data = leaf.view.metadataEditor.serialize();
-        leaf.view.metadataEditor.synchronize({});
-        leaf.view.metadataEditor.synchronize(data);
-      }
-    }
   }
 
   private async changeType(widget: PropertyWidget, path: string, value: unknown, onValueChange: (newValue: unknown) => void): Promise<void> {
@@ -166,22 +138,6 @@ export class NestedPropertyRendererComponent extends Component {
     }
   }
 
-  private getTypeInfo(next: GetTypeInfoFn, property: string, value: unknown): TypeInfo {
-    const result = next.call(this.app.metadataTypeManager, property, value);
-
-    if (result.inferred.type === 'unknown' && isComplexValue(value)) {
-      if (isSimpleArray(value)) {
-        result.inferred = this.listWidget;
-      } else if (Array.isArray(value)) {
-        result.inferred = this.mixedListWidget;
-      } else {
-        result.inferred = this.objectWidget;
-      }
-      result.expected = result.inferred;
-    }
-    return result;
-  }
-
   private getWidget(path: string, label: string, value: unknown): PropertyWidget {
     const override = this.widgetTypeOverrides.get(path);
     if (override) {
@@ -191,6 +147,16 @@ export class NestedPropertyRendererComponent extends Component {
       }
     }
     return this.app.metadataTypeManager.getTypeInfo(label, value).inferred;
+  }
+
+  private reloadAllProperties(): void {
+    for (const leaf of this.app.workspace.getLeavesOfType('markdown')) {
+      if (leaf.view instanceof MarkdownView) {
+        const data = leaf.view.metadataEditor.serialize();
+        leaf.view.metadataEditor.synchronize({});
+        leaf.view.metadataEditor.synchronize(data);
+      }
+    }
   }
 
   private renderArray(
@@ -444,23 +410,6 @@ export class NestedPropertyRendererComponent extends Component {
     });
   }
 
-  private renderUnknownWidget(next: UnknownRenderFn, el: HTMLElement, value: unknown, ctx: PropertyRenderContext): PropertyWidgetComponentBase {
-    if (isSimpleArray(value)) {
-      const iconEl = el.closest('.metadata-property')?.querySelector('.metadata-property-key .metadata-property-icon');
-      if (iconEl instanceof HTMLElement) {
-        setIcon(iconEl, this.listWidget.icon);
-      }
-      return this.listWidget.render(el, value, ctx);
-    }
-    if (Array.isArray(value)) {
-      return this.mixedListWidget.render(el, value, ctx);
-    }
-    if (isComplexValue(value)) {
-      return this.objectWidget.render(el, value, ctx);
-    }
-    return next(el, value, ctx);
-  }
-
   private showNestedPropertyMenu(
     evt: MouseEvent,
     path: string,
@@ -545,10 +494,6 @@ export class NestedPropertyRendererComponent extends Component {
         .onClick(onDelete);
     });
     menu.showAtMouseEvent(evt);
-  }
-
-  private validateListWidget(next: ValidateFn, value: unknown): boolean {
-    return next(value) || isSimpleArray(value);
   }
 }
 

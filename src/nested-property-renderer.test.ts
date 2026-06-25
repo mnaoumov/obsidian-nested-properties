@@ -459,10 +459,12 @@ describe('NestedPropertyRenderer', () => {
     });
 
     it('should call reloadAllProperties on load', () => {
-      const spy = vi.spyOn(renderer, 'reloadAllProperties');
+      const mockView = new hoisted.MarkdownViewBase();
+      mockApp.workspace.getLeavesOfType.mockReturnValue([{ view: mockView }]);
+
       loadRenderer();
 
-      expect(spy).toHaveBeenCalled();
+      expect(mockView.metadataEditor.serialize).toHaveBeenCalled();
     });
 
     it('should register cleanup callback that deletes widgets and reloads', () => {
@@ -515,7 +517,7 @@ describe('NestedPropertyRenderer', () => {
       const mockView = new hoisted.MarkdownViewBase();
       mockApp.workspace.getLeavesOfType.mockReturnValue([{ view: mockView }]);
 
-      renderer.reloadAllProperties();
+      loadRenderer();
 
       expect(mockView.metadataEditor.serialize).toHaveBeenCalled();
       expect(mockView.metadataEditor.synchronize).toHaveBeenCalledTimes(2);
@@ -525,7 +527,7 @@ describe('NestedPropertyRenderer', () => {
     it('should skip non-MarkdownView leaves', () => {
       mockApp.workspace.getLeavesOfType.mockReturnValue([{ view: {} }]);
 
-      renderer.reloadAllProperties();
+      loadRenderer();
 
       expect(mockApp.workspace.getLeavesOfType).toHaveBeenCalledWith('markdown');
     });
@@ -2671,7 +2673,8 @@ describe('NestedPropertyRenderer', () => {
       iconClickHandler({ stopPropagation: vi.fn() });
 
       // Click "Object" type (same type → no conversion needed, reload)
-      const reloadSpy = vi.spyOn(renderer, 'reloadAllProperties');
+      const mockView = new hoisted.MarkdownViewBase();
+      mockApp.workspace.getLeavesOfType.mockReturnValue([{ view: mockView }]);
       for (const subItem of hoisted.submenuItems) {
         const titleCalls = subItem.setTitle.mock.calls as unknown[][];
         if (titleCalls.some((call) => call[0] === 'Object')) {
@@ -2681,7 +2684,7 @@ describe('NestedPropertyRenderer', () => {
         }
       }
 
-      expect(reloadSpy).toHaveBeenCalled();
+      expect(mockView.metadataEditor.synchronize).toHaveBeenCalled();
     });
   });
 
