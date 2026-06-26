@@ -40,29 +40,43 @@ export class FloatingScrollbarComponent extends Component {
     });
 
     const allWindowsEventComponent = this.addChild(new AllWindowsEventComponent(this.app));
-    allWindowsEventComponent.registerAllDocumentsDomEvent('keydown', (e) => {
-      if (!this.activeEl || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) {
-        return;
-      }
-      if (
-        activeDocument.activeElement instanceof HTMLInputElement
-        || activeDocument.activeElement instanceof HTMLTextAreaElement
-        || (activeDocument.activeElement instanceof HTMLElement && activeDocument.activeElement.isContentEditable)
-      ) {
-        return;
-      }
-      this.activeEl.scrollLeft += e.key === 'ArrowLeft' ? -ARROW_SCROLL_PX : ARROW_SCROLL_PX;
-      e.preventDefault();
+    allWindowsEventComponent.registerAllDocumentsDomEvent({
+      callback: (e) => {
+        if (!this.activeEl || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) {
+          return;
+        }
+        if (
+          activeDocument.activeElement instanceof HTMLInputElement
+          || activeDocument.activeElement instanceof HTMLTextAreaElement
+          || (activeDocument.activeElement instanceof HTMLElement && activeDocument.activeElement.isContentEditable)
+        ) {
+          return;
+        }
+        this.activeEl.scrollLeft += e.key === 'ArrowLeft' ? -ARROW_SCROLL_PX : ARROW_SCROLL_PX;
+        e.preventDefault();
+      },
+      type: 'keydown'
     });
 
-    allWindowsEventComponent.registerAllDocumentsDomEvent('scroll', () => {
-      this.update();
-    }, true);
-    allWindowsEventComponent.registerAllDocumentsDomEvent('wheel', (e) => {
-      this.handleNativeScrollbarWheel(e);
-    }, { capture: true, passive: false });
-    allWindowsEventComponent.registerAllDocumentsDomEvent('mousemove', (e) => {
-      this.handleNativeScrollbarCursor(e);
+    allWindowsEventComponent.registerAllDocumentsDomEvent({
+      callback: () => {
+        this.update();
+      },
+      options: true,
+      type: 'scroll'
+    });
+    allWindowsEventComponent.registerAllDocumentsDomEvent({
+      callback: (e) => {
+        this.handleNativeScrollbarWheel(e);
+      },
+      options: { capture: true, passive: false },
+      type: 'wheel'
+    });
+    allWindowsEventComponent.registerAllDocumentsDomEvent({
+      callback: (e) => {
+        this.handleNativeScrollbarCursor(e);
+      },
+      type: 'mousemove'
     });
     allWindowsEventComponent.registerAllWindowsHandler(() => {
       this.update();
