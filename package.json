@@ -14,7 +14,6 @@
     "build": "jiti scripts/build.ts",
     "build:clean": "jiti scripts/build-clean.ts",
     "build:compile": "jiti scripts/build-compile.ts",
-    "build:compile:svelte": "jiti scripts/build-compile-svelte.ts",
     "build:compile:typescript": "jiti scripts/build-compile-typescript.ts",
     "commit": "jiti scripts/commit.ts",
     "dev": "jiti scripts/dev.ts",
