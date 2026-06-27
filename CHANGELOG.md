@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.2.9
+
+- refactor: new template
+
 ## 1.2.8
 
 - refactor: new template
