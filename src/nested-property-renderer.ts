@@ -31,6 +31,104 @@ import {
 const LIST_WIDGET_TYPE = 'list';
 const OBJECT_WIDGET_TYPE = 'object';
 
+interface CreateSummaryParams {
+  readonly expandedPaths: Set<string>;
+  readonly parentEl: HTMLElement;
+  readonly path: string;
+  readonly propertyEl: HTMLElement;
+  readonly value: unknown;
+}
+
+interface NestedPropertyRendererComponentChangeTypeParams {
+  onValueChange(this: void, newValue: unknown): void;
+  readonly path: string;
+  readonly value: unknown;
+  readonly widget: PropertyWidget;
+}
+
+interface NestedPropertyRendererComponentGetWidgetParams {
+  readonly label: string;
+  readonly path: string;
+  readonly value: unknown;
+}
+
+interface NestedPropertyRendererComponentRenderArrayParams {
+  readonly arr: unknown[];
+  readonly containerEl: HTMLElement;
+  readonly ctx: PropertyRenderContext;
+  onArrayChange(this: void, newValue: unknown): void;
+  readonly parentPath: string;
+}
+
+interface NestedPropertyRendererComponentRenderComplexWidgetParams {
+  readonly ctx: PropertyRenderContext;
+  readonly el: HTMLElement;
+  readonly value: unknown;
+  readonly widgetType: string;
+}
+
+interface NestedPropertyRendererComponentRenderEntryParams {
+  readonly containerEl: HTMLElement;
+  readonly ctx: PropertyRenderContext;
+  readonly label: string;
+  onDelete(this: void): void;
+  onValueChange(this: void, newValue: unknown): void;
+  readonly parentPath: string;
+  readonly value: unknown;
+}
+
+interface NestedPropertyRendererComponentRenderKeyElParams {
+  readonly label: string;
+  onDelete(this: void): void;
+  onValueChange(this: void, newValue: unknown): void;
+  readonly parentEl: HTMLElement;
+  readonly path: string;
+  readonly value: unknown;
+}
+
+interface NestedPropertyRendererComponentRenderNestedValueParams {
+  readonly containerEl: HTMLElement;
+  readonly ctx: PropertyRenderContext;
+  onValueChange(this: void, newValue: unknown): void;
+  readonly path: string;
+  readonly value: unknown;
+}
+
+interface NestedPropertyRendererComponentRenderObjectParams {
+  readonly containerEl: HTMLElement;
+  readonly ctx: PropertyRenderContext;
+  readonly obj: GenericObject;
+  onValueChange(this: void, newValue: unknown): void;
+  readonly parentPath: string;
+}
+
+interface NestedPropertyRendererComponentShowNestedPropertyMenuParams {
+  readonly evt: MouseEvent;
+  readonly label: string;
+  onDelete(this: void): void;
+  onValueChange(this: void, newValue: unknown): void;
+  readonly path: string;
+  readonly value: unknown;
+}
+
+interface RenderAddItemButtonParams {
+  readonly arr: unknown[];
+  readonly containerEl: HTMLElement;
+  onValueChange(this: void, newValue: unknown): void;
+}
+
+interface RenderAddPropertyButtonParams {
+  readonly containerEl: HTMLElement;
+  readonly obj: GenericObject;
+  onValueChange(this: void, newValue: unknown): void;
+  setPendingFocusKey(this: void, key: string): void;
+}
+
+interface UpdateToggleButtonParams {
+  readonly metadataContainerEl: HTMLElement;
+  readonly toggleButton: HTMLElement;
+}
+
 export class NestedPropertyRendererComponent extends Component {
   private _listWidget?: PropertyWidget<MultitextPropertyWidgetComponent>;
   private _mixedListWidget?: PropertyWidget;
@@ -62,7 +160,7 @@ export class NestedPropertyRendererComponent extends Component {
     this._mixedListWidget = {
       icon: 'lucide-list-tree',
       name: (): string => 'Mixed list',
-      render: (el, value, ctx): PropertyWidgetComponentBase => this.renderComplexWidget(el, value, ctx, LIST_WIDGET_TYPE),
+      render: (el, value, ctx): PropertyWidgetComponentBase => this.renderComplexWidget({ ctx, el, value, widgetType: LIST_WIDGET_TYPE }),
       type: LIST_WIDGET_TYPE,
       validate: (value): boolean => Array.isArray(value)
     };
@@ -70,7 +168,7 @@ export class NestedPropertyRendererComponent extends Component {
     this._objectWidget = {
       icon: 'lucide-braces',
       name: (): string => 'Object',
-      render: (el, value, ctx): PropertyWidgetComponentBase => this.renderComplexWidget(el, value, ctx, OBJECT_WIDGET_TYPE),
+      render: (el, value, ctx): PropertyWidgetComponentBase => this.renderComplexWidget({ ctx, el, value, widgetType: OBJECT_WIDGET_TYPE }),
       type: OBJECT_WIDGET_TYPE,
       validate: (value): boolean => value !== null && typeof value === 'object' && !Array.isArray(value)
     };
@@ -115,8 +213,9 @@ export class NestedPropertyRendererComponent extends Component {
     this.reloadAllProperties();
   }
 
-  private async changeType(widget: PropertyWidget, path: string, value: unknown, onValueChange: (newValue: unknown) => void): Promise<void> {
-    if (isLossyConversion(value, widget.type)) {
+  private async changeType(params: NestedPropertyRendererComponentChangeTypeParams): Promise<void> {
+    const { onValueChange, path, value, widget } = params;
+    if (isLossyConversion({ targetType: widget.type, value })) {
       const modal = new TypeChangeModal(this.app, widget.name());
       modal.open();
       if (!await modal.waitForResult()) {
@@ -130,7 +229,7 @@ export class NestedPropertyRendererComponent extends Component {
 
     this.widgetTypeOverrides.set(path, widget.type);
 
-    const converted = convertValue(value, widget.type);
+    const converted = convertValue({ targetType: widget.type, value });
     if (converted === value) {
       this.reloadAllProperties();
     } else {
@@ -138,7 +237,8 @@ export class NestedPropertyRendererComponent extends Component {
     }
   }
 
-  private getWidget(path: string, label: string, value: unknown): PropertyWidget {
+  private getWidget(params: NestedPropertyRendererComponentGetWidgetParams): PropertyWidget {
+    const { label, path, value } = params;
     const override = this.widgetTypeOverrides.get(path);
     if (override) {
       const widget = this.app.metadataTypeManager.registeredTypeWidgets[override];
@@ -159,27 +259,32 @@ export class NestedPropertyRendererComponent extends Component {
     }
   }
 
-  private renderArray(
-    containerEl: HTMLElement,
-    arr: unknown[],
-    ctx: PropertyRenderContext,
-    parentPath: string,
-    onArrayChange: (newValue: unknown) => void
-  ): void {
+  private renderArray(params: NestedPropertyRendererComponentRenderArrayParams): void {
+    const { arr, containerEl, ctx, onArrayChange, parentPath } = params;
     for (const [index, item] of arr.entries()) {
-      this.renderEntry(containerEl, String(index), item, ctx, parentPath, (newValue: unknown) => {
-        const newArr = [...arr];
-        newArr[index] = newValue;
-        onArrayChange(newArr);
-      }, () => {
-        const newArr = arr.filter((_, i) => i !== index);
-        onArrayChange(newArr);
+      this.renderEntry({
+        containerEl,
+        ctx,
+        label: String(index),
+        onDelete: () => {
+          const newArr = arr.filter((_, i) => i !== index);
+          onArrayChange(newArr);
+        },
+        onValueChange: (newValue: unknown) => {
+          const newArr = [...arr];
+          newArr[index] = newValue;
+          onArrayChange(newArr);
+        },
+        parentPath,
+        value: item
       });
     }
-    renderAddItemButton(containerEl, arr, onArrayChange);
+    renderAddItemButton({ arr, containerEl, onValueChange: onArrayChange });
   }
 
-  private renderComplexWidget(el: HTMLElement, value: unknown, ctx: PropertyRenderContext, widgetType: string): PropertyWidgetComponentBase {
+  private renderComplexWidget(params: NestedPropertyRendererComponentRenderComplexWidgetParams): PropertyWidgetComponentBase {
+    const { ctx, el, widgetType } = params;
+    let value = params.value;
     if (widgetType === LIST_WIDGET_TYPE && !Array.isArray(value)) {
       value = [];
     } else if (widgetType === OBJECT_WIDGET_TYPE && (!isComplexValue(value) || Array.isArray(value))) {
@@ -223,12 +328,18 @@ export class NestedPropertyRendererComponent extends Component {
     }
 
     if (propertyEl instanceof HTMLElement) {
-      createSummary(el, value, propertyEl, rootPath, this.expandedPaths);
+      createSummary({ expandedPaths: this.expandedPaths, parentEl: el, path: rootPath, propertyEl, value });
     }
 
     const containerEl = el.createDiv({ cls: 'nested-properties-container' });
-    this.renderNestedValue(containerEl, value, ctx, rootPath, (newValue: unknown) => {
-      ctx.onChange(newValue);
+    this.renderNestedValue({
+      containerEl,
+      ctx,
+      onValueChange: (newValue: unknown) => {
+        ctx.onChange(newValue);
+      },
+      path: rootPath,
+      value
     });
 
     window.setTimeout(() => {
@@ -267,15 +378,8 @@ export class NestedPropertyRendererComponent extends Component {
     };
   }
 
-  private renderEntry(
-    containerEl: HTMLElement,
-    label: string,
-    value: unknown,
-    ctx: PropertyRenderContext,
-    parentPath: string,
-    onValueChange: (newValue: unknown) => void,
-    onDelete: () => void
-  ): void {
+  private renderEntry(params: NestedPropertyRendererComponentRenderEntryParams): void {
+    const { containerEl, ctx, label, onDelete, onValueChange, parentPath, value } = params;
     const path = `${parentPath}.${label}`;
     const typeOverride = this.widgetTypeOverrides.get(path);
     const isComplex = typeOverride === LIST_WIDGET_TYPE || typeOverride === OBJECT_WIDGET_TYPE
@@ -289,7 +393,7 @@ export class NestedPropertyRendererComponent extends Component {
       });
       propertyEl.addEventListener('contextmenu', (e) => {
         e.stopPropagation();
-        this.showNestedPropertyMenu(e, path, label, value, onValueChange, onDelete);
+        this.showNestedPropertyMenu({ evt: e, label, onDelete, onValueChange, path, value });
       });
 
       const keyEl = propertyEl.createDiv({ cls: 'metadata-property-key' });
@@ -308,12 +412,12 @@ export class NestedPropertyRendererComponent extends Component {
         }
       });
 
-      const complexWidget = this.getWidget(path, label, value);
+      const complexWidget = this.getWidget({ label, path, value });
       const iconEl = keyEl.createSpan({ cls: 'metadata-property-icon' });
       setIcon(iconEl, complexWidget.icon);
       iconEl.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.showNestedPropertyMenu(e, path, label, value, onValueChange, onDelete);
+        this.showNestedPropertyMenu({ evt: e, label, onDelete, onValueChange, path, value });
       });
       const keyInput = keyEl.createEl('input', {
         attr: { readonly: '', tabindex: '-1' },
@@ -323,19 +427,19 @@ export class NestedPropertyRendererComponent extends Component {
       keyInput.size = Math.max(1, label.length);
 
       const valueEl = propertyEl.createDiv({ cls: 'metadata-property-value' });
-      createSummary(valueEl, value, propertyEl, path, this.expandedPaths);
+      createSummary({ expandedPaths: this.expandedPaths, parentEl: valueEl, path, propertyEl, value });
       const nestedContainer = valueEl.createDiv({ cls: 'nested-properties-container' });
-      this.renderNestedValue(nestedContainer, value, ctx, path, onValueChange);
+      this.renderNestedValue({ containerEl: nestedContainer, ctx, onValueChange, path, value });
       return;
     }
     const propertyEl = containerEl.createDiv({ cls: 'metadata-property' });
     propertyEl.addEventListener('contextmenu', (e) => {
       e.stopPropagation();
-      this.showNestedPropertyMenu(e, path, label, value, onValueChange, onDelete);
+      this.showNestedPropertyMenu({ evt: e, label, onDelete, onValueChange, path, value });
     });
-    this.renderKeyEl(propertyEl, path, label, value, onValueChange, onDelete);
+    this.renderKeyEl({ label, onDelete, onValueChange, parentEl: propertyEl, path, value });
 
-    const widget = this.getWidget(path, label, value);
+    const widget = this.getWidget({ label, path, value });
     const valueEl = propertyEl.createDiv({ cls: 'metadata-property-value' });
     valueEl.setAttr('data-property-type', widget.type);
     widget.render(valueEl, value, {
@@ -347,22 +451,16 @@ export class NestedPropertyRendererComponent extends Component {
     });
   }
 
-  private renderKeyEl(
-    parentEl: HTMLElement,
-    path: string,
-    label: string,
-    value: unknown,
-    onValueChange: (newValue: unknown) => void,
-    onDelete: () => void
-  ): void {
+  private renderKeyEl(params: NestedPropertyRendererComponentRenderKeyElParams): void {
+    const { label, onDelete, onValueChange, parentEl, path, value } = params;
     const keyEl = parentEl.createDiv({ cls: 'metadata-property-key' });
 
-    const widget = this.getWidget(path, label, value);
+    const widget = this.getWidget({ label, path, value });
     const iconEl = keyEl.createSpan({ cls: 'metadata-property-icon' });
     setIcon(iconEl, widget.icon);
     iconEl.addEventListener('click', (e) => {
       e.stopPropagation();
-      this.showNestedPropertyMenu(e, path, label, value, onValueChange, onDelete);
+      this.showNestedPropertyMenu({ evt: e, label, onDelete, onValueChange, path, value });
     });
 
     const keyInput = keyEl.createEl('input', {
@@ -373,51 +471,48 @@ export class NestedPropertyRendererComponent extends Component {
     keyInput.size = Math.max(1, label.length);
   }
 
-  private renderNestedValue(
-    containerEl: HTMLElement,
-    value: unknown,
-    ctx: PropertyRenderContext,
-    path: string,
-    onValueChange: (newValue: unknown) => void
-  ): void {
+  private renderNestedValue(params: NestedPropertyRendererComponentRenderNestedValueParams): void {
+    const { containerEl, ctx, onValueChange, path, value } = params;
     if (Array.isArray(value)) {
-      this.renderArray(containerEl, value, ctx, path, onValueChange);
+      this.renderArray({ arr: value, containerEl, ctx, onArrayChange: onValueChange, parentPath: path });
     } else {
-      this.renderObject(containerEl, value as GenericObject, ctx, path, onValueChange);
+      this.renderObject({ containerEl, ctx, obj: value as GenericObject, onValueChange, parentPath: path });
     }
   }
 
-  private renderObject(
-    containerEl: HTMLElement,
-    obj: GenericObject,
-    ctx: PropertyRenderContext,
-    parentPath: string,
-    onValueChange: (newValue: unknown) => void
-  ): void {
+  private renderObject(params: NestedPropertyRendererComponentRenderObjectParams): void {
+    const { containerEl, ctx, obj, onValueChange, parentPath } = params;
     for (const [key, val] of Object.entries(obj)) {
-      this.renderEntry(containerEl, key, val, ctx, parentPath, (newValue: unknown) => {
-        const newObj = { ...obj, [key]: newValue };
-        onValueChange(newObj);
-      }, () => {
-        const newObj = { ...obj };
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- Need to delete the key.
-        delete newObj[key];
-        onValueChange(newObj);
+      this.renderEntry({
+        containerEl,
+        ctx,
+        label: key,
+        onDelete: () => {
+          const newObj = { ...obj };
+          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- Need to delete the key.
+          delete newObj[key];
+          onValueChange(newObj);
+        },
+        onValueChange: (newValue: unknown) => {
+          const newObj = { ...obj, [key]: newValue };
+          onValueChange(newObj);
+        },
+        parentPath,
+        value: val
       });
     }
-    renderAddPropertyButton(containerEl, obj, onValueChange, (key) => {
-      this.pendingFocusKey = key;
+    renderAddPropertyButton({
+      containerEl,
+      obj,
+      onValueChange,
+      setPendingFocusKey: (key) => {
+        this.pendingFocusKey = key;
+      }
     });
   }
 
-  private showNestedPropertyMenu(
-    evt: MouseEvent,
-    path: string,
-    label: string,
-    value: unknown,
-    onValueChange: (newValue: unknown) => void,
-    onDelete: () => void
-  ): void {
+  private showNestedPropertyMenu(params: NestedPropertyRendererComponentShowNestedPropertyMenuParams): void {
+    const { evt, label, onDelete, onValueChange, path, value } = params;
     const MENU_DELAY_IN_MILLISECONDS = 200;
     if (Date.now() - this.lastMenuCloseTime < MENU_DELAY_IN_MILLISECONDS) {
       return;
@@ -432,7 +527,7 @@ export class NestedPropertyRendererComponent extends Component {
         .setIcon('lucide-info')
         .setSection('type');
       const submenu = item.setSubmenu();
-      const currentWidget = this.getWidget(path, label, value);
+      const currentWidget = this.getWidget({ label, path, value });
       for (const widget of Object.values(this.app.metadataTypeManager.registeredTypeWidgets)) {
         if (widget.reservedKeys && !widget.reservedKeys.contains(label)) {
           continue;
@@ -442,7 +537,7 @@ export class NestedPropertyRendererComponent extends Component {
             .setIcon(widget.icon)
             .setChecked(widget.type === currentWidget.type)
             .onClick(convertAsyncToSync(async () => {
-              await this.changeType(widget, path, value, onValueChange);
+              await this.changeType({ onValueChange, path, value, widget });
             }));
         });
       }
@@ -507,7 +602,8 @@ function collapseAllIn(parentNode: ParentNode, expandedPaths: Set<string>): void
   }
 }
 
-function createSummary(parentEl: HTMLElement, value: unknown, propertyEl: HTMLElement, path: string, expandedPaths: Set<string>): void {
+function createSummary(params: CreateSummaryParams): void {
+  const { expandedPaths, parentEl, path, propertyEl, value } = params;
   const summary = parentEl.createSpan({ cls: 'nested-properties-summary', text: Array.isArray(value) ? '[ ... ]' : '{ ... }' });
   summary.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -545,7 +641,7 @@ function injectHeaderButtons(metadataContainerEl: HTMLElement, expandedPaths: Se
   headingEl.after(actionsEl);
 
   const toggleButton = actionsEl.createDiv({ cls: 'clickable-icon' });
-  updateToggleButton(toggleButton, metadataContainerEl);
+  updateToggleButton({ metadataContainerEl, toggleButton });
 
   toggleButton.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -557,11 +653,12 @@ function injectHeaderButtons(metadataContainerEl: HTMLElement, expandedPaths: Se
     } else {
       collapseAllIn(metadataContainerEl, expandedPaths);
     }
-    updateToggleButton(toggleButton, metadataContainerEl);
+    updateToggleButton({ metadataContainerEl, toggleButton });
   });
 }
 
-function renderAddItemButton(containerEl: HTMLElement, arr: unknown[], onValueChange: (newValue: unknown) => void): void {
+function renderAddItemButton(params: RenderAddItemButtonParams): void {
+  const { arr, containerEl, onValueChange } = params;
   const addItemButton = containerEl.createDiv({ cls: 'nested-properties-add-item' });
   setIcon(addItemButton, 'plus');
   addItemButton.createSpan({ text: 'Add item' });
@@ -572,12 +669,8 @@ function renderAddItemButton(containerEl: HTMLElement, arr: unknown[], onValueCh
   });
 }
 
-function renderAddPropertyButton(
-  containerEl: HTMLElement,
-  obj: GenericObject,
-  onValueChange: (newValue: unknown) => void,
-  setPendingFocusKey: (key: string) => void
-): void {
+function renderAddPropertyButton(params: RenderAddPropertyButtonParams): void {
+  const { containerEl, obj, onValueChange, setPendingFocusKey } = params;
   const addPropertyButton = containerEl.createDiv({ cls: 'nested-properties-add-property' });
   setIcon(addPropertyButton, 'plus');
   addPropertyButton.createSpan({ text: 'Add property' });
@@ -635,7 +728,8 @@ function renderAddPropertyButton(
   });
 }
 
-function updateToggleButton(toggleButton: HTMLElement, metadataContainerEl: HTMLElement): void {
+function updateToggleButton(params: UpdateToggleButtonParams): void {
+  const { metadataContainerEl, toggleButton } = params;
   const allCollapsibles = metadataContainerEl.querySelectorAll('.nested-properties-collapsible');
   const allCollapsed = allCollapsibles.length > 0 && Array.from(allCollapsibles).every((el) => el.classList.contains('is-collapsed'));
 

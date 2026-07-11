@@ -5,7 +5,18 @@ import { extractDefaultExportInterop } from 'obsidian-dev-utils/object-utils';
 
 const momentFn = extractDefaultExportInterop(moment);
 
-export function convertValue(value: unknown, targetType: string): unknown {
+interface ConvertValueParams {
+  readonly targetType: string;
+  readonly value: unknown;
+}
+
+interface IsLossyConversionParams {
+  readonly targetType: string;
+  readonly value: unknown;
+}
+
+export function convertValue(params: ConvertValueParams): unknown {
+  const { targetType, value } = params;
   switch (targetType) {
     case 'aliases':
     case 'multitext':
@@ -32,7 +43,8 @@ export function isComplexValue(value: unknown): value is GenericObject | unknown
   return value !== null && typeof value === 'object';
 }
 
-export function isLossyConversion(value: unknown, targetType: string): boolean {
+export function isLossyConversion(params: IsLossyConversionParams): boolean {
+  const { targetType, value } = params;
   switch (targetType) {
     case 'aliases':
     case 'multitext':

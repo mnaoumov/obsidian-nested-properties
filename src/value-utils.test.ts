@@ -90,200 +90,200 @@ describe('convertValue', () => {
   describe('to simple list types (aliases/multitext/tags)', () => {
     it('should return simple array as-is', () => {
       const arr = [1, 2, 3];
-      expect(convertValue(arr, 'multitext')).toBe(arr);
+      expect(convertValue({ targetType: 'multitext', value: arr })).toBe(arr);
     });
 
     it('should filter out complex items from array', () => {
-      expect(convertValue([1, { a: 2 }, 3, [4]], 'multitext')).toEqual([1, 3]);
+      expect(convertValue({ targetType: 'multitext', value: [1, { a: 2 }, 3, [4]] })).toEqual([1, 3]);
     });
 
     it('should wrap string in array', () => {
-      expect(convertValue('hello', 'multitext')).toEqual(['hello']);
+      expect(convertValue({ targetType: 'multitext', value: 'hello' })).toEqual(['hello']);
     });
 
     it('should return empty array for empty string', () => {
-      expect(convertValue('', 'multitext')).toEqual([]);
+      expect(convertValue({ targetType: 'multitext', value: '' })).toEqual([]);
     });
 
     it('should return empty array for null', () => {
-      expect(convertValue(null, 'multitext')).toEqual([]);
+      expect(convertValue({ targetType: 'multitext', value: null })).toEqual([]);
     });
 
     it('should return empty array for undefined', () => {
-      expect(convertValue(undefined, 'multitext')).toEqual([]);
+      expect(convertValue({ targetType: 'multitext', value: undefined })).toEqual([]);
     });
 
     it('should wrap number as string in array', () => {
-      expect(convertValue(42, 'aliases')).toEqual(['42']);
+      expect(convertValue({ targetType: 'aliases', value: 42 })).toEqual(['42']);
     });
 
     it('should work for tags type', () => {
-      expect(convertValue('tag', 'tags')).toEqual(['tag']);
+      expect(convertValue({ targetType: 'tags', value: 'tag' })).toEqual(['tag']);
     });
 
     it('should return empty array for objects', () => {
-      expect(convertValue({ a: 1, b: 2 }, 'multitext')).toEqual([]);
+      expect(convertValue({ targetType: 'multitext', value: { a: 1, b: 2 } })).toEqual([]);
     });
   });
 
   describe('to mixed list', () => {
     it('should return array as-is', () => {
       const arr = [1, { a: 2 }];
-      expect(convertValue(arr, 'list')).toBe(arr);
+      expect(convertValue({ targetType: 'list', value: arr })).toBe(arr);
     });
 
     it('should wrap object in array', () => {
       const obj = { a: 1 };
-      expect(convertValue(obj, 'list')).toEqual([obj]);
+      expect(convertValue({ targetType: 'list', value: obj })).toEqual([obj]);
     });
 
     it('should wrap primitive in array', () => {
-      expect(convertValue('hello', 'list')).toEqual(['hello']);
-      expect(convertValue(42, 'list')).toEqual([42]);
-      expect(convertValue(true, 'list')).toEqual([true]);
+      expect(convertValue({ targetType: 'list', value: 'hello' })).toEqual(['hello']);
+      expect(convertValue({ targetType: 'list', value: 42 })).toEqual([42]);
+      expect(convertValue({ targetType: 'list', value: true })).toEqual([true]);
     });
 
     it('should return empty array for null', () => {
-      expect(convertValue(null, 'list')).toEqual([]);
+      expect(convertValue({ targetType: 'list', value: null })).toEqual([]);
     });
 
     it('should return empty array for undefined', () => {
-      expect(convertValue(undefined, 'list')).toEqual([]);
+      expect(convertValue({ targetType: 'list', value: undefined })).toEqual([]);
     });
   });
 
   describe('to checkbox', () => {
     it('should convert truthy values to true', () => {
-      expect(convertValue('yes', 'checkbox')).toBe(true);
-      expect(convertValue(1, 'checkbox')).toBe(true);
-      expect(convertValue({}, 'checkbox')).toBe(true);
+      expect(convertValue({ targetType: 'checkbox', value: 'yes' })).toBe(true);
+      expect(convertValue({ targetType: 'checkbox', value: 1 })).toBe(true);
+      expect(convertValue({ targetType: 'checkbox', value: {} })).toBe(true);
     });
 
     it('should convert falsy values to false', () => {
-      expect(convertValue('', 'checkbox')).toBe(false);
-      expect(convertValue(0, 'checkbox')).toBe(false);
-      expect(convertValue(null, 'checkbox')).toBe(false);
+      expect(convertValue({ targetType: 'checkbox', value: '' })).toBe(false);
+      expect(convertValue({ targetType: 'checkbox', value: 0 })).toBe(false);
+      expect(convertValue({ targetType: 'checkbox', value: null })).toBe(false);
     });
   });
 
   describe('to date/datetime', () => {
     it('should return valid date string as-is', () => {
-      expect(convertValue('2024-01-15', 'date')).toBe('2024-01-15');
+      expect(convertValue({ targetType: 'date', value: '2024-01-15' })).toBe('2024-01-15');
     });
 
     it('should return null for invalid date', () => {
-      expect(convertValue('not-a-date', 'date')).toBeNull();
+      expect(convertValue({ targetType: 'date', value: 'not-a-date' })).toBeNull();
     });
 
     it('should return null for non-string values', () => {
-      expect(convertValue(42, 'datetime')).toBeNull();
-      expect(convertValue(null, 'datetime')).toBeNull();
+      expect(convertValue({ targetType: 'datetime', value: 42 })).toBeNull();
+      expect(convertValue({ targetType: 'datetime', value: null })).toBeNull();
     });
 
     it('should return null for empty string', () => {
-      expect(convertValue('', 'datetime')).toBeNull();
+      expect(convertValue({ targetType: 'datetime', value: '' })).toBeNull();
     });
   });
 
   describe('to number', () => {
     it('should convert numeric string', () => {
-      expect(convertValue('42', 'number')).toBe(42);
+      expect(convertValue({ targetType: 'number', value: '42' })).toBe(42);
     });
 
     it('should return 0 for non-numeric string', () => {
-      expect(convertValue('hello', 'number')).toBe(0);
+      expect(convertValue({ targetType: 'number', value: 'hello' })).toBe(0);
     });
 
     it('should return 0 for null', () => {
-      expect(convertValue(null, 'number')).toBe(0);
+      expect(convertValue({ targetType: 'number', value: null })).toBe(0);
     });
 
     it('should pass through numbers', () => {
-      expect(convertValue(42, 'number')).toBe(42);
+      expect(convertValue({ targetType: 'number', value: 42 })).toBe(42);
     });
   });
 
   describe('to object', () => {
     it('should return objects as-is', () => {
       const obj = { a: 1 };
-      expect(convertValue(obj, 'object')).toBe(obj);
+      expect(convertValue({ targetType: 'object', value: obj })).toBe(obj);
     });
 
     it('should convert arrays to empty objects', () => {
-      expect(convertValue([1, 2], 'object')).toEqual({});
+      expect(convertValue({ targetType: 'object', value: [1, 2] })).toEqual({});
     });
 
     it('should return empty object for primitives', () => {
-      expect(convertValue('hello', 'object')).toEqual({});
-      expect(convertValue(42, 'object')).toEqual({});
-      expect(convertValue(null, 'object')).toEqual({});
+      expect(convertValue({ targetType: 'object', value: 'hello' })).toEqual({});
+      expect(convertValue({ targetType: 'object', value: 42 })).toEqual({});
+      expect(convertValue({ targetType: 'object', value: null })).toEqual({});
     });
   });
 
   describe('to text (default)', () => {
     it('should convert to string', () => {
-      expect(convertValue(42, 'text')).toBe('42');
-      expect(convertValue(true, 'text')).toBe('true');
+      expect(convertValue({ targetType: 'text', value: 42 })).toBe('42');
+      expect(convertValue({ targetType: 'text', value: true })).toBe('true');
     });
 
     it('should return empty string for null', () => {
-      expect(convertValue(null, 'text')).toBe('');
+      expect(convertValue({ targetType: 'text', value: null })).toBe('');
     });
 
     it('should use text as default for unknown types', () => {
-      expect(convertValue(42, 'unknown-type')).toBe('42');
+      expect(convertValue({ targetType: 'unknown-type', value: 42 })).toBe('42');
     });
   });
 });
 
 describe('isLossyConversion', () => {
   it('should not be lossy for simple primitive array to multitext', () => {
-    expect(isLossyConversion([1, 2, 3], 'multitext')).toBe(false);
+    expect(isLossyConversion({ targetType: 'multitext', value: [1, 2, 3] })).toBe(false);
   });
 
   it('should not be lossy for simple string array to aliases', () => {
-    expect(isLossyConversion(['a', 'b'], 'aliases')).toBe(false);
+    expect(isLossyConversion({ targetType: 'aliases', value: ['a', 'b'] })).toBe(false);
   });
 
   it('should not be lossy for simple string array to tags', () => {
-    expect(isLossyConversion(['a', 'b'], 'tags')).toBe(false);
+    expect(isLossyConversion({ targetType: 'tags', value: ['a', 'b'] })).toBe(false);
   });
 
   it('should not be lossy for simple string array to multitext', () => {
-    expect(isLossyConversion(['a', 'b'], 'multitext')).toBe(false);
+    expect(isLossyConversion({ targetType: 'multitext', value: ['a', 'b'] })).toBe(false);
   });
 
   it('should be lossy for mixed array to multitext', () => {
-    expect(isLossyConversion([1, { a: 2 }, 3], 'multitext')).toBe(true);
+    expect(isLossyConversion({ targetType: 'multitext', value: [1, { a: 2 }, 3] })).toBe(true);
   });
 
   it('should be lossy for object to multitext', () => {
-    expect(isLossyConversion({ a: 1 }, 'multitext')).toBe(true);
+    expect(isLossyConversion({ targetType: 'multitext', value: { a: 1 } })).toBe(true);
   });
 
   it('should be lossy for array to object', () => {
-    expect(isLossyConversion([1, 2], 'object')).toBe(true);
+    expect(isLossyConversion({ targetType: 'object', value: [1, 2] })).toBe(true);
   });
 
   it('should not be lossy for object to object', () => {
-    expect(isLossyConversion({ a: 1 }, 'object')).toBe(false);
+    expect(isLossyConversion({ targetType: 'object', value: { a: 1 } })).toBe(false);
   });
 
   it('should not be lossy for array to list', () => {
-    expect(isLossyConversion([1, 2], 'list')).toBe(false);
+    expect(isLossyConversion({ targetType: 'list', value: [1, 2] })).toBe(false);
   });
 
   it('should be lossy for object to list', () => {
-    expect(isLossyConversion({ a: 1 }, 'list')).toBe(true);
+    expect(isLossyConversion({ targetType: 'list', value: { a: 1 } })).toBe(true);
   });
 
   it('should be lossy for primitive to list', () => {
-    expect(isLossyConversion('hello', 'list')).toBe(true);
+    expect(isLossyConversion({ targetType: 'list', value: 'hello' })).toBe(true);
   });
 
   it('should not be lossy for other target types', () => {
-    expect(isLossyConversion('hello', 'text')).toBe(false);
-    expect(isLossyConversion(42, 'number')).toBe(false);
-    expect(isLossyConversion(true, 'checkbox')).toBe(false);
+    expect(isLossyConversion({ targetType: 'text', value: 'hello' })).toBe(false);
+    expect(isLossyConversion({ targetType: 'number', value: 42 })).toBe(false);
+    expect(isLossyConversion({ targetType: 'checkbox', value: true })).toBe(false);
   });
 });
