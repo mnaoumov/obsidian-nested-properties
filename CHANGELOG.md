@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## 1.2.10
+
+- chore: update libs
+- chore: update obsidian-dev-utils to 85.0.0
+- refactor: pass params objects to nested property renderer
+- build: lock typescript to 6.0.3
+- test: wire integration-testing vitest-setup into integration projects
+- chore: update libs
+- chore: clean up tsconfig
+
 ## 1.2.9
 
 - refactor: new template
