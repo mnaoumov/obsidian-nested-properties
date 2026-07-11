@@ -61,11 +61,11 @@ function createApp(): App {
 }
 
 function createPropertyEl(metrics?: ElementMetrics): HTMLElement {
-  const prop = activeDocument.createElement('div');
+  const prop = activeWindow.createDiv();
   prop.className = 'metadata-property';
-  const value = activeDocument.createElement('div');
+  const value = activeWindow.createDiv();
   value.className = 'metadata-property-value';
-  const nested = activeDocument.createElement('div');
+  const nested = activeWindow.createDiv();
   nested.className = 'nested-properties-container';
   value.appendChild(nested);
   prop.appendChild(value);
@@ -180,7 +180,7 @@ describe('FloatingScrollbar', () => {
 
     it('should use status bar offset height', () => {
       const STATUS_BAR_HEIGHT_PX = 30;
-      const statusBar = activeDocument.createElement('div');
+      const statusBar = activeWindow.createDiv();
       statusBar.className = 'status-bar';
       Object.defineProperty(statusBar, 'offsetHeight', { configurable: true, value: STATUS_BAR_HEIGHT_PX });
       activeDocument.body.appendChild(statusBar);
@@ -348,7 +348,7 @@ describe('FloatingScrollbar', () => {
       const activeEl = createPropertyEl({ clientWidth: 100, scrollLeft: 0, scrollWidth: 200 });
       scrollbar.update();
 
-      const input = activeDocument.createElement('input');
+      const input = activeWindow.createEl('input');
       activeDocument.body.appendChild(input);
       input.focus();
 
@@ -363,7 +363,7 @@ describe('FloatingScrollbar', () => {
       const activeEl = createPropertyEl({ clientWidth: 100, scrollLeft: 0, scrollWidth: 200 });
       scrollbar.update();
 
-      const textarea = activeDocument.createElement('textarea');
+      const textarea = activeWindow.createEl('textarea');
       activeDocument.body.appendChild(textarea);
       textarea.focus();
 
@@ -378,7 +378,7 @@ describe('FloatingScrollbar', () => {
       const activeEl = createPropertyEl({ clientWidth: 100, scrollLeft: 0, scrollWidth: 200 });
       scrollbar.update();
 
-      const editableEl = activeDocument.createElement('div');
+      const editableEl = activeWindow.createDiv();
       // Jsdom does not compute `isContentEditable`, so make the real element report it directly.
       Object.defineProperty(editableEl, 'isContentEditable', { configurable: true, value: true });
       editableEl.tabIndex = 0;
@@ -422,7 +422,7 @@ describe('FloatingScrollbar', () => {
       const activeEl = createPropertyEl({ clientWidth: 100, scrollLeft: 0, scrollWidth: 200 });
       scrollbar.update();
 
-      const nonEditableEl = activeDocument.createElement('div');
+      const nonEditableEl = activeWindow.createDiv();
       nonEditableEl.tabIndex = 0;
       activeDocument.body.appendChild(nonEditableEl);
       nonEditableEl.focus();
@@ -444,7 +444,7 @@ describe('FloatingScrollbar', () => {
     });
 
     it('should do nothing when no matching property element', () => {
-      const target = activeDocument.createElement('div');
+      const target = activeWindow.createDiv();
       activeDocument.body.appendChild(target);
 
       const event = new WheelEvent('wheel', { bubbles: true, cancelable: true });
@@ -455,7 +455,7 @@ describe('FloatingScrollbar', () => {
 
     it('should do nothing when property element is not scrollable', () => {
       const propEl = createPropertyEl({ clientWidth: 100, scrollWidth: 100 });
-      const inner = activeDocument.createElement('span');
+      const inner = activeWindow.createSpan();
       propEl.appendChild(inner);
 
       const event = new WheelEvent('wheel', { bubbles: true, cancelable: true });
@@ -470,7 +470,7 @@ describe('FloatingScrollbar', () => {
         rect: { bottom: 500, left: 0, right: 100, top: 400 },
         scrollWidth: 200
       });
-      const inner = activeDocument.createElement('span');
+      const inner = activeWindow.createSpan();
       propEl.appendChild(inner);
 
       const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, clientY: 400 });
@@ -486,7 +486,7 @@ describe('FloatingScrollbar', () => {
         scrollLeft: 0,
         scrollWidth: 200
       });
-      const inner = activeDocument.createElement('span');
+      const inner = activeWindow.createSpan();
       propEl.appendChild(inner);
 
       const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, clientY: 495, deltaY: 20 });
@@ -507,7 +507,7 @@ describe('FloatingScrollbar', () => {
     });
 
     it('should do nothing when no matching property element', () => {
-      const target = activeDocument.createElement('div');
+      const target = activeWindow.createDiv();
       activeDocument.body.appendChild(target);
 
       const event = new MouseEvent('mousemove', { bubbles: true });
@@ -518,7 +518,7 @@ describe('FloatingScrollbar', () => {
 
     it('should do nothing when property element is not scrollable', () => {
       const propEl = createPropertyEl({ clientWidth: 100, scrollWidth: 100 });
-      const inner = activeDocument.createElement('span');
+      const inner = activeWindow.createSpan();
       propEl.appendChild(inner);
 
       const event = new MouseEvent('mousemove', { bubbles: true });
@@ -533,7 +533,7 @@ describe('FloatingScrollbar', () => {
         rect: { bottom: 500 },
         scrollWidth: 200
       });
-      const inner = activeDocument.createElement('span');
+      const inner = activeWindow.createSpan();
       propEl.appendChild(inner);
 
       const event = new MouseEvent('mousemove', { bubbles: true, clientY: 495 });
@@ -548,7 +548,7 @@ describe('FloatingScrollbar', () => {
         rect: { bottom: 500 },
         scrollWidth: 200
       });
-      const inner = activeDocument.createElement('span');
+      const inner = activeWindow.createSpan();
       propEl.appendChild(inner);
 
       const event = new MouseEvent('mousemove', { bubbles: true, clientY: 400 });
