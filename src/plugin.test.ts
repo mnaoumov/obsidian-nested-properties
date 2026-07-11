@@ -3,6 +3,7 @@ import type {
   PluginManifest
 } from 'obsidian';
 
+import { castTo } from 'obsidian-dev-utils/object-utils';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   beforeEach,
@@ -30,14 +31,21 @@ interface ObsidianComponentModule {
   Component: new () => object;
 }
 
+interface RendererWithToggle {
+  toggleFullKeyDisplay: ReturnType<typeof vi.fn>;
+}
+
 async function loadableComponentStub(): Promise<ReturnType<typeof vi.fn>> {
   const { Component } = await vi.importActual<ObsidianComponentModule>('obsidian');
   // Vitest requires a non-arrow function for a mock invoked with `new`; it must return a fresh real
   // `Component`. Constructing a stub class directly would route `this` through vitest's mock proxy and
-  // Break the test-mocks `Component` constructor's own strict proxy.
+  // Break the test-mocks `Component` constructor's own strict proxy. The stub carries a
+  // `toggleFullKeyDisplay` spy so the command callback can be asserted to delegate to it.
   // eslint-disable-next-line prefer-arrow-callback -- See above; an arrow cannot be used here.
   return vi.fn(function componentStub() {
-    return new Component();
+    const component = new Component();
+    Object.assign(component, { toggleFullKeyDisplay: vi.fn() });
+    return component;
   });
 }
 
@@ -78,7 +86,8 @@ describe('Plugin', () => {
       const plugin = new Plugin(app, manifest);
       await plugin.onload();
 
-      expect(MockNestedPropertyRendererComponent).toHaveBeenCalledWith(app);
+      const params = MockNestedPropertyRendererComponent.mock.calls[0]?.[0];
+      expect(params?.app).toBe(app);
     });
 
     it('should add NestedPropertyRendererComponent as a child', async () => {
@@ -87,6 +96,31 @@ describe('Plugin', () => {
       await plugin.onload();
 
       expect(addChildSpy).toHaveBeenCalledWith(instanceOf(MockNestedPropertyRendererComponent));
+    });
+
+    it('should register the toggle-full-key-display command', async () => {
+      const plugin = new Plugin(app, manifest);
+      const addCommandSpy = vi.spyOn(plugin, 'addCommand');
+      await plugin.onload();
+
+      expect(addCommandSpy).toHaveBeenCalledWith(expect.objectContaining({
+        id: 'toggle-full-key-display',
+        name: 'Toggle full key display'
+      }));
+    });
+
+    it('should delegate the toggle-full-key-display command to the renderer', async () => {
+      const plugin = new Plugin(app, manifest);
+      const addCommandSpy = vi.spyOn(plugin, 'addCommand');
+      await plugin.onload();
+
+      const command = addCommandSpy.mock.calls
+        .map((call) => call[0])
+        .find((candidate) => candidate.id === 'toggle-full-key-display');
+      command?.callback?.();
+
+      const renderer = castTo<RendererWithToggle>(instanceOf(MockNestedPropertyRendererComponent));
+      expect(renderer.toggleFullKeyDisplay).toHaveBeenCalledTimes(1);
     });
   });
 });

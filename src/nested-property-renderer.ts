@@ -13,13 +13,19 @@ import {
   Menu,
   setIcon
 } from 'obsidian';
-import { convertAsyncToSync } from 'obsidian-dev-utils/async';
+import {
+  convertAsyncToSync,
+  invokeAsyncSafely
+} from 'obsidian-dev-utils/async';
+import { AllWindowsEventComponent } from 'obsidian-dev-utils/obsidian/components/all-windows-event-component';
+import { getAllDomWindows } from 'obsidian-dev-utils/obsidian/workspace';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
 import { FloatingScrollbarComponent } from './floating-scrollbar.ts';
 import { MetadataTypeManagerGetTypeInfoPatchComponent } from './patches/metadata-type-manager-get-type-info-patch-component.ts';
 import { MultiTextPropertyWidgetPatchComponent } from './patches/multi-text-property-widget-patch-component.ts';
 import { UnknownWidgetRenderPatchComponent } from './patches/unknown-widget-render-patch-component.ts';
+import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { TypeChangeModal } from './type-change-modal.ts';
 import {
   convertValue,
@@ -30,6 +36,7 @@ import {
 
 const LIST_WIDGET_TYPE = 'list';
 const OBJECT_WIDGET_TYPE = 'object';
+const FULL_KEY_DISPLAY_BODY_CLASS = 'nested-properties-full-key-display';
 
 interface CreateSummaryParams {
   readonly expandedPaths: Set<string>;
@@ -39,11 +46,22 @@ interface CreateSummaryParams {
   readonly value: unknown;
 }
 
+interface InjectHeaderButtonsParams {
+  readonly expandedPaths: Set<string>;
+  readonly metadataContainerEl: HTMLElement;
+  onToggleFullKeyDisplay(this: void): void;
+}
+
 interface NestedPropertyRendererComponentChangeTypeParams {
   onValueChange(this: void, newValue: unknown): void;
   readonly path: string;
   readonly value: unknown;
   readonly widget: PropertyWidget;
+}
+
+interface NestedPropertyRendererComponentConstructorParams {
+  readonly app: App;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
 }
 
 interface NestedPropertyRendererComponentGetWidgetParams {
@@ -133,10 +151,13 @@ export class NestedPropertyRendererComponent extends Component {
   private _listWidget?: PropertyWidget<MultitextPropertyWidgetComponent>;
   private _mixedListWidget?: PropertyWidget;
   private _objectWidget?: PropertyWidget;
+  private readonly app: App;
   private readonly expandedPaths = new Set<string>();
   private floatingScrollbar?: FloatingScrollbarComponent;
+  private isFullKeyDisplayEnabled = false;
   private lastMenuCloseTime = 0;
   private pendingFocusKey: null | string = null;
+  private readonly pluginSettingsComponent: PluginSettingsComponent;
   private readonly widgetTypeOverrides = new Map<string, string>();
 
   private get listWidget(): PropertyWidget<MultitextPropertyWidgetComponent> {
@@ -151,8 +172,10 @@ export class NestedPropertyRendererComponent extends Component {
     return ensureNonNullable(this._objectWidget);
   }
 
-  public constructor(private readonly app: App) {
+  public constructor(params: NestedPropertyRendererComponentConstructorParams) {
     super();
+    this.app = params.app;
+    this.pluginSettingsComponent = params.pluginSettingsComponent;
   }
 
   public override onload(): void {
@@ -206,11 +229,37 @@ export class NestedPropertyRendererComponent extends Component {
       for (const el of activeDocument.querySelectorAll('.nested-properties-header-actions')) {
         el.remove();
       }
+      for (const win of getAllDomWindows(this.app)) {
+        win.document.body.removeClass(FULL_KEY_DISPLAY_BODY_CLASS);
+      }
       this.reloadAllProperties();
+    });
+
+    this.isFullKeyDisplayEnabled = this.pluginSettingsComponent.settings.isFullKeyDisplayEnabled;
+
+    const allWindowsEventComponent = this.addChild(new AllWindowsEventComponent(this.app));
+    allWindowsEventComponent.registerAllWindowsHandler((win) => {
+      this.applyFullKeyDisplayClass(win);
     });
 
     this.floatingScrollbar = this.addChild(new FloatingScrollbarComponent(this.app));
     this.reloadAllProperties();
+  }
+
+  public toggleFullKeyDisplay(): void {
+    this.isFullKeyDisplayEnabled = !this.isFullKeyDisplayEnabled;
+    for (const win of getAllDomWindows(this.app)) {
+      this.applyFullKeyDisplayClass(win);
+    }
+    invokeAsyncSafely(() =>
+      this.pluginSettingsComponent.editAndSave((settings) => {
+        settings.isFullKeyDisplayEnabled = this.isFullKeyDisplayEnabled;
+      })
+    );
+  }
+
+  private applyFullKeyDisplayClass(win: Window): void {
+    win.document.body.toggleClass(FULL_KEY_DISPLAY_BODY_CLASS, this.isFullKeyDisplayEnabled);
   }
 
   private async changeType(params: NestedPropertyRendererComponentChangeTypeParams): Promise<void> {
@@ -345,7 +394,13 @@ export class NestedPropertyRendererComponent extends Component {
     window.setTimeout(() => {
       const metadataContainerEl = containerEl.closest('.metadata-container');
       if (metadataContainerEl instanceof HTMLElement) {
-        injectHeaderButtons(metadataContainerEl, this.expandedPaths);
+        injectHeaderButtons({
+          expandedPaths: this.expandedPaths,
+          metadataContainerEl,
+          onToggleFullKeyDisplay: () => {
+            this.toggleFullKeyDisplay();
+          }
+        });
       }
 
       if (this.pendingFocusKey) {
@@ -623,7 +678,8 @@ function expandAllIn(parentNode: ParentNode, expandedPaths: Set<string>): void {
   }
 }
 
-function injectHeaderButtons(metadataContainerEl: HTMLElement, expandedPaths: Set<string>): void {
+function injectHeaderButtons(params: InjectHeaderButtonsParams): void {
+  const { expandedPaths, metadataContainerEl, onToggleFullKeyDisplay } = params;
   if (metadataContainerEl.querySelector('.nested-properties-header-actions')) {
     return;
   }
@@ -654,6 +710,15 @@ function injectHeaderButtons(metadataContainerEl: HTMLElement, expandedPaths: Se
       collapseAllIn(metadataContainerEl, expandedPaths);
     }
     updateToggleButton({ metadataContainerEl, toggleButton });
+  });
+
+  const fullKeyToggleButton = actionsEl.createDiv({ cls: 'clickable-icon nested-properties-full-key-toggle' });
+  setIcon(fullKeyToggleButton, 'lucide-wrap-text');
+  fullKeyToggleButton.setAttribute('aria-label', 'Toggle full key display');
+  fullKeyToggleButton.addEventListener('click', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    onToggleFullKeyDisplay();
   });
 }
 

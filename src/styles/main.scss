@@ -162,6 +162,22 @@
   cursor: ew-resize;
 }
 
+.nested-properties-full-key-display {
+  .nested-properties-container .metadata-property-key {
+    width: auto;
+    flex: 0 0 auto;
+  }
+
+  .nested-properties-container .metadata-property-key-input {
+    width: auto;
+    text-overflow: clip;
+  }
+
+  .nested-properties-full-key-toggle {
+    color: var(--text-accent);
+  }
+}
+
 .nested-properties-collapse-btn {
   display: inline-flex;
   align-items: center;
