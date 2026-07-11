@@ -32,6 +32,15 @@ level1Nested:
 - Context menu (Cut, Copy, Paste, Remove) on nested properties
 - Add new properties at any nesting level
 - Horizontal scrolling for deeply nested structures
+- Toggle full display of nested property keys (see [Commands](#commands))
+
+## Commands
+
+The plugin adds the following command to the command palette (it can be bound to a hotkey):
+
+- **`Toggle full key display`** — An on/off toggle that switches nested property keys between the default view (long keys truncated with a trailing ellipsis) and the full key text. Deeply nested keys scroll horizontally.
+
+The same on/off toggle is also available as a button in the Properties header (next to the collapse/expand-all button), so you can flip it directly from the frontmatter without opening the command palette. The button is highlighted while full key display is on.
 
 ## Installation
 

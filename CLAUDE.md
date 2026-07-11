@@ -30,8 +30,8 @@ Nested Properties is an Obsidian plugin that lets you view and edit nested front
 - **Root config files** are thin re-exports — actual logic lives in `scripts/` (`eslint.config.mts` → `scripts/eslint-config.ts`, etc.).
 - **`src/`** — plugin source:
   - `main.ts` — Obsidian entry point (default export of `Plugin`); imports the global stylesheet.
-  - `plugin.ts` — `Plugin` extends `obsidian-dev-utils`' `PluginBase`; `onloadImpl()` adds the `NestedPropertyRendererComponent`.
-  - `nested-property-renderer.ts` — `NestedPropertyRendererComponent` (Obsidian `Component`); the core renderer that wires up the property widgets, patches, context menus, expand/collapse state, and the floating scrollbar.
+  - `plugin.ts` — `Plugin` extends `obsidian-dev-utils`' `PluginBase`; `onloadImpl()` adds the `NestedPropertyRendererComponent` and registers the `toggle-full-key-display` command (delegates to the renderer's `toggleFullKeyDisplay()`).
+  - `nested-property-renderer.ts` — `NestedPropertyRendererComponent` (Obsidian `Component`); the core renderer that wires up the property widgets, patches, context menus, expand/collapse state, and the floating scrollbar. `toggleFullKeyDisplay()` flips a `nested-properties-full-key-display` body class across all windows (via `AllWindowsEventComponent` + `getAllDomWindows`), which the stylesheet uses to show full (untruncated) nested keys. The same toggle is exposed as an inline `clickable-icon` button (`.nested-properties-full-key-toggle`) injected into the Properties header actions by `injectHeaderButtons`; its active appearance is driven purely by the body class (no per-button state sync).
   - `value-utils.ts` — pure helpers for converting frontmatter values between property types and value-shape type guards (`convertValue`, `isComplexValue`, `isSimpleArray`, `isLossyConversion`, etc.).
   - `type-change-modal.ts` — `TypeChangeModal` (Obsidian `Modal`) confirming a potentially lossy property-type change before applying it.
   - `floating-scrollbar.ts` — `FloatingScrollbarComponent` (Obsidian `Component`) providing a floating horizontal scrollbar for deeply nested property containers.

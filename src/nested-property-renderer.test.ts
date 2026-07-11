@@ -225,6 +225,27 @@ vi.mock('./type-change-modal.ts', () => ({
 // eslint-disable-next-line import-x/first, import-x/imports-first -- vi.mock must precede imports.
 import { FloatingScrollbarComponent } from './floating-scrollbar.ts';
 
+interface FakeContainer {
+  win: FakeWindow;
+}
+
+interface FakeLeaf {
+  getContainer(): FakeContainer;
+}
+
+interface FakeWindow {
+  document: FakeWindowDocument;
+}
+
+interface FakeWindowBody {
+  removeClass: MockFn;
+  toggleClass: MockFn;
+}
+
+interface FakeWindowDocument {
+  body: FakeWindowBody;
+}
+
 type GetTypeInfoFn = (p: string, v: unknown) => TypeInfo;
 
 interface MockApp {
@@ -240,6 +261,8 @@ interface MockMetadataTypeManager {
 
 interface MockWorkspace {
   getLeavesOfType: MockFn;
+  iterateAllLeaves: MockFn;
+  onLayoutReady: MockFn;
 }
 
 interface RendererTestAccess {
@@ -252,6 +275,17 @@ interface RendererTestAccess {
 
 function asNodeList(els: MockDomElement[]): NodeListOf<Element> {
   return castTo<NodeListOf<Element>>(els);
+}
+
+function createFakeWindow(): FakeWindow {
+  return {
+    document: {
+      body: {
+        removeClass: vi.fn(),
+        toggleClass: vi.fn()
+      }
+    }
+  };
 }
 
 function createMockEl(overrides?: Partial<MockDomElement>): MockDomElement {
@@ -378,7 +412,9 @@ describe('NestedPropertyRenderer', () => {
         }
       },
       workspace: {
-        getLeavesOfType: vi.fn(() => [])
+        getLeavesOfType: vi.fn(() => []),
+        iterateAllLeaves: vi.fn(),
+        onLayoutReady: vi.fn()
       }
     };
 
@@ -388,6 +424,7 @@ describe('NestedPropertyRenderer', () => {
       activeElement: null,
       querySelectorAll: vi.fn(() => [])
     });
+    vi.stubGlobal('activeWindow', createFakeWindow());
     vi.stubGlobal('createDiv', vi.fn(() => createMockEl()));
     vi.stubGlobal('navigator', {
       clipboard: {
@@ -530,6 +567,59 @@ describe('NestedPropertyRenderer', () => {
       loadRenderer();
 
       expect(mockApp.workspace.getLeavesOfType).toHaveBeenCalledWith('markdown');
+    });
+  });
+
+  describe('toggleFullKeyDisplay', () => {
+    const FULL_KEY_DISPLAY_BODY_CLASS = 'nested-properties-full-key-display';
+
+    function stubWindows(win: FakeWindow): void {
+      vi.stubGlobal('activeWindow', win);
+      mockApp.workspace.iterateAllLeaves = vi.fn((cb: (leaf: FakeLeaf) => void) => {
+        cb({ getContainer: () => ({ win }) });
+      });
+    }
+
+    it('should apply the disabled state to the main window on load', () => {
+      const win = createFakeWindow();
+      stubWindows(win);
+
+      loadRenderer();
+
+      expect(win.document.body.toggleClass).toHaveBeenCalledWith(FULL_KEY_DISPLAY_BODY_CLASS, false);
+    });
+
+    it('should enable full key display across all windows when toggled on', () => {
+      const win = createFakeWindow();
+      stubWindows(win);
+      loadRenderer();
+      win.document.body.toggleClass.mockClear();
+
+      renderer.toggleFullKeyDisplay();
+
+      expect(win.document.body.toggleClass).toHaveBeenCalledWith(FULL_KEY_DISPLAY_BODY_CLASS, true);
+    });
+
+    it('should disable full key display when toggled twice', () => {
+      const win = createFakeWindow();
+      stubWindows(win);
+      loadRenderer();
+
+      renderer.toggleFullKeyDisplay();
+      win.document.body.toggleClass.mockClear();
+      renderer.toggleFullKeyDisplay();
+
+      expect(win.document.body.toggleClass).toHaveBeenCalledWith(FULL_KEY_DISPLAY_BODY_CLASS, false);
+    });
+
+    it('should remove the full key display class from all windows on unload', () => {
+      const win = createFakeWindow();
+      stubWindows(win);
+      loadRenderer();
+
+      renderer.unload();
+
+      expect(win.document.body.removeClass).toHaveBeenCalledWith(FULL_KEY_DISPLAY_BODY_CLASS);
     });
   });
 
@@ -1803,6 +1893,49 @@ describe('NestedPropertyRenderer', () => {
 
       const handler = findEventHandler(toggleButton, 'click');
       handler({ preventDefault: vi.fn(), stopPropagation: vi.fn() });
+    });
+
+    it('should create a full key display toggle button that toggles full key display', () => {
+      loadRenderer();
+      const toggleFullKeyDisplaySpy = vi.spyOn(renderer, 'toggleFullKeyDisplay');
+
+      const collapseButton = createMockEl();
+      const fullKeyButton = createMockEl();
+      const headingEl = createMockEl();
+      const actionsEl = createMockEl();
+      actionsEl.createDiv.mockReturnValueOnce(collapseButton).mockReturnValueOnce(fullKeyButton);
+
+      const collapsibleEl = createMockEl();
+
+      const metaContainer = createMockEl({
+        createDiv: vi.fn(() => actionsEl),
+        querySelector: vi.fn((selector: string) => {
+          if (selector === '.nested-properties-header-actions') {
+            return null;
+          }
+          if (selector === '.nested-properties-collapsible') {
+            return collapsibleEl;
+          }
+          if (selector === '.metadata-properties-heading') {
+            return headingEl;
+          }
+          return null;
+        }),
+        querySelectorAll: vi.fn(() => [collapsibleEl])
+      });
+
+      const containerEl = createMockEl({ closest: vi.fn(() => metaContainer) });
+      const el = createMockEl();
+      el.createDiv.mockReturnValue(containerEl);
+
+      const ctx = createMockCtx();
+      renderWidget('list', el, ['a'], ctx);
+      vi.runAllTimers();
+
+      const handler = findEventHandler(fullKeyButton, 'click');
+      handler({ preventDefault: vi.fn(), stopPropagation: vi.fn() });
+
+      expect(toggleFullKeyDisplaySpy).toHaveBeenCalledTimes(1);
     });
 
     it('should handle collapse all when not all collapsed', () => {
