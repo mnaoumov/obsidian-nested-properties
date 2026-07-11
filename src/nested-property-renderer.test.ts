@@ -5,7 +5,9 @@ import type {
 } from '@obsidian-typings/obsidian-public-latest';
 import type { App } from 'obsidian';
 
+import { noopAsync } from 'obsidian-dev-utils/function';
 import { castTo } from 'obsidian-dev-utils/object-utils';
+import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   afterEach,
   beforeEach,
@@ -15,7 +17,10 @@ import {
   vi
 } from 'vitest';
 
+import type { PluginSettingsComponent } from './plugin-settings-component.ts';
+
 import { NestedPropertyRendererComponent } from './nested-property-renderer.ts';
+import { PluginSettings } from './plugin-settings.ts';
 
 interface MockClassList {
   add: MockFn;
@@ -336,6 +341,8 @@ function testAccess(r: NestedPropertyRendererComponent): RendererTestAccess {
 
 let getTypeInfoOriginal: MockFn;
 let mockApp: MockApp;
+let mockPluginSettings: PluginSettings;
+let mockPluginSettingsComponent: PluginSettingsComponent;
 
 interface RenderWidgetResult {
   focus(): void;
@@ -440,7 +447,19 @@ describe('NestedPropertyRenderer', () => {
     hoisted.changeTypeChangeModalResult(true);
     vi.mocked(FloatingScrollbarComponent).mockClear();
 
-    renderer = new NestedPropertyRendererComponent(castTo<App>(mockApp));
+    mockPluginSettings = new PluginSettings();
+    mockPluginSettingsComponent = strictProxy<PluginSettingsComponent>({
+      editAndSave: vi.fn((settingsEditor: (settings: PluginSettings) => void) => {
+        settingsEditor(mockPluginSettings);
+        return noopAsync();
+      }),
+      settings: mockPluginSettings
+    });
+
+    renderer = new NestedPropertyRendererComponent({
+      app: castTo<App>(mockApp),
+      pluginSettingsComponent: mockPluginSettingsComponent
+    });
   });
 
   afterEach(() => {
@@ -620,6 +639,27 @@ describe('NestedPropertyRenderer', () => {
       renderer.unload();
 
       expect(win.document.body.removeClass).toHaveBeenCalledWith(FULL_KEY_DISPLAY_BODY_CLASS);
+    });
+
+    it('should initialize the enabled state from persisted settings on load', () => {
+      const win = createFakeWindow();
+      stubWindows(win);
+      mockPluginSettings.isFullKeyDisplayEnabled = true;
+
+      loadRenderer();
+
+      expect(win.document.body.toggleClass).toHaveBeenCalledWith(FULL_KEY_DISPLAY_BODY_CLASS, true);
+    });
+
+    it('should persist the state when toggled', () => {
+      const win = createFakeWindow();
+      stubWindows(win);
+      loadRenderer();
+
+      renderer.toggleFullKeyDisplay();
+
+      expect(mockPluginSettingsComponent.editAndSave).toHaveBeenCalledTimes(1);
+      expect(mockPluginSettings.isFullKeyDisplayEnabled).toBe(true);
     });
   });
 

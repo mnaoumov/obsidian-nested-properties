@@ -42,6 +42,8 @@ The plugin adds the following command to the command palette (it can be bound to
 
 The same on/off toggle is also available as a button in the Properties header (next to the collapse/expand-all button), so you can flip it directly from the frontmatter without opening the command palette. The button is highlighted while full key display is on.
 
+The chosen state is remembered and restored the next time Obsidian starts.
+
 ## Installation
 
 The plugin is available in [the official Community Plugins repository](https://community.obsidian.md/plugins/nested-properties).

@@ -13,7 +13,10 @@ import {
   Menu,
   setIcon
 } from 'obsidian';
-import { convertAsyncToSync } from 'obsidian-dev-utils/async';
+import {
+  convertAsyncToSync,
+  invokeAsyncSafely
+} from 'obsidian-dev-utils/async';
 import { AllWindowsEventComponent } from 'obsidian-dev-utils/obsidian/components/all-windows-event-component';
 import { getAllDomWindows } from 'obsidian-dev-utils/obsidian/workspace';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
@@ -22,6 +25,7 @@ import { FloatingScrollbarComponent } from './floating-scrollbar.ts';
 import { MetadataTypeManagerGetTypeInfoPatchComponent } from './patches/metadata-type-manager-get-type-info-patch-component.ts';
 import { MultiTextPropertyWidgetPatchComponent } from './patches/multi-text-property-widget-patch-component.ts';
 import { UnknownWidgetRenderPatchComponent } from './patches/unknown-widget-render-patch-component.ts';
+import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { TypeChangeModal } from './type-change-modal.ts';
 import {
   convertValue,
@@ -53,6 +57,11 @@ interface NestedPropertyRendererComponentChangeTypeParams {
   readonly path: string;
   readonly value: unknown;
   readonly widget: PropertyWidget;
+}
+
+interface NestedPropertyRendererComponentConstructorParams {
+  readonly app: App;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
 }
 
 interface NestedPropertyRendererComponentGetWidgetParams {
@@ -142,11 +151,13 @@ export class NestedPropertyRendererComponent extends Component {
   private _listWidget?: PropertyWidget<MultitextPropertyWidgetComponent>;
   private _mixedListWidget?: PropertyWidget;
   private _objectWidget?: PropertyWidget;
+  private readonly app: App;
   private readonly expandedPaths = new Set<string>();
   private floatingScrollbar?: FloatingScrollbarComponent;
   private isFullKeyDisplayEnabled = false;
   private lastMenuCloseTime = 0;
   private pendingFocusKey: null | string = null;
+  private readonly pluginSettingsComponent: PluginSettingsComponent;
   private readonly widgetTypeOverrides = new Map<string, string>();
 
   private get listWidget(): PropertyWidget<MultitextPropertyWidgetComponent> {
@@ -161,8 +172,10 @@ export class NestedPropertyRendererComponent extends Component {
     return ensureNonNullable(this._objectWidget);
   }
 
-  public constructor(private readonly app: App) {
+  public constructor(params: NestedPropertyRendererComponentConstructorParams) {
     super();
+    this.app = params.app;
+    this.pluginSettingsComponent = params.pluginSettingsComponent;
   }
 
   public override onload(): void {
@@ -222,6 +235,8 @@ export class NestedPropertyRendererComponent extends Component {
       this.reloadAllProperties();
     });
 
+    this.isFullKeyDisplayEnabled = this.pluginSettingsComponent.settings.isFullKeyDisplayEnabled;
+
     const allWindowsEventComponent = this.addChild(new AllWindowsEventComponent(this.app));
     allWindowsEventComponent.registerAllWindowsHandler((win) => {
       this.applyFullKeyDisplayClass(win);
@@ -236,6 +251,11 @@ export class NestedPropertyRendererComponent extends Component {
     for (const win of getAllDomWindows(this.app)) {
       this.applyFullKeyDisplayClass(win);
     }
+    invokeAsyncSafely(() =>
+      this.pluginSettingsComponent.editAndSave((settings) => {
+        settings.isFullKeyDisplayEnabled = this.isFullKeyDisplayEnabled;
+      })
+    );
   }
 
   private applyFullKeyDisplayClass(win: Window): void {

@@ -86,7 +86,8 @@ describe('Plugin', () => {
       const plugin = new Plugin(app, manifest);
       await plugin.onload();
 
-      expect(MockNestedPropertyRendererComponent).toHaveBeenCalledWith(app);
+      const params = MockNestedPropertyRendererComponent.mock.calls[0]?.[0];
+      expect(params?.app).toBe(app);
     });
 
     it('should add NestedPropertyRendererComponent as a child', async () => {

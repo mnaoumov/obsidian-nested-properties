@@ -160,4 +160,55 @@ describe('full key display command', () => {
     expect(result.truncatedAfterFirstClick).toBe(!result.truncatedBefore);
     expect(result.truncatedAfterSecondClick).toBe(result.truncatedBefore);
   });
+
+  it('persists full key display across a plugin reload', async () => {
+    const result = await evalInObsidian({
+      fn: async ({ app }) => {
+        const SETTLE_IN_MILLISECONDS = 300;
+        const PLUGIN_ID = 'nested-properties';
+        const FULL_KEY_CLASS = 'nested-properties-full-key-display';
+        const TOGGLE_COMMAND_ID = 'nested-properties:toggle-full-key-display';
+
+        const file = app.vault.getFileByPath('full-key.md');
+        if (!file) {
+          throw new Error('full-key.md not found');
+        }
+        await app.workspace.getLeaf(true).openFile(file);
+        await sleep(SETTLE_IN_MILLISECONDS);
+
+        // Normalize to the disabled state so the assertions do not depend on earlier tests.
+        if (activeDocument.body.hasClass(FULL_KEY_CLASS)) {
+          app.commands.executeCommandById(TOGGLE_COMMAND_ID);
+          await sleep(SETTLE_IN_MILLISECONDS);
+        }
+
+        app.commands.executeCommandById(TOGGLE_COMMAND_ID);
+        await sleep(SETTLE_IN_MILLISECONDS);
+        const classAfterToggle = activeDocument.body.hasClass(FULL_KEY_CLASS);
+
+        await app.plugins.disablePlugin(PLUGIN_ID);
+        await sleep(SETTLE_IN_MILLISECONDS);
+        const classAfterDisable = activeDocument.body.hasClass(FULL_KEY_CLASS);
+
+        await app.plugins.enablePlugin(PLUGIN_ID);
+        await sleep(SETTLE_IN_MILLISECONDS);
+        const classAfterReenable = activeDocument.body.hasClass(FULL_KEY_CLASS);
+
+        // Reset to the disabled state so other tests start clean.
+        app.commands.executeCommandById(TOGGLE_COMMAND_ID);
+        await sleep(SETTLE_IN_MILLISECONDS);
+
+        return {
+          classAfterDisable,
+          classAfterReenable,
+          classAfterToggle
+        };
+      },
+      vaultPath: vault.path
+    });
+
+    expect(result.classAfterToggle).toBe(true);
+    expect(result.classAfterDisable).toBe(false);
+    expect(result.classAfterReenable).toBe(true);
+  });
 });
