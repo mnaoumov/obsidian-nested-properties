@@ -42,7 +42,3 @@ Nested Properties is an Obsidian plugin that lets you view and edit nested front
     - `unknown-widget-render-patch-component.ts` — patches the unknown-widget renderer to display nested objects/arrays.
   - `styles/` — `main.scss` (plugin styles) and `scss.d.ts` (style-import type declaration).
 - **`main` field** points to `src/main.ts` (Obsidian plugin source entry; built artifact is `dist/build/main.js`, not published to npm).
-
-## Known Issues
-
-None.
