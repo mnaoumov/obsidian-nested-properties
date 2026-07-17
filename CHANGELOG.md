@@ -1,9 +1,5 @@
 # CHANGELOG
 
-## 1.3.0
-
-- feat: re #9
-
 ## 1.2.10
 
 - chore: update libs
