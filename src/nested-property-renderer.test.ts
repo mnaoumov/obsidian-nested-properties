@@ -878,6 +878,35 @@ describe('NestedPropertyRenderer', () => {
       expect(propertyEl.classList.add).toHaveBeenCalledWith('is-collapsed');
     });
 
+    it('should size the native key input to its value length', () => {
+      loadRenderer();
+
+      const keyInput = createMockEl({ value: 'vehicle_identification_number_long_key' });
+      Object.setPrototypeOf(keyInput, hoisted.MockHTMLInputElementBase.prototype);
+      const keyEl = createMockEl({
+        querySelector: vi.fn((selector: string) => (selector === '.metadata-property-key-input' ? keyInput : null))
+      });
+      const propertyEl = createMockEl({
+        querySelector: vi.fn((selector: string) => {
+          if (selector === '.metadata-property-key .metadata-property-icon') {
+            return createMockEl();
+          }
+          if (selector === '.metadata-property-key') {
+            return keyEl;
+          }
+          return null;
+        })
+      });
+
+      const el = createMockEl();
+      el.closest.mockReturnValue(propertyEl);
+
+      const ctx = createMockCtx();
+      renderWidget('object', el, { vin: 'ABC' }, ctx);
+
+      expect(keyInput.size).toBe('vehicle_identification_number_long_key'.length);
+    });
+
     it('should handle collapse button click toggling', () => {
       loadRenderer();
 
