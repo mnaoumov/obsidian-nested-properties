@@ -44,6 +44,10 @@ The same on/off toggle is also available as a button in the Properties header (n
 
 The chosen state is remembered and restored the next time Obsidian starts.
 
+## Demo vault
+
+A ready-made [demo vault](./demo-vault/README.md) ships with the plugin. Run the **`Open demo vault`** command to download the current release's vault and open it in a new window. Each note's frontmatter showcases one feature (nested objects, arrays, mixed lists, deeply nested structures, type changes, and the full-key-display toggle) — open a note and look at the Properties panel.
+
 ## Installation
 
 The plugin is available in [the official Community Plugins repository](https://community.obsidian.md/plugins/nested-properties).

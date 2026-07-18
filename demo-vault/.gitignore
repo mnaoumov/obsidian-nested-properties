@@ -1,0 +1,18 @@
+# Churny / runtime-generated Obsidian state.
+.obsidian/workspace.json
+.obsidian/hotkeys.json
+
+# Built plugins are release-injected by archivePluginDemoVault (the plugin under
+# test) or installed at runtime by the Demo Vault Helper (CodeScript Toolkit), so
+# commit only the baked settings file for the plugin under test.
+.obsidian/plugins/*
+!.obsidian/plugins/nested-properties/
+.obsidian/plugins/nested-properties/*
+!.obsidian/plugins/nested-properties/data.json
+
+# The Demo Vault Helper bootstrap plugin IS committed (it installs and configures
+# CodeScript Toolkit and runs the vault's startup script), so re-include its files
+# that the root .gitignore's `main.js` rule would otherwise drop.
+!.obsidian/plugins/demo-vault-helper/
+!.obsidian/plugins/demo-vault-helper/main.js
+!.obsidian/plugins/demo-vault-helper/manifest.json
