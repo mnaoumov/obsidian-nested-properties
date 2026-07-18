@@ -4,6 +4,7 @@ import type {
 } from 'obsidian';
 
 import { castTo } from 'obsidian-dev-utils/object-utils';
+import { OpenDemoVaultCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/open-demo-vault-command-handler';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   beforeEach,
@@ -53,7 +54,21 @@ vi.mock('./nested-property-renderer.ts', async () => ({
   NestedPropertyRendererComponent: await loadableComponentStub()
 }));
 
+// `OpenDemoVaultCommandHandler` is registered through the real `commandHandlerComponent`, which calls
+// `buildCommand()` then `onRegistered()` on each handler — so the stub must supply both (a minimal command
+// And a noop) to keep that real registration path working; the constructor spy is what the test asserts on.
+vi.mock('obsidian-dev-utils/obsidian/command-handlers/open-demo-vault-command-handler', () => ({
+  // eslint-disable-next-line prefer-arrow-callback -- a non-arrow function so it is constructable via `new`.
+  OpenDemoVaultCommandHandler: vi.fn(function openDemoVaultCommandHandlerStub() {
+    return {
+      buildCommand: vi.fn(() => ({ id: 'open-demo-vault', name: 'Open demo vault' })),
+      onRegistered: vi.fn()
+    };
+  })
+}));
+
 const MockNestedPropertyRendererComponent = vi.mocked(NestedPropertyRendererComponent);
+const MockOpenDemoVaultCommandHandler = vi.mocked(OpenDemoVaultCommandHandler);
 
 const manifest: PluginManifest = {
   author: 'test',
@@ -121,6 +136,16 @@ describe('Plugin', () => {
 
       const renderer = castTo<RendererWithToggle>(instanceOf(MockNestedPropertyRendererComponent));
       expect(renderer.toggleFullKeyDisplay).toHaveBeenCalledTimes(1);
+    });
+
+    it('should register the open-demo-vault command handler with the app and manifest', async () => {
+      const plugin = new Plugin(app, manifest);
+      await plugin.onload();
+
+      expect(MockOpenDemoVaultCommandHandler).toHaveBeenCalledOnce();
+      const params = MockOpenDemoVaultCommandHandler.mock.calls[0]?.[0];
+      expect(params?.app).toBe(app);
+      expect(params?.manifest).toBe(manifest);
     });
   });
 });

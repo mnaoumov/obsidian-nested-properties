@@ -1,0 +1,10 @@
+{
+  "author": "mnaoumov",
+  "authorUrl": "https://github.com/mnaoumov/",
+  "description": "Universal bootstrap for a plugin demo vault: installs CodeScript Toolkit, then runs the vault's startup script.",
+  "id": "demo-vault-helper",
+  "isDesktopOnly": false,
+  "name": "Demo Vault Helper",
+  "version": "1.0.0",
+  "minAppVersion": "1.12.7"
+}
