@@ -374,6 +374,14 @@ export class NestedPropertyRendererComponent extends Component {
           this.floatingScrollbar?.update();
         });
       }
+
+      // Size the native key input to its content so the full-key-display toggle (`width: auto`) can
+      // Expand it. Obsidian's default input width overrides `size` while the toggle is off, so this is
+      // Inert until the body class is present — mirroring the nested inputs in `renderKeyEl`.
+      const keyInputEl = keyEl?.querySelector('.metadata-property-key-input');
+      if (keyInputEl instanceof HTMLInputElement) {
+        keyInputEl.size = Math.max(1, keyInputEl.value.length);
+      }
     }
 
     if (propertyEl instanceof HTMLElement) {
