@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 1.2.12
+
+- fix: re #9
+- feat: demo-vault
+
 ## 1.2.11
 
 - feat: re #9
