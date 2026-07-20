@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 1.2.13
+
+- docs: standardize demo-vault README
+- docs: drop per-plugin demo-vault setup notes (bootstrap covered by ODU harness)
+- docs: unnumber demo-vault setup notes
+- Merge branch 'T119-renumber': number ONP demo vault example notes (S2)
+- Merge branch 'T119': adopt ODU 87.x demo-vault helpers + coverage suite (S2)
+
 ## 1.2.12
 
 - fix: re #9
