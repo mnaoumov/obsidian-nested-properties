@@ -4,7 +4,7 @@ Welcome to the [Nested Properties](https://github.com/mnaoumov/obsidian-nested-p
 
 > [!TIP] Interactive buttons
 >
-> A couple of notes have **Run** buttons, powered by [`CodeScript Toolkit`](https://github.com/mnaoumov/obsidian-codescript-toolkit/), which this vault installs for you automatically on first open (see [[CodeScript Toolkit prerequisite]]). Every button also has a manual equivalent, so you never strictly need it.
+> A couple of notes have **Run** buttons, powered by [`CodeScript Toolkit`](https://github.com/mnaoumov/obsidian-codescript-toolkit/), which this vault installs for you automatically on first open. Every button also has a manual equivalent, so you never strictly need it.
 
 ## Structure
 
@@ -22,8 +22,3 @@ Welcome to the [Nested Properties](https://github.com/mnaoumov/obsidian-nested-p
 ## Display
 
 - [[08 Full key display]]
-
-## Setup
-
-- [[Code buttons check]]
-- [[CodeScript Toolkit prerequisite]]
