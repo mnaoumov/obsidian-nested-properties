@@ -138,14 +138,15 @@ describe('Plugin', () => {
       expect(renderer.toggleFullKeyDisplay).toHaveBeenCalledTimes(1);
     });
 
-    it('should register the open-demo-vault command handler with the app and manifest', async () => {
+    it('should register the open-demo-vault command handler with the app, plugin id, and version', async () => {
       const plugin = new Plugin(app, manifest);
       await plugin.onload();
 
       expect(MockOpenDemoVaultCommandHandler).toHaveBeenCalledOnce();
       const params = MockOpenDemoVaultCommandHandler.mock.calls[0]?.[0];
       expect(params?.app).toBe(app);
-      expect(params?.manifest).toBe(manifest);
+      expect(params?.pluginId).toBe(manifest.id);
+      expect(params?.pluginVersion).toBe(manifest.version);
     });
   });
 });
