@@ -4,26 +4,26 @@ Welcome to the [Nested Properties](https://github.com/mnaoumov/obsidian-nested-p
 
 > [!TIP] Interactive buttons
 >
-> A couple of notes have **Run** buttons, powered by [`CodeScript Toolkit`](https://github.com/mnaoumov/obsidian-codescript-toolkit/), which this vault installs for you automatically on first open (see [[CodeScript Toolkit prerequisite]]). Every button also has a manual equivalent, so you never strictly need it.
+> A couple of notes have **Run** buttons, powered by [`CodeScript Toolkit`](https://github.com/mnaoumov/obsidian-codescript-toolkit/), which this vault installs for you automatically on first open (see [[10 CodeScript Toolkit prerequisite]]). Every button also has a manual equivalent, so you never strictly need it.
 
 ## Structure
 
-- [[Nested objects]]
-- [[Nested arrays]]
-- [[Mixed lists]]
-- [[Array of objects]]
-- [[Deeply nested and scrolling]]
+- [[01 Nested objects]]
+- [[02 Nested arrays]]
+- [[03 Mixed lists]]
+- [[04 Array of objects]]
+- [[05 Deeply nested and scrolling]]
 
 ## Editing
 
-- [[Context menu actions]]
-- [[Changing property types]]
+- [[06 Context menu actions]]
+- [[07 Changing property types]]
 
 ## Display
 
-- [[Full key display]]
+- [[08 Full key display]]
 
 ## Setup
 
-- [[Code buttons check]]
-- [[CodeScript Toolkit prerequisite]]
+- [[09 Code buttons check]]
+- [[10 CodeScript Toolkit prerequisite]]
