@@ -20,7 +20,7 @@ The toggle state is persisted in the plugin setting `isFullKeyDisplayEnabled` (s
 
 ## Switch it with a button
 
-The block below toggles full key display for you (needs the [[10 CodeScript Toolkit prerequisite]]). Manual equivalent: use the header button or the command palette as described above.
+The block below toggles full key display for you (needs the [[CodeScript Toolkit prerequisite]]). Manual equivalent: use the header button or the command palette as described above.
 
 ```code-button
 ---
