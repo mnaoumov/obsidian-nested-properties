@@ -1,9 +1,8 @@
-# Nested Properties demo vault
+This is an [Obsidian](https://obsidian.md/) vault demonstrating features of the [Nested Properties](https://github.com/mnaoumov/obsidian-nested-properties) plugin.
 
-A small Obsidian vault that demonstrates the [Nested Properties](https://github.com/mnaoumov/obsidian-nested-properties) plugin - it renders nested frontmatter (YAML objects and arrays) as a collapsible, editable tree in the **Properties** editor.
+## Opening this vault
 
-Open [00 Start](<./00 Start.md>) and work through the notes. Each note's **frontmatter** is the specimen: open the note and look at the Properties panel at the top.
+- **If you already have the plugin installed**, run the **Nested Properties: Open demo vault** command — it downloads and opens the latest demo vault automatically.
+- **Otherwise**, download `nested-properties.demo-vault.zip` from the [plugin releases](https://github.com/mnaoumov/obsidian-nested-properties/releases), unzip it, and in Obsidian choose `Manage vaults...` → `Open folder as vault` → select the unzipped folder.
 
-## First open
-
-The first time you open this vault, Obsidian treats it as **untrusted**, so the bundled plugins are listed but not loaded until you **Trust author and enable plugins** and reload. After that, the Demo Vault Helper installs [CodeScript Toolkit](https://github.com/mnaoumov/obsidian-codescript-toolkit) (which powers the optional **Run** buttons) and opens the start note for you.
+On first open, Obsidian treats the vault as untrusted — choose **Trust author and enable plugins** (or enable Community plugins manually), then open [00 Start](<./00 Start.md>).
