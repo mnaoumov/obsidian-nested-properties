@@ -52,9 +52,18 @@ interface InjectHeaderButtonsParams {
   onToggleFullKeyDisplay(this: void): void;
 }
 
+interface NestedPropertyRendererComponentAddTypeSubmenuParams {
+  readonly checkedType: string;
+  readonly menu: Menu;
+  onValueChange(this: void, newValue: unknown): void;
+  readonly title: string;
+  readonly typeKey: string;
+  readonly value: unknown;
+}
+
 interface NestedPropertyRendererComponentChangeTypeParams {
   onValueChange(this: void, newValue: unknown): void;
-  readonly path: string;
+  readonly typeKey: string;
   readonly value: unknown;
   readonly widget: PropertyWidget;
 }
@@ -158,7 +167,6 @@ export class NestedPropertyRendererComponent extends Component {
   private lastMenuCloseTime = 0;
   private pendingFocusKey: null | string = null;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
-  private readonly widgetTypeOverrides = new Map<string, string>();
 
   private get listWidget(): PropertyWidget<MultitextPropertyWidgetComponent> {
     return ensureNonNullable(this._listWidget);
@@ -258,12 +266,36 @@ export class NestedPropertyRendererComponent extends Component {
     );
   }
 
+  // Add a "Property type" submenu that lists every registered widget and persists the chosen type
+  // Under `typeKey`. The `reservedKeys` guard is intentionally omitted so `tags`/`aliases`/`cssclasses`
+  // Can be assigned to nested properties (Obsidian's own reserved-key handling for genuine top-level
+  // Properties is untouched - this menu only ever renders for nested entries).
+  private addTypeSubmenu(params: NestedPropertyRendererComponentAddTypeSubmenuParams): void {
+    const { checkedType, menu, onValueChange, title, typeKey, value } = params;
+    menu.addItem((item) => {
+      item.setTitle(title)
+        .setIcon('lucide-info')
+        .setSection('type');
+      const submenu = item.setSubmenu();
+      for (const widget of Object.values(this.app.metadataTypeManager.registeredTypeWidgets)) {
+        submenu.addItem((subItem) => {
+          subItem.setTitle(widget.name())
+            .setIcon(widget.icon)
+            .setChecked(widget.type === checkedType)
+            .onClick(convertAsyncToSync(async () => {
+              await this.changeType({ onValueChange, typeKey, value, widget });
+            }));
+        });
+      }
+    });
+  }
+
   private applyFullKeyDisplayClass(win: Window): void {
     win.document.body.toggleClass(FULL_KEY_DISPLAY_BODY_CLASS, this.isFullKeyDisplayEnabled);
   }
 
   private async changeType(params: NestedPropertyRendererComponentChangeTypeParams): Promise<void> {
-    const { onValueChange, path, value, widget } = params;
+    const { onValueChange, typeKey, value, widget } = params;
     if (isLossyConversion({ targetType: widget.type, value })) {
       const modal = new TypeChangeModal(this.app, widget.name());
       modal.open();
@@ -276,7 +308,15 @@ export class NestedPropertyRendererComponent extends Component {
       activeDocument.activeElement.blur();
     }
 
-    this.widgetTypeOverrides.set(path, widget.type);
+    // Persist to Obsidian's native `types.json`. When the chosen type matches what would be inferred
+    // From the value anyway, unset the key instead so `types.json` stays free of redundant entries.
+    const leaf = typeKey.split('.').at(-1) ?? typeKey;
+    const inferredType = this.app.metadataTypeManager.getTypeInfo(leaf, value).inferred.type;
+    if (widget.type === inferredType) {
+      await this.app.metadataTypeManager.unsetType(typeKey);
+    } else {
+      await this.app.metadataTypeManager.setType(typeKey, widget.type);
+    }
 
     const converted = convertValue({ targetType: widget.type, value });
     if (converted === value) {
@@ -286,16 +326,23 @@ export class NestedPropertyRendererComponent extends Component {
     }
   }
 
+  // Resolve the persisted widget for a node, honouring the layered read order:
+  // Per-index override (`versions.0.released`) -> collapsed per-field default (`versions.released`).
+  // Returns undefined when nothing is assigned so the caller can fall back to value inference.
+  private getAssignedWidgetForPath(path: string): PropertyWidget | undefined {
+    const metadataTypeManager = this.app.metadataTypeManager;
+    const itemType = metadataTypeManager.getAssignedWidget(getItemTypeKey(path));
+    const fieldKey = getFieldTypeKey(path);
+    const assignedType = itemType ?? (fieldKey ? metadataTypeManager.getAssignedWidget(fieldKey) : null);
+    return assignedType ? metadataTypeManager.registeredTypeWidgets[assignedType] : undefined;
+  }
+
   private getWidget(params: NestedPropertyRendererComponentGetWidgetParams): PropertyWidget {
     const { label, path, value } = params;
-    const override = this.widgetTypeOverrides.get(path);
-    if (override) {
-      const widget = this.app.metadataTypeManager.registeredTypeWidgets[override];
-      if (widget) {
-        return widget;
-      }
-    }
-    return this.app.metadataTypeManager.getTypeInfo(label, value).inferred;
+    // Keep the inference fallback keyed on the leaf `label` (not the dotted key): `.inferred` is
+    // Value-based and flows through the `getTypeInfo` patch, and it avoids a top-level property named
+    // E.g. `released` bleeding its assigned type onto every nested `*.released`.
+    return this.getAssignedWidgetForPath(path) ?? this.app.metadataTypeManager.getTypeInfo(label, value).inferred;
   }
 
   private reloadAllProperties(): void {
@@ -445,8 +492,8 @@ export class NestedPropertyRendererComponent extends Component {
   private renderEntry(params: NestedPropertyRendererComponentRenderEntryParams): void {
     const { containerEl, ctx, label, onDelete, onValueChange, parentPath, value } = params;
     const path = `${parentPath}.${label}`;
-    const typeOverride = this.widgetTypeOverrides.get(path);
-    const isComplex = typeOverride === LIST_WIDGET_TYPE || typeOverride === OBJECT_WIDGET_TYPE
+    const assignedWidget = this.getAssignedWidgetForPath(path);
+    const isComplex = assignedWidget?.type === LIST_WIDGET_TYPE || assignedWidget?.type === OBJECT_WIDGET_TYPE
       || (isComplexValue(value) && !isSimpleArray(value));
 
     if (isComplex) {
@@ -586,26 +633,39 @@ export class NestedPropertyRendererComponent extends Component {
       this.lastMenuCloseTime = Date.now();
     });
     menu.addSections(['type', 'action', '', 'danger']);
-    menu.addItem((item) => {
-      item.setTitle('Property type')
-        .setIcon('lucide-info')
-        .setSection('type');
-      const submenu = item.setSubmenu();
-      const currentWidget = this.getWidget({ label, path, value });
-      for (const widget of Object.values(this.app.metadataTypeManager.registeredTypeWidgets)) {
-        if (widget.reservedKeys && !widget.reservedKeys.contains(label)) {
-          continue;
-        }
-        submenu.addItem((subItem) => {
-          subItem.setTitle(widget.name())
-            .setIcon(widget.icon)
-            .setChecked(widget.type === currentWidget.type)
-            .onClick(convertAsyncToSync(async () => {
-              await this.changeType({ onValueChange, path, value, widget });
-            }));
-        });
-      }
-    });
+    const itemKey = getItemTypeKey(path);
+    const fieldKey = getFieldTypeKey(path);
+    const effectiveType = this.getWidget({ label, path, value }).type;
+    if (fieldKey !== null && fieldKey !== itemKey) {
+      // Array-item field: offer both the shared per-field default and a per-item override.
+      const inferredType = this.app.metadataTypeManager.getTypeInfo(label, value).inferred.type;
+      const fieldAssignedType = this.app.metadataTypeManager.getAssignedWidget(fieldKey);
+      this.addTypeSubmenu({
+        checkedType: fieldAssignedType ?? inferredType,
+        menu,
+        onValueChange,
+        title: 'Property type (all items)',
+        typeKey: fieldKey,
+        value
+      });
+      this.addTypeSubmenu({
+        checkedType: effectiveType,
+        menu,
+        onValueChange,
+        title: 'Property type (this item only)',
+        typeKey: itemKey,
+        value
+      });
+    } else {
+      this.addTypeSubmenu({
+        checkedType: effectiveType,
+        menu,
+        onValueChange,
+        title: 'Property type',
+        typeKey: itemKey,
+        value
+      });
+    }
     menu.addItem((item) => {
       item.setTitle('Cut')
         .setIcon('lucide-scissors')
@@ -685,6 +745,25 @@ function expandAllIn(parentNode: ParentNode, expandedPaths: Set<string>): void {
       expandedPaths.add(path);
     }
   }
+}
+
+// The collapsed per-field key: array indices are removed so a field's type applies to every item
+// (e.g. `versions.0.released` and `versions.1.released` share `versions.released`). Returns null when
+// The LAST segment is itself an index (the array-item node) - collapsing it would collide with the
+// Parent array's own key and make an item render with the array's type.
+function getFieldTypeKey(path: string): null | string {
+  const segments = getItemTypeKey(path).split('.');
+  if (/^\d+$/.test(segments[segments.length - 1] ?? '')) {
+    return null;
+  }
+  return segments.filter((segment) => !/^\d+$/.test(segment)).join('.');
+}
+
+// The persisted type key for an exact node: the plugin's dotted `path` with the leading
+// `sourcePath:` dropped so the key is vault-global (matching Obsidian's flat `types.json`).
+// `ctx.sourcePath` is vault-relative and never contains a colon, so the first `:` is safe to split on.
+function getItemTypeKey(path: string): string {
+  return path.slice(path.indexOf(':') + 1);
 }
 
 function injectHeaderButtons(params: InjectHeaderButtonsParams): void {

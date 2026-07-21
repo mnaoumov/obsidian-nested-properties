@@ -259,9 +259,12 @@ interface MockApp {
 }
 
 interface MockMetadataTypeManager {
+  getAssignedWidget: MockFn;
   getTypeInfo: MockFn;
   getWidget: MockFn;
   registeredTypeWidgets: Record<string, PropertyWidget>;
+  setType: MockFn;
+  unsetType: MockFn;
 }
 
 interface MockWorkspace {
@@ -275,7 +278,6 @@ interface RendererTestAccess {
   expandedPaths: Set<string>;
   loaded__: boolean;
   pendingFocusKey: null | string;
-  widgetTypeOverrides: Map<string, string>;
 }
 
 function asNodeList(els: MockDomElement[]): NodeListOf<Element> {
@@ -410,13 +412,16 @@ describe('NestedPropertyRenderer', () => {
 
     mockApp = {
       metadataTypeManager: {
+        getAssignedWidget: vi.fn(() => null),
         getTypeInfo: getTypeInfoOriginal,
         getWidget: vi.fn(() => unknownWidget),
         registeredTypeWidgets: {
           multitext: multitextWidget,
           text: textWidget,
           unknown: unknownWidget
-        }
+        },
+        setType: vi.fn(() => noopAsync()),
+        unsetType: vi.fn(() => noopAsync())
       },
       workspace: {
         getLeavesOfType: vi.fn(() => []),
@@ -1372,14 +1377,16 @@ describe('NestedPropertyRenderer', () => {
       expect(hoisted.menuItems.length).toBeGreaterThanOrEqual(firstCount);
     });
 
-    it('should handle widget with reservedKeys that does not contain label', () => {
+    it('should offer a reserved-key widget for a nested property (guard removed)', () => {
       loadRenderer();
 
+      // A widget whose reservedKeys don't contain the nested label (like `tags`) must now be offered,
+      // So Tags/aliases/cssclasses can be assigned to nested properties.
       const reservedWidget: PropertyWidget = {
         icon: 'lucide-reserved',
         name: (): string => 'Reserved',
         render: vi.fn(() => ({ focus: vi.fn(), type: 'reserved' })),
-        reservedKeys: [],
+        reservedKeys: ['some-other-key'],
         type: 'reserved',
         validate: vi.fn(() => true)
       };
@@ -1388,6 +1395,12 @@ describe('NestedPropertyRenderer', () => {
       hoisted.menuItems.length = 0;
       hoisted.submenuItems.length = 0;
       triggerContextMenu();
+
+      const offeredReserved = hoisted.submenuItems.some((subItem) => {
+        const titleCalls = subItem.setTitle.mock.calls as unknown[][];
+        return titleCalls.some((call) => call[0] === 'Reserved');
+      });
+      expect(offeredReserved).toBe(true);
     });
 
     it('should handle type submenu with checked state for current widget', () => {
@@ -1507,14 +1520,55 @@ describe('NestedPropertyRenderer', () => {
         }
       }
     });
+
+    it('should persist the chosen type via setType with the global (source-path-stripped) key', async () => {
+      loadRenderer();
+
+      hoisted.changeTypeChangeModalResult(true);
+      hoisted.menuItems.length = 0;
+      hoisted.submenuItems.length = 0;
+      // Menu opens on the `nested` object entry; inferred type is `object`, so choosing `Text` persists.
+      triggerContextMenu();
+
+      for (const subItem of hoisted.submenuItems) {
+        const titleCalls = subItem.setTitle.mock.calls as unknown[][];
+        if (titleCalls.some((call) => call[0] === 'Text')) {
+          await subItem._onClickFn?.();
+          break;
+        }
+      }
+
+      expect(mockApp.metadataTypeManager.setType).toHaveBeenCalledWith('testKey.nested', 'text');
+    });
+
+    it('should unsetType when the chosen type equals the inferred type', async () => {
+      loadRenderer();
+
+      hoisted.changeTypeChangeModalResult(true);
+      hoisted.menuItems.length = 0;
+      hoisted.submenuItems.length = 0;
+      // Menu opens on the `nested` object entry; choosing `Object` matches inference, so it unsets.
+      triggerContextMenu();
+
+      for (const subItem of hoisted.submenuItems) {
+        const titleCalls = subItem.setTitle.mock.calls as unknown[][];
+        if (titleCalls.some((call) => call[0] === 'Object')) {
+          await subItem._onClickFn?.();
+          break;
+        }
+      }
+
+      expect(mockApp.metadataTypeManager.unsetType).toHaveBeenCalledWith('testKey.nested');
+      expect(mockApp.metadataTypeManager.setType).not.toHaveBeenCalled();
+    });
   });
 
   describe('getWidget', () => {
-    it('should fall through when override widget not found in registry', () => {
+    it('should fall through when assigned widget not found in registry', () => {
       loadRenderer();
 
-      // Path format: rootPath.label = "sourcePath:key.entryKey"
-      testAccess(renderer).widgetTypeOverrides.set('test.md:testKey.test', 'nonexistent');
+      // GetAssignedWidget returns a type that is not registered, so getWidget falls back to inference.
+      mockApp.metadataTypeManager.getAssignedWidget.mockReturnValue('nonexistent');
 
       const el = createMockEl();
       const ctx = createMockCtx();
@@ -2471,11 +2525,11 @@ describe('NestedPropertyRenderer', () => {
     });
   });
 
-  describe('renderEntry with type override', () => {
-    it('should treat entry as complex when typeOverride is list', () => {
+  describe('renderEntry with assigned type', () => {
+    it('should treat entry as complex when assigned type is list', () => {
       loadRenderer();
 
-      testAccess(renderer).widgetTypeOverrides.set('test.md:testKey.myProp', 'list');
+      mockApp.metadataTypeManager.getAssignedWidget.mockImplementation((key: string) => key === 'testKey.myProp' ? 'list' : null);
 
       const el = createMockEl();
       const ctx = createMockCtx();
@@ -2483,10 +2537,10 @@ describe('NestedPropertyRenderer', () => {
       vi.runAllTimers();
     });
 
-    it('should treat entry as complex when typeOverride is object', () => {
+    it('should treat entry as complex when assigned type is object', () => {
       loadRenderer();
 
-      testAccess(renderer).widgetTypeOverrides.set('test.md:testKey.myProp', 'object');
+      mockApp.metadataTypeManager.getAssignedWidget.mockImplementation((key: string) => key === 'testKey.myProp' ? 'object' : null);
 
       const el = createMockEl();
       const ctx = createMockCtx();
@@ -2811,9 +2865,9 @@ describe('NestedPropertyRenderer', () => {
         }
       }
 
-      // WidgetTypeOverrides should NOT have been set since user cancelled
-      const overrides = testAccess(renderer).widgetTypeOverrides;
-      expect(overrides.size).toBe(0);
+      // The type should NOT have been persisted since the user cancelled the lossy-conversion modal.
+      expect(mockApp.metadataTypeManager.setType).not.toHaveBeenCalled();
+      expect(mockApp.metadataTypeManager.unsetType).not.toHaveBeenCalled();
     });
 
     it('should set widget type override and reload when converted equals value', async () => {
@@ -2942,21 +2996,28 @@ describe('NestedPropertyRenderer', () => {
     });
   });
 
-  describe('getWidget with existing override', () => {
-    it('should return the override widget when it exists in registry', () => {
+  describe('getWidget with existing assigned type', () => {
+    it('should return the assigned widget (winning over inference) when it exists in registry', () => {
       loadRenderer();
 
-      // Set up a valid widget type override that exists in the registry
-      testAccess(renderer).widgetTypeOverrides.set('test.md:testKey.myProp', 'text');
+      // Inference would pick multitext, but an assigned `text` type must win.
+      mockApp.metadataTypeManager.getTypeInfo.mockImplementation((property: string) => ({
+        expected: multitextWidget,
+        inferred: multitextWidget,
+        property
+      }));
+      mockApp.metadataTypeManager.getAssignedWidget.mockImplementation((key: string) => key === 'testKey.myProp' ? 'text' : null);
 
       const el = createMockEl();
       const ctx = createMockCtx();
       vi.mocked(textWidget.render).mockClear();
+      vi.mocked(multitextWidget.render).mockClear();
       renderWidget('object', el, { myProp: 'val' }, ctx);
       vi.runAllTimers();
 
-      // TextWidget should have been used for rendering
+      // TextWidget (assigned) should have been used for rendering, not the inferred multitext.
       expect(textWidget.render).toHaveBeenCalled();
+      expect(multitextWidget.render).not.toHaveBeenCalled();
     });
   });
 
