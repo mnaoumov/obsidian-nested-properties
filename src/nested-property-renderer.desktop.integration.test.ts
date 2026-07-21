@@ -14,6 +14,7 @@ import {
 import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup';
 import {
   afterAll,
+  afterEach,
   beforeAll,
   beforeEach,
   describe,
@@ -48,6 +49,11 @@ mixedList:
   - i
   - j: 1
     k: 2
+versions:
+  - name: v1
+    released: "2020"
+  - name: v2
+    released: "2021"
 ---
 `
   });
@@ -203,5 +209,81 @@ describe('multitext validate patch integration', () => {
     });
 
     expect(isValid).toBe(true);
+  });
+});
+
+describe('nested property type persistence integration', () => {
+  afterEach(async () => {
+    await evalInObsidian({
+      contextId,
+      fn: async ({ app }) => {
+        await app.metadataTypeManager.unsetType('object.d');
+        await app.metadataTypeManager.unsetType('versions.released');
+      },
+      vaultPath: vault.path
+    });
+  });
+
+  it('persists a nested type (including reserved `tags`) under its dotted key', async () => {
+    const assignedType = await evalInObsidian({
+      contextId,
+      fn: async ({ app }) => {
+        await app.metadataTypeManager.setType('object.d', 'tags');
+        return app.metadataTypeManager.getAssignedWidget('object.d');
+      },
+      vaultPath: vault.path
+    });
+
+    expect(assignedType).toBe('tags');
+  });
+
+  it('renders a nested scalar with its persisted (assigned) type', { retry: 3 }, async () => {
+    const propertyType = await evalInObsidian({
+      contextId,
+      fn: async ({ app, context: { markdownView } }) => {
+        await app.metadataTypeManager.setType('object.d', 'number');
+        const data = markdownView.metadataEditor.serialize();
+        markdownView.metadataEditor.synchronize({});
+        markdownView.metadataEditor.synchronize(data);
+        await sleep(500);
+
+        for (const valueEl of Array.from(activeDocument.querySelectorAll('.nested-properties-container > .metadata-property > .metadata-property-value'))) {
+          const keyInput = valueEl.parentElement?.querySelector('.metadata-property-key > .metadata-property-key-input');
+          if (keyInput instanceof HTMLInputElement && keyInput.value === 'd') {
+            return valueEl.getAttribute('data-property-type');
+          }
+        }
+        return null;
+      },
+      vaultPath: vault.path
+    });
+
+    expect(propertyType).toBe('number');
+  });
+
+  it('applies a collapsed per-field type to every array item', { retry: 3 }, async () => {
+    const propertyTypes = await evalInObsidian({
+      contextId,
+      fn: async ({ app, context: { markdownView } }) => {
+        await app.metadataTypeManager.setType('versions.released', 'number');
+        const data = markdownView.metadataEditor.serialize();
+        markdownView.metadataEditor.synchronize({});
+        markdownView.metadataEditor.synchronize(data);
+        await sleep(500);
+
+        const types: (null | string)[] = [];
+        for (const valueEl of Array.from(activeDocument.querySelectorAll('.nested-properties-container > .metadata-property > .metadata-property-value'))) {
+          const keyInput = valueEl.parentElement?.querySelector('.metadata-property-key > .metadata-property-key-input');
+          if (keyInput instanceof HTMLInputElement && keyInput.value === 'released') {
+            types.push(valueEl.getAttribute('data-property-type'));
+          }
+        }
+        return types;
+      },
+      vaultPath: vault.path
+    });
+
+    expect(propertyTypes).toHaveLength(2);
+    expect(propertyTypes.every((propertyType) => propertyType === 'number')).toBe(true);
   });
 });

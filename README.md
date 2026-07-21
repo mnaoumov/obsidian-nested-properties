@@ -30,6 +30,7 @@ level1Nested:
 - Render nested YAML objects and arrays as a collapsible tree inside the Properties editor
 - Collapse/expand individual properties or all at once
 - Context menu (Cut, Copy, Paste, Remove) on nested properties
+- Set and **persist** the type of any nested property — text, number, checkbox, date, list, object, and even **Tags** (which Obsidian's UI won't let you assign). The choice is saved to the vault's `types.json` under the property's dotted path (e.g. `foo.bar.property`), so it survives reload and applies across notes (see [Nested property types](#nested-property-types))
 - Add new properties at any nesting level
 - Horizontal scrolling for deeply nested structures
 - Toggle full display of nested property keys (see [Commands](#commands))
@@ -43,6 +44,49 @@ The plugin adds the following command to the command palette (it can be bound to
 The same on/off toggle is also available as a button in the Properties header (next to the collapse/expand-all button), so you can flip it directly from the frontmatter without opening the command palette. The button is highlighted while full key display is on.
 
 The chosen state is remembered and restored the next time Obsidian starts.
+
+## Nested property types
+
+Right-click any nested key (or click its type icon) and open the **Property type** submenu to convert a value to another type — text, number, checkbox, date, list, or object. Converting a rich value to a simpler one can lose data, so a confirmation dialog appears first.
+
+Unlike Obsidian's built-in property types, the submenu also offers reserved types such as **Tags**, which Obsidian's own UI won't let you assign. This is handy when you want, for example, a nested `tags` list to behave exactly like the top-level one.
+
+The chosen type is **persisted** to the vault's `.obsidian/types.json` under the property's dotted path, so it survives reloads and is shared across notes:
+
+```yaml
+foo:
+  bar:
+    property: "Value"
+```
+
+```json
+{
+  "types": {
+    "foo.bar.property": "text"
+  }
+}
+```
+
+For arrays of objects, a field's type is stored once for the whole array (the item index is collapsed), so it applies to every item:
+
+```yaml
+versions:
+  - version: "1.0.0"
+    released: 2026-03-06
+  - version: "1.1.0"
+    released: 2026-03-21
+```
+
+```json
+{
+  "types": {
+    "versions.version": "text",
+    "versions.released": "date"
+  }
+}
+```
+
+The context menu offers two scopes for a field inside an array item: **Property type (all items)** writes the shared per-field key (`versions.released`), while **Property type (this item only)** writes a per-index override (`versions.0.released`) that wins for just that item. When a chosen type matches what the plugin would infer from the value anyway, the entry is removed from `types.json` to keep it tidy.
 
 ## Demo vault
 
