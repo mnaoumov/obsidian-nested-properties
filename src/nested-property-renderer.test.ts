@@ -278,6 +278,16 @@ interface RendererTestAccess {
   expandedPaths: Set<string>;
   loaded__: boolean;
   pendingFocusKey: null | string;
+  showNestedPropertyMenu(params: ShowNestedPropertyMenuTestParams): void;
+}
+
+interface ShowNestedPropertyMenuTestParams {
+  readonly evt: unknown;
+  readonly label: string;
+  onDelete(): void;
+  onValueChange(value: unknown): void;
+  readonly path: string;
+  readonly value: unknown;
 }
 
 function asNodeList(els: MockDomElement[]): NodeListOf<Element> {
@@ -1377,6 +1387,27 @@ describe('NestedPropertyRenderer', () => {
       expect(hoisted.menuItems.length).toBeGreaterThanOrEqual(firstCount);
     });
 
+    it('should offer both per-field and per-item type submenus for an array-item field', () => {
+      loadRenderer();
+
+      // A field nested inside an array item (`versions.0.released`) resolves to a non-null field key
+      // (`versions.released`) that differs from its item key, so the menu offers a shared per-field
+      // "all items" default alongside the per-item "this item only" override.
+      hoisted.menuItems.length = 0;
+      testAccess(renderer).showNestedPropertyMenu({
+        evt: { stopPropagation: vi.fn() },
+        label: 'released',
+        onDelete: vi.fn(),
+        onValueChange: vi.fn(),
+        path: 'test.md:versions.0.released',
+        value: true
+      });
+
+      const titles = hoisted.menuItems.flatMap((item) => (item.setTitle.mock.calls as unknown[][]).map((call) => call[0]));
+      expect(titles).toContain('Property type (all items)');
+      expect(titles).toContain('Property type (this item only)');
+    });
+
     it('should offer a reserved-key widget for a nested property (guard removed)', () => {
       loadRenderer();
 
@@ -2016,6 +2047,95 @@ describe('NestedPropertyRenderer', () => {
 
       const handler = findEventHandler(toggleButton, 'click');
       handler({ preventDefault: vi.fn(), stopPropagation: vi.fn() });
+    });
+
+    it('should size top-level key inputs that sit outside the nested container', () => {
+      loadRenderer();
+
+      const toggleButton = createMockEl();
+      const headingEl = createMockEl();
+      const actionsEl = createMockEl();
+      actionsEl.createDiv.mockReturnValue(toggleButton);
+
+      const collapsibleEl = createMockEl();
+
+      // A native top-level key input (`instanceOf(HTMLInputElement)` true) that is NOT inside a
+      // `.nested-properties-container` must have its `size` set to its content length.
+      const topLevelKeyInput = createMockEl();
+      topLevelKeyInput.value = 'a-long-top-level-key';
+      topLevelKeyInput.instanceOf.mockReturnValue(true);
+      topLevelKeyInput.closest.mockReturnValue(null);
+
+      const metaContainer = createMockEl({
+        createDiv: vi.fn(() => actionsEl),
+        querySelector: vi.fn((selector: string) => {
+          if (selector === '.nested-properties-header-actions') {
+            return null;
+          }
+          if (selector === '.nested-properties-collapsible') {
+            return collapsibleEl;
+          }
+          if (selector === '.metadata-properties-heading') {
+            return headingEl;
+          }
+          return null;
+        }),
+        querySelectorAll: vi.fn((selector: string) => (selector === '.metadata-property-key-input' ? [topLevelKeyInput] : [collapsibleEl]))
+      });
+
+      const containerEl = createMockEl({ closest: vi.fn(() => metaContainer) });
+      const el = createMockEl();
+      el.createDiv.mockReturnValue(containerEl);
+
+      const ctx = createMockCtx();
+      renderWidget('list', el, ['a'], ctx);
+      vi.runAllTimers();
+
+      expect(topLevelKeyInput.size).toBe('a-long-top-level-key'.length);
+    });
+
+    it('should skip key inputs inside the nested container when sizing top-level inputs', () => {
+      loadRenderer();
+
+      const toggleButton = createMockEl();
+      const headingEl = createMockEl();
+      const actionsEl = createMockEl();
+      actionsEl.createDiv.mockReturnValue(toggleButton);
+
+      const collapsibleEl = createMockEl();
+
+      // A key input inside a `.nested-properties-container` is the plugin's own - it is left untouched.
+      const nestedKeyInput = createMockEl();
+      nestedKeyInput.value = 'nested-key';
+      nestedKeyInput.instanceOf.mockReturnValue(true);
+      nestedKeyInput.closest.mockReturnValue(createMockEl());
+
+      const metaContainer = createMockEl({
+        createDiv: vi.fn(() => actionsEl),
+        querySelector: vi.fn((selector: string) => {
+          if (selector === '.nested-properties-header-actions') {
+            return null;
+          }
+          if (selector === '.nested-properties-collapsible') {
+            return collapsibleEl;
+          }
+          if (selector === '.metadata-properties-heading') {
+            return headingEl;
+          }
+          return null;
+        }),
+        querySelectorAll: vi.fn((selector: string) => (selector === '.metadata-property-key-input' ? [nestedKeyInput] : [collapsibleEl]))
+      });
+
+      const containerEl = createMockEl({ closest: vi.fn(() => metaContainer) });
+      const el = createMockEl();
+      el.createDiv.mockReturnValue(containerEl);
+
+      const ctx = createMockCtx();
+      renderWidget('list', el, ['a'], ctx);
+      vi.runAllTimers();
+
+      expect(nestedKeyInput.size).toBe(0);
     });
 
     it('should create a full key display toggle button that toggles full key display', () => {

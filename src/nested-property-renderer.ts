@@ -310,7 +310,7 @@ export class NestedPropertyRendererComponent extends Component {
 
     // Persist to Obsidian's native `types.json`. When the chosen type matches what would be inferred
     // From the value anyway, unset the key instead so `types.json` stays free of redundant entries.
-    const leaf = typeKey.split('.').at(-1) ?? typeKey;
+    const leaf = typeKey.slice(typeKey.lastIndexOf('.') + 1);
     const inferredType = this.app.metadataTypeManager.getTypeInfo(leaf, value).inferred.type;
     if (widget.type === inferredType) {
       await this.app.metadataTypeManager.unsetType(typeKey);
@@ -752,11 +752,12 @@ function expandAllIn(parentNode: ParentNode, expandedPaths: Set<string>): void {
 // The LAST segment is itself an index (the array-item node) - collapsing it would collide with the
 // Parent array's own key and make an item render with the array's type.
 function getFieldTypeKey(path: string): null | string {
-  const segments = getItemTypeKey(path).split('.');
-  if (/^\d+$/.test(segments[segments.length - 1] ?? '')) {
+  const itemKey = getItemTypeKey(path);
+  const lastSegment = itemKey.slice(itemKey.lastIndexOf('.') + 1);
+  if (/^\d+$/.test(lastSegment)) {
     return null;
   }
-  return segments.filter((segment) => !/^\d+$/.test(segment)).join('.');
+  return itemKey.split('.').filter((segment) => !/^\d+$/.test(segment)).join('.');
 }
 
 // The persisted type key for an exact node: the plugin's dotted `path` with the leading
