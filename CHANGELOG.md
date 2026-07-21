@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.2.16
+
+- fix: expand long key
+
 ## 1.2.15
 
 - chore: update libs
