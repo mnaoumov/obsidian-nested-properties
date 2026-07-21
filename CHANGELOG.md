@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 1.3.0
+
+- test: reach 100% unit-test coverage
+- chore: spellcheck
+- feat: re #8
+
 ## 1.2.16
 
 - fix: expand long key
