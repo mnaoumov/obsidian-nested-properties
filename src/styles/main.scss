@@ -163,13 +163,13 @@
 }
 
 .nested-properties-full-key-display {
-  .nested-properties-collapsible > .metadata-property-key,
+  .metadata-property:not(.nested-properties-container .metadata-property) > .metadata-property-key,
   .nested-properties-container .metadata-property-key {
     width: auto;
     flex: 0 0 auto;
   }
 
-  .nested-properties-collapsible > .metadata-property-key > .metadata-property-key-input,
+  .metadata-property:not(.nested-properties-container .metadata-property) > .metadata-property-key > .metadata-property-key-input,
   .nested-properties-container .metadata-property-key-input {
     width: auto;
     text-overflow: clip;

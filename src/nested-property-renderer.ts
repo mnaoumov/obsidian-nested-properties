@@ -409,6 +409,7 @@ export class NestedPropertyRendererComponent extends Component {
             this.toggleFullKeyDisplay();
           }
         });
+        sizeTopLevelKeyInputs(metadataContainerEl);
       }
 
       if (this.pendingFocusKey) {
@@ -799,6 +800,19 @@ function renderAddPropertyButton(params: RenderAddPropertyButtonParams): void {
       }
     });
   });
+}
+
+function sizeTopLevelKeyInputs(metadataContainerEl: HTMLElement): void {
+  // Size the native key input of every top-level property to its content so the full-key-display
+  // Toggle (`width: auto`) can expand it. Obsidian renders plain scalar properties itself, so unlike
+  // The object/list keys and nested keys the plugin never set their `size` - without this they stay
+  // Truncated even when full key display is on. The `size` is inert while the toggle is off, because
+  // Obsidian's default input width overrides it until the body class switches to `width: auto`.
+  for (const input of metadataContainerEl.querySelectorAll('.metadata-property-key-input')) {
+    if (input.instanceOf(HTMLInputElement) && !input.closest('.nested-properties-container')) {
+      input.size = Math.max(1, input.value.length);
+    }
+  }
 }
 
 function updateToggleButton(params: UpdateToggleButtonParams): void {

@@ -11,6 +11,12 @@ const vault = getTempVault();
 
 beforeEach(() => {
   vault.populate({
+    'full-key-scalar.md': `---
+a_very_long_top_level_scalar_property_key_that_gets_truncated: value
+container_object:
+  nested: ok
+---
+`,
     'full-key-top-level.md': `---
 vehicle_identification_number_long_key:
   vin: ABC123456789
@@ -168,6 +174,72 @@ describe('full key display command', () => {
     });
 
     expect(result.before.keyValue).toBe('vehicle_identification_number_long_key');
+    expect(result.before.isTruncated).toBe(true);
+    expect(result.before.hasFullKeyDisplayClass).toBe(false);
+
+    expect(result.afterOn.isTruncated).toBe(false);
+    expect(result.afterOn.hasFullKeyDisplayClass).toBe(true);
+
+    expect(result.afterOff.isTruncated).toBe(true);
+    expect(result.afterOff.hasFullKeyDisplayClass).toBe(false);
+  });
+
+  it('toggles truncation of a plain top-level scalar property key', async () => {
+    const result = await evalInObsidian({
+      fn: async ({ app, obsidianModule }) => {
+        const TRUNCATION_TOLERANCE_IN_PIXELS = 2;
+        const SETTLE_IN_MILLISECONDS = 300;
+        const SCALAR_KEY = 'a_very_long_top_level_scalar_property_key_that_gets_truncated';
+
+        const file = app.vault.getFileByPath('full-key-scalar.md');
+        if (!file) {
+          throw new Error('full-key-scalar.md not found');
+        }
+        await app.workspace.getLeaf(true).openFile(file);
+        await sleep(SETTLE_IN_MILLISECONDS);
+
+        const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
+        const containerEl = view?.contentEl ?? activeDocument.body;
+
+        function measure(): KeyDisplayMeasurement {
+          // The scalar key is rendered natively by Obsidian - not inside `.nested-properties-container`
+          // And not a `.nested-properties-collapsible` - so locate it by value among the top-level inputs.
+          const keyInput = Array.from(containerEl.querySelectorAll('.metadata-property-key-input'))
+            .find((el) => el.instanceOf(HTMLInputElement) && el.value === SCALAR_KEY && !el.closest('.nested-properties-container'));
+          if (!(keyInput instanceof HTMLInputElement)) {
+            throw new Error('top-level scalar key input not found');
+          }
+          return {
+            hasFullKeyDisplayClass: activeDocument.body.hasClass('nested-properties-full-key-display'),
+            isTruncated: keyInput.scrollWidth > keyInput.clientWidth + TRUNCATION_TOLERANCE_IN_PIXELS,
+            keyValue: keyInput.value
+          };
+        }
+
+        // Normalize to the disabled state so the assertions do not depend on earlier tests.
+        if (activeDocument.body.hasClass('nested-properties-full-key-display')) {
+          app.commands.executeCommandById('nested-properties:toggle-full-key-display');
+          await sleep(SETTLE_IN_MILLISECONDS);
+        }
+
+        const before = measure();
+        app.commands.executeCommandById('nested-properties:toggle-full-key-display');
+        await sleep(SETTLE_IN_MILLISECONDS);
+        const afterOn = measure();
+        app.commands.executeCommandById('nested-properties:toggle-full-key-display');
+        await sleep(SETTLE_IN_MILLISECONDS);
+        const afterOff = measure();
+
+        return {
+          afterOff,
+          afterOn,
+          before
+        };
+      },
+      vaultPath: vault.path
+    });
+
+    expect(result.before.keyValue).toBe('a_very_long_top_level_scalar_property_key_that_gets_truncated');
     expect(result.before.isTruncated).toBe(true);
     expect(result.before.hasFullKeyDisplayClass).toBe(false);
 

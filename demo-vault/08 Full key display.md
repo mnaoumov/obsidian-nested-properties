@@ -8,7 +8,7 @@ metadata:
 
 # Full key display
 
-By default, long nested keys are **truncated with a trailing ellipsis** to save space. The **Toggle full key display** command (and the matching button in the Properties header) switches keys to their full text, widening each field and scrolling horizontally where needed.
+By default, long keys are **truncated with a trailing ellipsis** to save space - both plain top-level keys (like `aVeryLongPropertyKeyName…` above) and nested ones. The **Toggle full key display** command (and the matching button in the Properties header) switches keys to their full text, widening each field and scrolling horizontally where needed.
 
 ## Try it
 
