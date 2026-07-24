@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 1.3.1
+
+- fix: re #7
+- chore: update libs
+
 ## 1.3.0
 
 - test: reach 100% unit-test coverage
