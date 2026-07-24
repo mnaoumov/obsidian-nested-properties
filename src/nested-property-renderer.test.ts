@@ -283,11 +283,11 @@ interface RendererTestAccess {
 
 interface ShowNestedPropertyMenuTestParams {
   readonly evt: unknown;
+  getValue(): unknown;
   readonly label: string;
   onDelete(): void;
   onValueChange(value: unknown): void;
   readonly path: string;
-  readonly value: unknown;
 }
 
 function asNodeList(els: MockDomElement[]): NodeListOf<Element> {
@@ -1241,6 +1241,98 @@ describe('NestedPropertyRenderer', () => {
     });
   });
 
+  // Issue #7: the widget re-renders only on structural changes (add/remove key), not on in-place scalar
+  // Edits, so the per-entry handlers must mutate one shared, privately-cloned model rather than spread a
+  // Render-time snapshot — otherwise a later structural write reverts every sibling value.
+  describe('nested value preservation (issue #7)', () => {
+    it('preserves a sibling object value across a later structural write', () => {
+      loadRenderer();
+
+      const el = createMockEl();
+      const onChange = vi.fn();
+      const ctx = createMockCtx({ onChange });
+      vi.mocked(textWidget.render).mockClear();
+      renderWidget('object', el, { a: 'x', b: 'y' }, ctx);
+      vi.runAllTimers();
+
+      const renderCalls = vi.mocked(textWidget.render).mock.calls as unknown[][];
+      const ctxA = renderCalls[0]?.[2] as PropertyRenderContext;
+      const ctxB = renderCalls[1]?.[2] as PropertyRenderContext;
+
+      ctxA.onChange('A');
+      ctxB.onChange('B');
+
+      // Without the shared-mutable-model fix, filling `b` would spread a stale `a: 'x'`.
+      expect(onChange).toHaveBeenLastCalledWith({ a: 'A', b: 'B' });
+    });
+
+    it('preserves a sibling array item across a later structural write', () => {
+      loadRenderer();
+
+      const el = createMockEl();
+      const onChange = vi.fn();
+      const ctx = createMockCtx({ onChange });
+      vi.mocked(textWidget.render).mockClear();
+      const original = ['x', 'y'];
+      renderWidget('list', el, original, ctx);
+      vi.runAllTimers();
+
+      const renderCalls = vi.mocked(textWidget.render).mock.calls as unknown[][];
+      const ctx0 = renderCalls[0]?.[2] as PropertyRenderContext;
+      const ctx1 = renderCalls[1]?.[2] as PropertyRenderContext;
+
+      ctx0.onChange('X');
+      ctx1.onChange('Y');
+
+      expect(onChange).toHaveBeenLastCalledWith(['X', 'Y']);
+      expect(original).toEqual(['x', 'y']);
+    });
+
+    it('does not mutate the caller-provided value (structuredClone isolation)', () => {
+      loadRenderer();
+
+      const el = createMockEl();
+      const ctx = createMockCtx();
+      vi.mocked(textWidget.render).mockClear();
+      const original = { a: 'x', b: 'y' };
+      renderWidget('object', el, original, ctx);
+      vi.runAllTimers();
+
+      const ctxA = (vi.mocked(textWidget.render).mock.calls as unknown[][])[0]?.[2] as PropertyRenderContext;
+      ctxA.onChange('A');
+
+      expect(original).toEqual({ a: 'x', b: 'y' });
+    });
+
+    it('copies the live value after an in-place scalar edit (getValue accessor)', async () => {
+      loadRenderer();
+
+      const propertyEl = createMockEl();
+      const containerEl = createMockEl();
+      containerEl.createDiv.mockReturnValue(propertyEl);
+      const el = createMockEl();
+      el.createDiv.mockReturnValue(containerEl);
+
+      const ctx = createMockCtx();
+      vi.mocked(textWidget.render).mockClear();
+      renderWidget('object', el, { a: 'x' }, ctx);
+      vi.runAllTimers();
+
+      const scalarCtx = (vi.mocked(textWidget.render).mock.calls as unknown[][])[0]?.[2] as PropertyRenderContext;
+      scalarCtx.onChange('A');
+
+      hoisted.menuItems.length = 0;
+      const contextHandler = findEventHandler(propertyEl, 'contextmenu');
+      contextHandler({ stopPropagation: vi.fn() });
+
+      const copyItem = hoisted.menuItems.at(2);
+      await copyItem?._onClickFn?.();
+
+      // Reads the live value ('A'), not the render-time snapshot ('x').
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('{"a":"A"}');
+    });
+  });
+
   describe('showNestedPropertyMenu', () => {
     it('should create menu with type submenu and action items', () => {
       loadRenderer();
@@ -1396,11 +1488,11 @@ describe('NestedPropertyRenderer', () => {
       hoisted.menuItems.length = 0;
       testAccess(renderer).showNestedPropertyMenu({
         evt: { stopPropagation: vi.fn() },
+        getValue: () => true,
         label: 'released',
         onDelete: vi.fn(),
         onValueChange: vi.fn(),
-        path: 'test.md:versions.0.released',
-        value: true
+        path: 'test.md:versions.0.released'
       });
 
       const titles = hoisted.menuItems.flatMap((item) => (item.setTitle.mock.calls as unknown[][]).map((call) => call[0]));

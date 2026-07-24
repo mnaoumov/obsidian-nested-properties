@@ -97,6 +97,7 @@ interface NestedPropertyRendererComponentRenderComplexWidgetParams {
 interface NestedPropertyRendererComponentRenderEntryParams {
   readonly containerEl: HTMLElement;
   readonly ctx: PropertyRenderContext;
+  getValue(this: void): unknown;
   readonly label: string;
   onDelete(this: void): void;
   onValueChange(this: void, newValue: unknown): void;
@@ -105,6 +106,7 @@ interface NestedPropertyRendererComponentRenderEntryParams {
 }
 
 interface NestedPropertyRendererComponentRenderKeyElParams {
+  getValue(this: void): unknown;
   readonly label: string;
   onDelete(this: void): void;
   onValueChange(this: void, newValue: unknown): void;
@@ -131,11 +133,11 @@ interface NestedPropertyRendererComponentRenderObjectParams {
 
 interface NestedPropertyRendererComponentShowNestedPropertyMenuParams {
   readonly evt: MouseEvent;
+  getValue(this: void): unknown;
   readonly label: string;
   onDelete(this: void): void;
   onValueChange(this: void, newValue: unknown): void;
   readonly path: string;
-  readonly value: unknown;
 }
 
 interface RenderAddItemButtonParams {
@@ -361,15 +363,15 @@ export class NestedPropertyRendererComponent extends Component {
       this.renderEntry({
         containerEl,
         ctx,
+        getValue: () => arr[index],
         label: String(index),
         onDelete: () => {
           const newArr = arr.filter((_, i) => i !== index);
           onArrayChange(newArr);
         },
         onValueChange: (newValue: unknown) => {
-          const newArr = [...arr];
-          newArr[index] = newValue;
-          onArrayChange(newArr);
+          arr[index] = newValue;
+          onArrayChange([...arr]);
         },
         parentPath,
         value: item
@@ -386,6 +388,13 @@ export class NestedPropertyRendererComponent extends Component {
     } else if (widgetType === OBJECT_WIDGET_TYPE && (!isComplexValue(value) || Array.isArray(value))) {
       value = {};
     }
+
+    // Own a private, deeply-cloned mutable model. Obsidian re-renders this widget only on structural
+    // Changes (add/remove key), NOT on in-place scalar edits, so the per-entry handlers below mutate
+    // This shared model in place; a later structural write then spreads current values rather than a
+    // Stale render-time snapshot (issue #7). `structuredClone` (not JSON) preserves `Date`/`null`.
+    // eslint-disable-next-line n/no-unsupported-features/node-builtins -- structuredClone is a Web/Electron API available in Obsidian's renderer; the rule wrongly flags it against the Node engines range.
+    value = structuredClone(value);
 
     const rootPath = `${ctx.sourcePath}:${ctx.key}`;
 
@@ -490,7 +499,7 @@ export class NestedPropertyRendererComponent extends Component {
   }
 
   private renderEntry(params: NestedPropertyRendererComponentRenderEntryParams): void {
-    const { containerEl, ctx, label, onDelete, onValueChange, parentPath, value } = params;
+    const { containerEl, ctx, getValue, label, onDelete, onValueChange, parentPath, value } = params;
     const path = `${parentPath}.${label}`;
     const assignedWidget = this.getAssignedWidgetForPath(path);
     const isComplex = assignedWidget?.type === LIST_WIDGET_TYPE || assignedWidget?.type === OBJECT_WIDGET_TYPE
@@ -504,7 +513,7 @@ export class NestedPropertyRendererComponent extends Component {
       });
       propertyEl.addEventListener('contextmenu', (e) => {
         e.stopPropagation();
-        this.showNestedPropertyMenu({ evt: e, label, onDelete, onValueChange, path, value });
+        this.showNestedPropertyMenu({ evt: e, getValue, label, onDelete, onValueChange, path });
       });
 
       const keyEl = propertyEl.createDiv({ cls: 'metadata-property-key' });
@@ -528,7 +537,7 @@ export class NestedPropertyRendererComponent extends Component {
       setIcon(iconEl, complexWidget.icon);
       iconEl.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.showNestedPropertyMenu({ evt: e, label, onDelete, onValueChange, path, value });
+        this.showNestedPropertyMenu({ evt: e, getValue, label, onDelete, onValueChange, path });
       });
       const keyInput = keyEl.createEl('input', {
         attr: { readonly: '', tabindex: '-1' },
@@ -546,9 +555,9 @@ export class NestedPropertyRendererComponent extends Component {
     const propertyEl = containerEl.createDiv({ cls: 'metadata-property' });
     propertyEl.addEventListener('contextmenu', (e) => {
       e.stopPropagation();
-      this.showNestedPropertyMenu({ evt: e, label, onDelete, onValueChange, path, value });
+      this.showNestedPropertyMenu({ evt: e, getValue, label, onDelete, onValueChange, path });
     });
-    this.renderKeyEl({ label, onDelete, onValueChange, parentEl: propertyEl, path, value });
+    this.renderKeyEl({ getValue, label, onDelete, onValueChange, parentEl: propertyEl, path, value });
 
     const widget = this.getWidget({ label, path, value });
     const valueEl = propertyEl.createDiv({ cls: 'metadata-property-value' });
@@ -563,7 +572,7 @@ export class NestedPropertyRendererComponent extends Component {
   }
 
   private renderKeyEl(params: NestedPropertyRendererComponentRenderKeyElParams): void {
-    const { label, onDelete, onValueChange, parentEl, path, value } = params;
+    const { getValue, label, onDelete, onValueChange, parentEl, path, value } = params;
     const keyEl = parentEl.createDiv({ cls: 'metadata-property-key' });
 
     const widget = this.getWidget({ label, path, value });
@@ -571,7 +580,7 @@ export class NestedPropertyRendererComponent extends Component {
     setIcon(iconEl, widget.icon);
     iconEl.addEventListener('click', (e) => {
       e.stopPropagation();
-      this.showNestedPropertyMenu({ evt: e, label, onDelete, onValueChange, path, value });
+      this.showNestedPropertyMenu({ evt: e, getValue, label, onDelete, onValueChange, path });
     });
 
     const keyInput = keyEl.createEl('input', {
@@ -597,6 +606,7 @@ export class NestedPropertyRendererComponent extends Component {
       this.renderEntry({
         containerEl,
         ctx,
+        getValue: () => obj[key],
         label: key,
         onDelete: () => {
           const newObj = { ...obj };
@@ -605,8 +615,8 @@ export class NestedPropertyRendererComponent extends Component {
           onValueChange(newObj);
         },
         onValueChange: (newValue: unknown) => {
-          const newObj = { ...obj, [key]: newValue };
-          onValueChange(newObj);
+          obj[key] = newValue;
+          onValueChange({ ...obj });
         },
         parentPath,
         value: val
@@ -623,11 +633,14 @@ export class NestedPropertyRendererComponent extends Component {
   }
 
   private showNestedPropertyMenu(params: NestedPropertyRendererComponentShowNestedPropertyMenuParams): void {
-    const { evt, label, onDelete, onValueChange, path, value } = params;
+    const { evt, getValue, label, onDelete, onValueChange, path } = params;
     const MENU_DELAY_IN_MILLISECONDS = 200;
     if (Date.now() - this.lastMenuCloseTime < MENU_DELAY_IN_MILLISECONDS) {
       return;
     }
+    // Read the live value at menu-open time. In-place scalar edits do not re-render this widget, so the
+    // Render-time captured value would be stale for the Cut/Copy payload and the type submenu (issue #7).
+    const value = getValue();
     const menu = new Menu();
     menu.onHide(() => {
       this.lastMenuCloseTime = Date.now();

@@ -1,5 +1,6 @@
 import type {
   MultitextPropertyWidgetComponent,
+  PropertyRenderContext,
   PropertyWidget
 } from '@obsidian-typings/obsidian-public-latest';
 import type {
@@ -285,5 +286,112 @@ describe('nested property type persistence integration', () => {
 
     expect(propertyTypes).toHaveLength(2);
     expect(propertyTypes.every((propertyType) => propertyType === 'number')).toBe(true);
+  });
+});
+
+describe('nested value preservation integration (issue #7)', () => {
+  // Patch the real `text` widget to capture the render context handed to each nested scalar, so the
+  // Test can drive an in-place value edit through the REAL renderer (`renderComplexWidget` clone +
+  // `renderObject`/`renderArray` in-place mutation) without re-rendering — exactly the sequence
+  // Obsidian performs for a scalar edit, which is what issue #7 regressed.
+  it('preserves a sibling scalar value across a later in-place edit', { retry: 3 }, async () => {
+    const result = await evalInObsidian({
+      contextId,
+      fn: ({ app, context: { objectWidget } }) => {
+        const container = createDiv();
+        activeDocument.body.appendChild(container);
+
+        const textWidget = app.metadataTypeManager.registeredTypeWidgets.text;
+        const originalRender = textWidget.render;
+        const capturedCtxs: PropertyRenderContext[] = [];
+        textWidget.render = (el, value, ctx): ReturnType<typeof originalRender> => {
+          capturedCtxs.push(ctx);
+          return originalRender.call(textWidget, el, value, ctx);
+        };
+
+        let current: unknown = { a: '1', b: '2' };
+        try {
+          objectWidget.render(container, current, {
+            app,
+            blur: () => undefined,
+            key: 'obj',
+            onChange: (value) => {
+              current = value;
+            },
+            sourcePath: 'test.md'
+          });
+
+          // Two sibling scalars render via the real text widget; fill them in place (no re-render).
+          capturedCtxs[0]?.onChange('A');
+          capturedCtxs[1]?.onChange('B');
+        } finally {
+          textWidget.render = originalRender;
+          container.remove();
+        }
+
+        return current;
+      },
+      vaultPath: vault.path
+    });
+
+    // Without the shared-mutable-model fix, filling `b` would spread a stale `a: '1'`.
+    expect(result).toEqual({ a: 'A', b: 'B' });
+  });
+
+  it('preserves existing nested object values when a new property is added', { retry: 3 }, async () => {
+    const result = await evalInObsidian({
+      contextId,
+      fn: ({ app, context: { objectWidget } }) => {
+        const container = createDiv();
+        activeDocument.body.appendChild(container);
+
+        const textWidget = app.metadataTypeManager.registeredTypeWidgets.text;
+        const originalRender = textWidget.render;
+        const capturedCtxs: PropertyRenderContext[] = [];
+        textWidget.render = (el, value, ctx): ReturnType<typeof originalRender> => {
+          capturedCtxs.push(ctx);
+          return originalRender.call(textWidget, el, value, ctx);
+        };
+
+        let current: unknown = { nested: { a: '1', b: '2' } };
+        try {
+          objectWidget.render(container, current, {
+            app,
+            blur: () => undefined,
+            key: 'obj',
+            onChange: (value) => {
+              current = value;
+            },
+            sourcePath: 'test.md'
+          });
+
+          // Edit a nested scalar in place (this does NOT re-render the object widget).
+          capturedCtxs[0]?.onChange('A');
+
+          // Structural change: add a new key to the ROOT object via the real Add-property button.
+          const rootContainer = container.querySelector('.nested-properties-container');
+          const addButton = rootContainer?.querySelector(':scope > .nested-properties-add-property');
+          if (!(addButton instanceof HTMLElement)) {
+            throw new Error('Root add-property button not found');
+          }
+          addButton.click();
+          const input = addButton.querySelector('input');
+          if (!(input instanceof HTMLInputElement)) {
+            throw new Error('Add-property input not found');
+          }
+          input.value = 'c';
+          input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+        } finally {
+          textWidget.render = originalRender;
+          container.remove();
+        }
+
+        return current;
+      },
+      vaultPath: vault.path
+    });
+
+    // The pre-existing nested values survive the structural add; the new key is present.
+    expect(result).toMatchObject({ c: '', nested: { a: 'A', b: '2' } });
   });
 });
