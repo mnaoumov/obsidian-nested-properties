@@ -15,6 +15,7 @@ import {
 } from 'vitest';
 
 import { NestedPropertyRendererComponent } from './nested-property-renderer.ts';
+import { NestedPropertyVaultOpsComponent } from './nested-property-vault-ops-component.ts';
 import { Plugin } from './plugin.ts';
 
 // The real `PluginBase.onload()` loads dev-utils' own notice/context/debug components, which read a
@@ -36,6 +37,11 @@ interface RendererWithToggle {
   toggleFullKeyDisplay: ReturnType<typeof vi.fn>;
 }
 
+interface VaultOpsWithCommands {
+  deleteNestedPropertyAcrossVault: ReturnType<typeof vi.fn>;
+  renameNestedPropertyAcrossVault: ReturnType<typeof vi.fn>;
+}
+
 async function loadableComponentStub(): Promise<ReturnType<typeof vi.fn>> {
   const { Component } = await vi.importActual<ObsidianComponentModule>('obsidian');
   // Vitest requires a non-arrow function for a mock invoked with `new`; it must return a fresh real
@@ -54,6 +60,25 @@ vi.mock('./nested-property-renderer.ts', async () => ({
   NestedPropertyRendererComponent: await loadableComponentStub()
 }));
 
+// Mirrors `loadableComponentStub` but exposes the two vault-wide command methods as async spies so the
+// Command callbacks can be asserted to delegate to them.
+async function loadableVaultOpsStub(): Promise<ReturnType<typeof vi.fn>> {
+  const { Component } = await vi.importActual<ObsidianComponentModule>('obsidian');
+  // eslint-disable-next-line prefer-arrow-callback -- A non-arrow function so it is constructable via `new`.
+  return vi.fn(function vaultOpsComponentStub() {
+    const component = new Component();
+    Object.assign(component, {
+      deleteNestedPropertyAcrossVault: vi.fn().mockResolvedValue(undefined),
+      renameNestedPropertyAcrossVault: vi.fn().mockResolvedValue(undefined)
+    });
+    return component;
+  });
+}
+
+vi.mock('./nested-property-vault-ops-component.ts', async () => ({
+  NestedPropertyVaultOpsComponent: await loadableVaultOpsStub()
+}));
+
 // `OpenDemoVaultCommandHandler` is registered through the real `commandHandlerComponent`, which calls
 // `buildCommand()` then `onRegistered()` on each handler — so the stub must supply both (a minimal command
 // And a noop) to keep that real registration path working; the constructor spy is what the test asserts on.
@@ -68,6 +93,7 @@ vi.mock('obsidian-dev-utils/obsidian/command-handlers/open-demo-vault-command-ha
 }));
 
 const MockNestedPropertyRendererComponent = vi.mocked(NestedPropertyRendererComponent);
+const MockNestedPropertyVaultOpsComponent = vi.mocked(NestedPropertyVaultOpsComponent);
 const MockOpenDemoVaultCommandHandler = vi.mocked(OpenDemoVaultCommandHandler);
 
 const manifest: PluginManifest = {
@@ -136,6 +162,64 @@ describe('Plugin', () => {
 
       const renderer = castTo<RendererWithToggle>(instanceOf(MockNestedPropertyRendererComponent));
       expect(renderer.toggleFullKeyDisplay).toHaveBeenCalledTimes(1);
+    });
+
+    it('should add NestedPropertyVaultOpsComponent as a child', async () => {
+      const plugin = new Plugin(app, manifest);
+      const addChildSpy = vi.spyOn(plugin, 'addChild');
+      await plugin.onload();
+
+      expect(addChildSpy).toHaveBeenCalledWith(instanceOf(MockNestedPropertyVaultOpsComponent));
+    });
+
+    it('should register the rename-nested-property-across-vault command', async () => {
+      const plugin = new Plugin(app, manifest);
+      const addCommandSpy = vi.spyOn(plugin, 'addCommand');
+      await plugin.onload();
+
+      expect(addCommandSpy).toHaveBeenCalledWith(expect.objectContaining({
+        id: 'rename-nested-property-across-vault',
+        name: 'Rename a nested property in all notes'
+      }));
+    });
+
+    it('should register the delete-nested-property-across-vault command', async () => {
+      const plugin = new Plugin(app, manifest);
+      const addCommandSpy = vi.spyOn(plugin, 'addCommand');
+      await plugin.onload();
+
+      expect(addCommandSpy).toHaveBeenCalledWith(expect.objectContaining({
+        id: 'delete-nested-property-across-vault',
+        name: 'Delete a nested property from all notes'
+      }));
+    });
+
+    it('should delegate the rename command to the vault-ops component', async () => {
+      const plugin = new Plugin(app, manifest);
+      const addCommandSpy = vi.spyOn(plugin, 'addCommand');
+      await plugin.onload();
+
+      const command = addCommandSpy.mock.calls
+        .map((call) => call[0])
+        .find((candidate) => candidate.id === 'rename-nested-property-across-vault');
+      command?.callback?.();
+
+      const vaultOps = castTo<VaultOpsWithCommands>(instanceOf(MockNestedPropertyVaultOpsComponent));
+      expect(vaultOps.renameNestedPropertyAcrossVault).toHaveBeenCalledTimes(1);
+    });
+
+    it('should delegate the delete command to the vault-ops component', async () => {
+      const plugin = new Plugin(app, manifest);
+      const addCommandSpy = vi.spyOn(plugin, 'addCommand');
+      await plugin.onload();
+
+      const command = addCommandSpy.mock.calls
+        .map((call) => call[0])
+        .find((candidate) => candidate.id === 'delete-nested-property-across-vault');
+      command?.callback?.();
+
+      const vaultOps = castTo<VaultOpsWithCommands>(instanceOf(MockNestedPropertyVaultOpsComponent));
+      expect(vaultOps.deleteNestedPropertyAcrossVault).toHaveBeenCalledTimes(1);
     });
 
     it('should register the open-demo-vault command handler with the app, plugin id, and version', async () => {

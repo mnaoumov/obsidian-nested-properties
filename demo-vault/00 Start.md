@@ -22,3 +22,7 @@ Welcome to the [Nested Properties](https://github.com/mnaoumov/obsidian-nested-p
 ## Display
 
 - [[08 Full key display]]
+
+## Vault-wide operations
+
+- [[09 Vault-wide rename and delete]]
