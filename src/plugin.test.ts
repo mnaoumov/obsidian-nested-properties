@@ -15,6 +15,7 @@ import {
 } from 'vitest';
 
 import { NestedPropertyRendererComponent } from './nested-property-renderer.ts';
+import { NestedPropertySearchComponent } from './nested-property-search-component.ts';
 import { NestedPropertyVaultOpsComponent } from './nested-property-vault-ops-component.ts';
 import { Plugin } from './plugin.ts';
 
@@ -35,6 +36,10 @@ interface ObsidianComponentModule {
 
 interface RendererWithToggle {
   toggleFullKeyDisplay: ReturnType<typeof vi.fn>;
+}
+
+interface SearchWithCommand {
+  findNotesByNestedProperty: ReturnType<typeof vi.fn>;
 }
 
 interface VaultOpsWithCommands {
@@ -79,6 +84,23 @@ vi.mock('./nested-property-vault-ops-component.ts', async () => ({
   NestedPropertyVaultOpsComponent: await loadableVaultOpsStub()
 }));
 
+// Mirrors the stubs above but exposes the find command method as an async spy.
+async function loadableSearchStub(): Promise<ReturnType<typeof vi.fn>> {
+  const { Component } = await vi.importActual<ObsidianComponentModule>('obsidian');
+  // eslint-disable-next-line prefer-arrow-callback -- A non-arrow function so it is constructable via `new`.
+  return vi.fn(function searchComponentStub() {
+    const component = new Component();
+    Object.assign(component, {
+      findNotesByNestedProperty: vi.fn().mockResolvedValue(undefined)
+    });
+    return component;
+  });
+}
+
+vi.mock('./nested-property-search-component.ts', async () => ({
+  NestedPropertySearchComponent: await loadableSearchStub()
+}));
+
 // `OpenDemoVaultCommandHandler` is registered through the real `commandHandlerComponent`, which calls
 // `buildCommand()` then `onRegistered()` on each handler — so the stub must supply both (a minimal command
 // And a noop) to keep that real registration path working; the constructor spy is what the test asserts on.
@@ -94,6 +116,7 @@ vi.mock('obsidian-dev-utils/obsidian/command-handlers/open-demo-vault-command-ha
 
 const MockNestedPropertyRendererComponent = vi.mocked(NestedPropertyRendererComponent);
 const MockNestedPropertyVaultOpsComponent = vi.mocked(NestedPropertyVaultOpsComponent);
+const MockNestedPropertySearchComponent = vi.mocked(NestedPropertySearchComponent);
 const MockOpenDemoVaultCommandHandler = vi.mocked(OpenDemoVaultCommandHandler);
 
 const manifest: PluginManifest = {
@@ -220,6 +243,39 @@ describe('Plugin', () => {
 
       const vaultOps = castTo<VaultOpsWithCommands>(instanceOf(MockNestedPropertyVaultOpsComponent));
       expect(vaultOps.deleteNestedPropertyAcrossVault).toHaveBeenCalledTimes(1);
+    });
+
+    it('should add NestedPropertySearchComponent as a child', async () => {
+      const plugin = new Plugin(app, manifest);
+      const addChildSpy = vi.spyOn(plugin, 'addChild');
+      await plugin.onload();
+
+      expect(addChildSpy).toHaveBeenCalledWith(instanceOf(MockNestedPropertySearchComponent));
+    });
+
+    it('should register the find-notes-by-nested-property command', async () => {
+      const plugin = new Plugin(app, manifest);
+      const addCommandSpy = vi.spyOn(plugin, 'addCommand');
+      await plugin.onload();
+
+      expect(addCommandSpy).toHaveBeenCalledWith(expect.objectContaining({
+        id: 'find-notes-by-nested-property',
+        name: 'Find notes by nested property'
+      }));
+    });
+
+    it('should delegate the find command to the search component', async () => {
+      const plugin = new Plugin(app, manifest);
+      const addCommandSpy = vi.spyOn(plugin, 'addCommand');
+      await plugin.onload();
+
+      const command = addCommandSpy.mock.calls
+        .map((call) => call[0])
+        .find((candidate) => candidate.id === 'find-notes-by-nested-property');
+      command?.callback?.();
+
+      const search = castTo<SearchWithCommand>(instanceOf(MockNestedPropertySearchComponent));
+      expect(search.findNotesByNestedProperty).toHaveBeenCalledTimes(1);
     });
 
     it('should register the open-demo-vault command handler with the app, plugin id, and version', async () => {
