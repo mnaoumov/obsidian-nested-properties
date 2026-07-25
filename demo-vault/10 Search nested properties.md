@@ -9,14 +9,15 @@ book:
 
 # Search nested properties
 
-Obsidian's built-in search understands *top-level* property operators like `[author]` or `[status: done]`, but it cannot reach into nested frontmatter such as `book.author`. The **Find notes by nested property** command fills that gap: enter a nested-property query, and pick from the matching notes to open one - no Base required.
+Obsidian's built-in search understands *top-level* property operators like `[author]` or `[status: done]`, but out of the box it cannot reach into nested frontmatter such as `book.author`. This plugin teaches Obsidian's **own search** to understand nested paths - so you just type the query into the normal search bar, and results appear in the search pane like any other query. No separate command, and no Base required.
 
-Two equivalent syntaxes are accepted:
+Write the nested key as a dotted path inside the property brackets:
 
-- Bracket chain: `[book][author]` (existence) or `[book][author: Ursula K. Le Guin]` (value).
-- Dotted path: `book.author` or `book.author: Ursula K. Le Guin`.
+- `[book.author]` - notes that have the nested `book.author` property.
+- `[book.author: Ursula K. Le Guin]` - notes whose `book.author` equals that value.
+- `[book.genres: fantasy]` - a query value matches any member of a nested list, so this matches the note above.
 
-Value matching is case-insensitive, and a query value matches any member of a list-valued property (for example `book.genres: sci-fi` matches the note above).
+Because it is real Obsidian search, a nested-property operator composes with everything else - content terms, `path:`, `OR`, `-`, and so on (e.g. `[book.genres: fantasy] -[book.author: Ursula K. Le Guin]`), and it works inside embedded ` ```query ` blocks too.
 
 ## Seed a few notes first
 
@@ -32,6 +33,6 @@ await require('/demoSetup.ts').seedSearchDemoNotes(app);
 ## Try it
 
 1. Click **Seed search demo notes** above (or add your own notes with nested `book` frontmatter).
-2. Run the **Find notes by nested property** command.
-3. Enter `book.genres: fantasy` (or `[book][genres: fantasy]`) - both this note and the two fantasy books above match, because `fantasy` is one of their `book.genres`; `Dune` (sci-fi only) does not.
-4. Pick a note from the list to open it.
+2. Open Obsidian's search (the magnifier in the left sidebar, or `Ctrl`/`Cmd` + `Shift` + `F`).
+3. Type `[book.genres: fantasy]` - both this note and the two fantasy books above match, because `fantasy` is one of their `book.genres`; `Dune` (sci-fi only) does not.
+4. Click a result to open it.
