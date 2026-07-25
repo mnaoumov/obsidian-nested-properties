@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 1.4.0
+
+- feat: re #1
+- docs: demo nested-property commands in demo vault (re #6, re #1)
+- test: add behavioral integration tests for nested-property commands (re #6, re #1)
+- feat: re #1
+- feat: re #6
+
 ## 1.3.1
 
 - fix: re #7
