@@ -7,6 +7,7 @@ import {
 } from 'vitest';
 
 import {
+  collectNestedPropertyEntries,
   collectNestedPropertyPaths,
   deleteNestedProperty,
   renameNestedProperty
@@ -46,6 +47,47 @@ describe('collectNestedPropertyPaths', () => {
   it('treats a null nested value as a leaf', () => {
     const frontmatter: GenericObject = { parent: { child: null } };
     expect(collectNestedPropertyPaths(frontmatter)).toEqual(['parent.child']);
+  });
+});
+
+describe('collectNestedPropertyEntries', () => {
+  it('returns an empty list for a flat object', () => {
+    expect(collectNestedPropertyEntries({ a: 1, b: 'two' })).toEqual([]);
+  });
+
+  it('pairs every nested path with its value, excluding top-level keys, in document order', () => {
+    const frontmatter: GenericObject = {
+      top: {
+        level1: {
+          level2: 'x'
+        },
+        other: 1
+      },
+      zzz: 'scalar'
+    };
+    expect(collectNestedPropertyEntries(frontmatter)).toEqual([
+      { path: 'top.level1', value: { level2: 'x' } },
+      { path: 'top.level1.level2', value: 'x' },
+      { path: 'top.other', value: 1 }
+    ]);
+  });
+
+  it('records an array-valued path without descending into it', () => {
+    const frontmatter: GenericObject = {
+      parent: {
+        items: ['a', 'b']
+      }
+    };
+    expect(collectNestedPropertyEntries(frontmatter)).toEqual([
+      { path: 'parent.items', value: ['a', 'b'] }
+    ]);
+  });
+
+  it('records a null nested value as a leaf entry', () => {
+    const frontmatter: GenericObject = { parent: { child: null } };
+    expect(collectNestedPropertyEntries(frontmatter)).toEqual([
+      { path: 'parent.child', value: null }
+    ]);
   });
 });
 

@@ -4,8 +4,8 @@ import { PluginDataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
 import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin';
 
 import { NestedPropertyRendererComponent } from './nested-property-renderer.ts';
-import { NestedPropertySearchComponent } from './nested-property-search-component.ts';
 import { NestedPropertyVaultOpsComponent } from './nested-property-vault-ops-component.ts';
+import { NestedPropertySearchPatchComponent } from './patches/nested-property-search-patch-component.ts';
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettings } from './plugin-settings.ts';
 
@@ -52,19 +52,11 @@ export class Plugin extends PluginBase {
       id: 'delete-nested-property-across-vault',
       name: 'Delete a nested property from all notes'
     });
-    const nestedPropertySearchComponent = this.addChild(
-      new NestedPropertySearchComponent({
-        app: this.app,
-        pluginNoticeComponent: this.pluginNoticeComponent
+    this.addChild(
+      new NestedPropertySearchPatchComponent({
+        app: this.app
       })
     );
-    this.addCommand({
-      callback: () => {
-        invokeAsyncSafely(() => nestedPropertySearchComponent.findNotesByNestedProperty());
-      },
-      id: 'find-notes-by-nested-property',
-      name: 'Find notes by nested property'
-    });
     this.commandHandlerComponent.registerCommandHandlers([
       new OpenDemoVaultCommandHandler({
         app: this.app,

@@ -3,6 +3,21 @@ import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
 /**
+ * A nested property path (depth of two or more segments) paired with the value found there.
+ */
+export interface NestedPropertyEntry {
+  /**
+   * The dotted nested property path (e.g. `a.b.c`).
+   */
+  readonly path: string;
+
+  /**
+   * The value the path resolves to (a scalar, array, or nested object).
+   */
+  readonly value: unknown;
+}
+
+/**
  * Parameters for {@link deleteNestedProperty}.
  */
 interface DeleteNestedPropertyParams {
@@ -40,6 +55,25 @@ interface RenameNestedPropertyParams {
 
 /**
  * Collects every nested property path (depth of two or more segments) reachable by descending through
+ * plain objects in the given frontmatter, paired with the value found at each path.
+ *
+ * This is the value-carrying companion of {@link collectNestedPropertyPaths}: it drives the native-search
+ * patch, which must match both the nested key path and its value. The same rationale applies — top-level
+ * keys (depth one) are excluded because Obsidian's own search already matches them, and arrays are not
+ * descended into (array indices are not stable property names), though the array-valued path itself is
+ * recorded so a list-member value query can match against it.
+ *
+ * @param frontmatter - The frontmatter object to scan.
+ * @returns The nested property entries in document order.
+ */
+export function collectNestedPropertyEntries(frontmatter: GenericObject): NestedPropertyEntry[] {
+  const entries: NestedPropertyEntry[] = [];
+  collectEntriesInto(frontmatter, '', entries);
+  return entries;
+}
+
+/**
+ * Collects every nested property path (depth of two or more segments) reachable by descending through
  * plain objects in the given frontmatter.
  *
  * Top-level keys (depth one) are intentionally excluded because Obsidian's own "All properties" view
@@ -50,8 +84,7 @@ interface RenameNestedPropertyParams {
  * @returns A sorted, de-duplicated list of dotted nested property paths.
  */
 export function collectNestedPropertyPaths(frontmatter: GenericObject): string[] {
-  const paths = new Set<string>();
-  collectInto(frontmatter, '', paths);
+  const paths = new Set(collectNestedPropertyEntries(frontmatter).map((entry) => entry.path));
   return [...paths].sort((a, b) => a.localeCompare(b));
 }
 
@@ -130,14 +163,14 @@ export function renameNestedProperty(params: RenameNestedPropertyParams): boolea
   return true;
 }
 
-function collectInto(obj: GenericObject, prefix: string, paths: Set<string>): void {
+function collectEntriesInto(obj: GenericObject, prefix: string, entries: NestedPropertyEntry[]): void {
   for (const [key, value] of Object.entries(obj)) {
     const path = prefix ? `${prefix}.${key}` : key;
     if (prefix) {
-      paths.add(path);
+      entries.push({ path, value });
     }
     if (isPlainObject(value)) {
-      collectInto(value, path, paths);
+      collectEntriesInto(value, path, entries);
     }
   }
 }

@@ -34,6 +34,7 @@ level1Nested:
 - Add new properties at any nesting level
 - Horizontal scrolling for deeply nested structures
 - Toggle full display of nested property keys (see [Commands](#commands))
+- **Find notes by nested property in Obsidian's own search** — type a dotted key such as `[book.author: value]` right in the search bar (see [Nested property search](#nested-property-search))
 
 ## Commands
 
@@ -42,9 +43,18 @@ The plugin adds the following commands to the command palette (they can be bound
 - **`Toggle full key display`** — An on/off toggle that switches nested property keys between the default view (long keys truncated with a trailing ellipsis) and the full key text. Deeply nested keys scroll horizontally.
 - **`Rename a nested property in all notes`** — Pick a nested property path (shown with the number of notes that use it), then enter the new dotted path. The key is renamed in every note that contains it. Notes where the target path already exists are skipped so nothing is overwritten. This complements Obsidian's built-in **Properties view: Show all properties**, which only exposes top-level property names.
 - **`Delete a nested property from all notes`** — Pick a nested property path and confirm; the key is removed from every note that contains it.
-- **`Find notes by nested property`** — Enter a nested-property query and pick from the matching notes to open one. Obsidian's own search only understands top-level property operators (`[property]` / `[property: value]`), so this evaluates an equivalent nested query across every note's frontmatter. Two syntaxes are accepted: a bracket chain `[parent][child]` (existence) or `[parent][child: value]` (value), and the dotted equivalents `parent.child` and `parent.child: value`. Value matching is case-insensitive, and matches any member of a list-valued property.
 
 The same on/off toggle is also available as a button in the Properties header (next to the collapse/expand-all button), so you can flip it directly from the frontmatter without opening the command palette. The button is highlighted while full key display is on.
+
+## Nested property search
+
+Obsidian's built-in search understands *top-level* property operators like `[author]` or `[status: done]`, but out of the box it cannot reach into nested frontmatter such as `book.author`. This plugin extends Obsidian's **own search** so a nested path written as a dotted key works directly in the search bar — no separate command, and results appear in the normal search pane:
+
+- `[book.author]` — notes that have the nested `book.author` property.
+- `[book.author: Ursula K. Le Guin]` — notes whose nested `book.author` equals that value.
+- `[book.genres: fantasy]` — a query value matches any member of a nested list.
+
+Because this is real Obsidian search, a nested-property operator composes with every other search feature — content terms, `path:`, `OR`, `-` negation — and works inside embedded ` ```query ` blocks. Top-level property operators keep working exactly as before; this only adds the nested paths Obsidian could not previously reach.
 
 The chosen state is remembered and restored the next time Obsidian starts.
 
