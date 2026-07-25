@@ -1,8 +1,10 @@
+import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { OpenDemoVaultCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/open-demo-vault-command-handler';
 import { PluginDataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
 import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin';
 
 import { NestedPropertyRendererComponent } from './nested-property-renderer.ts';
+import { NestedPropertyVaultOpsComponent } from './nested-property-vault-ops-component.ts';
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettings } from './plugin-settings.ts';
 
@@ -28,6 +30,26 @@ export class Plugin extends PluginBase {
       },
       id: 'toggle-full-key-display',
       name: 'Toggle full key display'
+    });
+    const nestedPropertyVaultOpsComponent = this.addChild(
+      new NestedPropertyVaultOpsComponent({
+        app: this.app,
+        pluginNoticeComponent: this.pluginNoticeComponent
+      })
+    );
+    this.addCommand({
+      callback: () => {
+        invokeAsyncSafely(() => nestedPropertyVaultOpsComponent.renameNestedPropertyAcrossVault());
+      },
+      id: 'rename-nested-property-across-vault',
+      name: 'Rename a nested property in all notes'
+    });
+    this.addCommand({
+      callback: () => {
+        invokeAsyncSafely(() => nestedPropertyVaultOpsComponent.deleteNestedPropertyAcrossVault());
+      },
+      id: 'delete-nested-property-across-vault',
+      name: 'Delete a nested property from all notes'
     });
     this.commandHandlerComponent.registerCommandHandlers([
       new OpenDemoVaultCommandHandler({
