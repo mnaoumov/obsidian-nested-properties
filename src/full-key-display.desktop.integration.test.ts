@@ -43,6 +43,7 @@ interface KeyDisplayMeasurement {
 describe('full key display command', () => {
   it('toggles nested property key truncation', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       fn: async ({ app, obsidianModule }) => {
         const TRUNCATION_TOLERANCE_IN_PIXELS = 2;
         const SETTLE_IN_MILLISECONDS = 300;
@@ -60,19 +61,19 @@ describe('full key display command', () => {
         // Expand the root nested property only if it is currently collapsed. The renderer remembers
         // Expanded paths across the shared Obsidian instance, so a blind toggle could collapse a
         // Property a previous test already expanded.
-        const collapsible = containerEl.querySelector('.nested-properties-collapsible');
+        const collapsible = containerEl.querySelector(':scope .nested-properties-collapsible');
         if (collapsible instanceof HTMLElement && collapsible.hasClass('is-collapsed')) {
-          const collapseBtn = collapsible.querySelector('.nested-properties-collapse-btn');
-          if (collapseBtn instanceof HTMLElement) {
-            collapseBtn.click();
+          const collapseButton = collapsible.querySelector('.nested-properties-collapse-btn');
+          if (collapseButton instanceof HTMLElement) {
+            collapseButton.click();
           }
         }
         await sleep(SETTLE_IN_MILLISECONDS);
 
         function measure(): KeyDisplayMeasurement {
-          const keyInput = containerEl.querySelector('.nested-properties-container .metadata-property-key-input');
+          const keyInput = containerEl.querySelector(':scope .nested-properties-container .metadata-property-key-input');
           if (!(keyInput instanceof HTMLInputElement)) {
-            throw new Error('nested key input not found');
+            throw new TypeError('nested key input not found');
           }
           return {
             hasFullKeyDisplayClass: activeDocument.body.hasClass('nested-properties-full-key-display'),
@@ -111,6 +112,7 @@ describe('full key display command', () => {
 
   it('toggles truncation of a top-level object property key', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       fn: async ({ app, obsidianModule }) => {
         const TRUNCATION_TOLERANCE_IN_PIXELS = 2;
         const SETTLE_IN_MILLISECONDS = 300;
@@ -129,11 +131,11 @@ describe('full key display command', () => {
         // Expand the top-level object property only if it is currently collapsed. The renderer remembers
         // Expanded paths across the shared Obsidian instance, so a blind toggle could collapse a
         // Property a previous test already expanded.
-        const collapsible = containerEl.querySelector('.metadata-property.nested-properties-collapsible');
+        const collapsible = containerEl.querySelector(':scope .metadata-property.nested-properties-collapsible');
         if (collapsible instanceof HTMLElement && collapsible.hasClass('is-collapsed')) {
-          const collapseBtn = collapsible.querySelector('.nested-properties-collapse-btn');
-          if (collapseBtn instanceof HTMLElement) {
-            collapseBtn.click();
+          const collapseButton = collapsible.querySelector('.nested-properties-collapse-btn');
+          if (collapseButton instanceof HTMLElement) {
+            collapseButton.click();
           }
         }
         await sleep(SETTLE_IN_MILLISECONDS);
@@ -141,7 +143,7 @@ describe('full key display command', () => {
         function measure(): KeyDisplayMeasurement {
           const keyInput = containerEl.querySelector(TOP_LEVEL_KEY_SELECTOR);
           if (!(keyInput instanceof HTMLInputElement)) {
-            throw new Error('top-level key input not found');
+            throw new TypeError('top-level key input not found');
           }
           return {
             hasFullKeyDisplayClass: activeDocument.body.hasClass('nested-properties-full-key-display'),
@@ -186,6 +188,7 @@ describe('full key display command', () => {
 
   it('toggles truncation of a plain top-level scalar property key', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       fn: async ({ app, obsidianModule }) => {
         const TRUNCATION_TOLERANCE_IN_PIXELS = 2;
         const SETTLE_IN_MILLISECONDS = 300;
@@ -204,10 +207,10 @@ describe('full key display command', () => {
         function measure(): KeyDisplayMeasurement {
           // The scalar key is rendered natively by Obsidian - not inside `.nested-properties-container`
           // And not a `.nested-properties-collapsible` - so locate it by value among the top-level inputs.
-          const keyInput = Array.from(containerEl.querySelectorAll('.metadata-property-key-input'))
+          const keyInput = [...containerEl.querySelectorAll(':scope .metadata-property-key-input')]
             .find((el) => el.instanceOf(HTMLInputElement) && el.value === SCALAR_KEY && !el.closest('.nested-properties-container'));
           if (!(keyInput instanceof HTMLInputElement)) {
-            throw new Error('top-level scalar key input not found');
+            throw new TypeError('top-level scalar key input not found');
           }
           return {
             hasFullKeyDisplayClass: activeDocument.body.hasClass('nested-properties-full-key-display'),
@@ -252,6 +255,7 @@ describe('full key display command', () => {
 
   it('toggles nested property key truncation via the header button', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       fn: async ({ app, obsidianModule }) => {
         const TRUNCATION_TOLERANCE_IN_PIXELS = 2;
         const SETTLE_IN_MILLISECONDS = 300;
@@ -269,42 +273,42 @@ describe('full key display command', () => {
         // Expand the root nested property only if it is currently collapsed. The renderer remembers
         // Expanded paths across the shared Obsidian instance, so a blind toggle could collapse a
         // Property a previous test already expanded.
-        const collapsible = containerEl.querySelector('.nested-properties-collapsible');
+        const collapsible = containerEl.querySelector(':scope .nested-properties-collapsible');
         if (collapsible instanceof HTMLElement && collapsible.hasClass('is-collapsed')) {
-          const collapseBtn = collapsible.querySelector('.nested-properties-collapse-btn');
-          if (collapseBtn instanceof HTMLElement) {
-            collapseBtn.click();
+          const collapseButton = collapsible.querySelector('.nested-properties-collapse-btn');
+          if (collapseButton instanceof HTMLElement) {
+            collapseButton.click();
           }
         }
         await sleep(SETTLE_IN_MILLISECONDS);
 
-        const headerButton = containerEl.querySelector('.nested-properties-full-key-toggle');
+        const headerButton = containerEl.querySelector(':scope .nested-properties-full-key-toggle');
         if (!(headerButton instanceof HTMLElement)) {
-          throw new Error('full key toggle button not found');
+          throw new TypeError('full key toggle button not found');
         }
 
         function isTruncated(): boolean {
-          const keyInput = containerEl.querySelector('.nested-properties-container .metadata-property-key-input');
+          const keyInput = containerEl.querySelector(':scope .nested-properties-container .metadata-property-key-input');
           if (!(keyInput instanceof HTMLInputElement)) {
-            throw new Error('nested key input not found');
+            throw new TypeError('nested key input not found');
           }
           return keyInput.scrollWidth > keyInput.clientWidth + TRUNCATION_TOLERANCE_IN_PIXELS;
         }
 
         const hasIcon = headerButton.querySelector('svg') !== null;
-        const truncatedBefore = isTruncated();
+        const isTruncatedBefore = isTruncated();
         headerButton.click();
         await sleep(SETTLE_IN_MILLISECONDS);
-        const truncatedAfterFirstClick = isTruncated();
+        const isTruncatedAfterFirstClick = isTruncated();
         headerButton.click();
         await sleep(SETTLE_IN_MILLISECONDS);
-        const truncatedAfterSecondClick = isTruncated();
+        const isTruncatedAfterSecondClick = isTruncated();
 
         return {
           hasIcon,
-          truncatedAfterFirstClick,
-          truncatedAfterSecondClick,
-          truncatedBefore
+          truncatedAfterFirstClick: isTruncatedAfterFirstClick,
+          truncatedAfterSecondClick: isTruncatedAfterSecondClick,
+          truncatedBefore: isTruncatedBefore
         };
       },
       vaultPath: vault.path
@@ -317,6 +321,7 @@ describe('full key display command', () => {
 
   it('persists full key display across a plugin reload', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       fn: async ({ app }) => {
         const SETTLE_IN_MILLISECONDS = 300;
         const PLUGIN_ID = 'nested-properties';
@@ -338,24 +343,24 @@ describe('full key display command', () => {
 
         app.commands.executeCommandById(TOGGLE_COMMAND_ID);
         await sleep(SETTLE_IN_MILLISECONDS);
-        const classAfterToggle = activeDocument.body.hasClass(FULL_KEY_CLASS);
+        const isClassAfterToggle = activeDocument.body.hasClass(FULL_KEY_CLASS);
 
         await app.plugins.disablePlugin(PLUGIN_ID);
         await sleep(SETTLE_IN_MILLISECONDS);
-        const classAfterDisable = activeDocument.body.hasClass(FULL_KEY_CLASS);
+        const isClassAfterDisable = activeDocument.body.hasClass(FULL_KEY_CLASS);
 
         await app.plugins.enablePlugin(PLUGIN_ID);
         await sleep(SETTLE_IN_MILLISECONDS);
-        const classAfterReenable = activeDocument.body.hasClass(FULL_KEY_CLASS);
+        const isClassAfterReenable = activeDocument.body.hasClass(FULL_KEY_CLASS);
 
         // Reset to the disabled state so other tests start clean.
         app.commands.executeCommandById(TOGGLE_COMMAND_ID);
         await sleep(SETTLE_IN_MILLISECONDS);
 
         return {
-          classAfterDisable,
-          classAfterReenable,
-          classAfterToggle
+          classAfterDisable: isClassAfterDisable,
+          classAfterReenable: isClassAfterReenable,
+          classAfterToggle: isClassAfterToggle
         };
       },
       vaultPath: vault.path

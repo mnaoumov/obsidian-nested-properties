@@ -62,7 +62,7 @@ interface SearchMatchContext {
   strings: Record<string, unknown>;
 }
 
-type SearchQueryConstructor = new (app: App, query: string, matchingCase: boolean) => SearchQueryInstance;
+type SearchQueryConstructor = new (app: App, query: string, isMatchingCase: boolean) => SearchQueryInstance;
 
 /**
  * A compiled search query. Its `matcher` is the root of the matcher tree; for a bare property query it is
@@ -153,11 +153,11 @@ export class NestedPropertySearchPatchComponent extends MonkeyAroundComponent {
 
     this.isPropertyMatcherPatched = true;
     this.registerMethodPatch({
+      $object: propertyMatcherPrototype,
       methodName: 'match',
-      obj: propertyMatcherPrototype,
       patchHandler: ({
         fallback,
-        originalArgs: [context],
+        originalArguments: [context],
         originalThis
       }) => matchNestedProperties(fallback, context, originalThis)
     });
@@ -170,8 +170,8 @@ export class NestedPropertySearchPatchComponent extends MonkeyAroundComponent {
     }
     const searchViewPrototype = castTo<SearchView>(Object.getPrototypeOf(searchLeaf.view));
     this.registerMethodPatch({
+      $object: searchViewPrototype,
       methodName: 'startSearch',
-      obj: searchViewPrototype,
       patchHandler: ({
         fallback,
         originalThis
@@ -185,8 +185,8 @@ export class NestedPropertySearchPatchComponent extends MonkeyAroundComponent {
 
 function addValueMatches(target: PropertyMatch[], valueMatcher: SubMatcher, context: SearchMatchContext, path: string, value: unknown): void {
   if (Array.isArray(value)) {
-    for (let index = 0; index < value.length; index++) {
-      const itemMatch = valueMatcher.match(context.cloneForPropertyContent(value[index]));
+    for (const [index, element] of value.entries()) {
+      const itemMatch = valueMatcher.match(context.cloneForPropertyContent(element));
       for (const pos of itemMatch?.content ?? []) {
         target.push({ key: path, pos, subkey: [index] });
       }

@@ -34,24 +34,24 @@ export class UnknownWidgetRenderPatchComponent extends MonkeyAroundComponent {
 
   public override onload(): void {
     this.registerMethodPatch({
+      $object: this.unknownWidget,
       methodName: 'render',
-      obj: this.unknownWidget,
       patchHandler: ({
         fallback,
-        originalArgs: [el, value, ctx]
+        originalArguments: [el, value, context]
       }) => {
         if (isSimpleArray(value)) {
-          const iconEl = el.closest('.metadata-property')?.querySelector('.metadata-property-key .metadata-property-icon');
+          const iconEl = el.closest('.metadata-property')?.querySelector(':scope .metadata-property-key .metadata-property-icon');
           if (iconEl instanceof HTMLElement) {
             setIcon(iconEl, this.listWidget.icon);
           }
-          return this.listWidget.render(el, value, ctx);
+          return this.listWidget.render(el, value, context);
         }
         if (Array.isArray(value)) {
-          return this.mixedListWidget.render(el, value, ctx);
+          return this.mixedListWidget.render(el, value, context);
         }
         if (isComplexValue(value)) {
-          return this.objectWidget.render(el, value, ctx);
+          return this.objectWidget.render(el, value, context);
         }
         return fallback();
       }

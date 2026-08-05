@@ -103,7 +103,7 @@ describe('NestedPropertyVaultOpsComponent', () => {
         { count: 2, path: 'top.level1.level2' },
         { count: 1, path: 'top.other' }
       ]);
-      expect(call?.itemTextFunc({ count: 2, path: 'top.level1' })).toBe('top.level1 (2)');
+      expect(call?.itemTextFunction({ count: 2, path: 'top.level1' })).toBe('top.level1 (2)');
     });
 
     it('does nothing when the property selection is cancelled', async () => {
@@ -134,7 +134,7 @@ describe('NestedPropertyVaultOpsComponent', () => {
       const { component, showNotice } = makeComponent(app);
       mockSelectItem.mockResolvedValue({ count: 1, path: 'top.other' });
 
-      mockPrompt.mockResolvedValueOnce('   ');
+      mockPrompt.mockResolvedValueOnce(' '.repeat(3));
       await component.renameNestedPropertyAcrossVault();
 
       mockPrompt.mockResolvedValueOnce('top.other');
@@ -219,7 +219,7 @@ describe('NestedPropertyVaultOpsComponent', () => {
 
       expect(mockConfirm).not.toHaveBeenCalled();
       expect(showNotice).not.toHaveBeenCalled();
-      expect(mockSelectItem.mock.calls[0]?.[0].itemTextFunc({ count: 1, path: 'top.other' })).toBe('top.other (1)');
+      expect(mockSelectItem.mock.calls[0]?.[0].itemTextFunction({ count: 1, path: 'top.other' })).toBe('top.other (1)');
     });
 
     it('does nothing when the confirmation is declined', async () => {

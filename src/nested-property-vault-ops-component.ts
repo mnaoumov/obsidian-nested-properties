@@ -9,8 +9,8 @@ import { selectItem } from 'obsidian-dev-utils/obsidian/modals/select-item';
 
 import {
   collectNestedPropertyPaths,
-  deleteNestedProperty,
-  renameNestedProperty
+  didDeleteNestedProperty,
+  didRenameNestedProperty
 } from './nested-property-paths.ts';
 
 interface NestedPropertyPathCount {
@@ -58,19 +58,19 @@ export class NestedPropertyVaultOpsComponent extends Component {
     const selected = await selectItem({
       app: this.app,
       items,
-      itemTextFunc: (item) => `${item.path} (${String(item.count)})`,
+      itemTextFunction: (item) => `${item.path} (${String(item.count)})`,
       placeholder: 'Select a nested property to delete'
     });
     if (!selected) {
       return;
     }
 
-    const confirmed = await confirm({
+    const isConfirmed = await confirm({
       app: this.app,
       message: `Delete the nested property "${selected.path}" from ${describeNoteCount(selected.count)}? This cannot be undone.`,
       title: 'Delete nested property'
     });
-    if (!confirmed) {
+    if (!isConfirmed) {
       return;
     }
 
@@ -88,7 +88,7 @@ export class NestedPropertyVaultOpsComponent extends Component {
     const selected = await selectItem({
       app: this.app,
       items,
-      itemTextFunc: (item) => `${item.path} (${String(item.count)})`,
+      itemTextFunction: (item) => `${item.path} (${String(item.count)})`,
       placeholder: 'Select a nested property to rename'
     });
     if (!selected) {
@@ -124,7 +124,7 @@ export class NestedPropertyVaultOpsComponent extends Component {
         continue;
       }
       await this.app.fileManager.processFrontMatter(file, (fileFrontmatter) => {
-        deleteNestedProperty({ frontmatter: fileFrontmatter as GenericObject, path });
+        didDeleteNestedProperty({ frontmatter: fileFrontmatter as GenericObject, path });
       });
       count++;
     }
@@ -146,11 +146,11 @@ export class NestedPropertyVaultOpsComponent extends Component {
       // Decide on a deep clone first (the mutating write cannot report back through Obsidian's
       // Synchronous frontmatter callback in a way the type checker can observe).
       // eslint-disable-next-line n/no-unsupported-features/node-builtins -- structuredClone is a Web/Electron API available in Obsidian's renderer; the rule wrongly flags it against the Node engines range.
-      if (!renameNestedProperty({ fromPath, frontmatter: structuredClone(frontmatter), toPath })) {
+      if (!didRenameNestedProperty({ fromPath, frontmatter: structuredClone(frontmatter), toPath })) {
         continue;
       }
       await this.app.fileManager.processFrontMatter(file, (fileFrontmatter) => {
-        renameNestedProperty({ fromPath, frontmatter: fileFrontmatter as GenericObject, toPath });
+        didRenameNestedProperty({ fromPath, frontmatter: fileFrontmatter as GenericObject, toPath });
       });
       count++;
     }
@@ -168,7 +168,7 @@ export class NestedPropertyVaultOpsComponent extends Component {
         counts.set(path, (counts.get(path) ?? 0) + 1);
       }
     }
-    return [...counts.entries()]
+    return [...counts]
       .map(([path, count]) => ({ count, path }))
       .sort((a, b) => a.path.localeCompare(b.path));
   }

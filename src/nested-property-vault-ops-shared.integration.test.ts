@@ -39,6 +39,7 @@ export function registerNestedPropertyVaultOpsSuite(platform: string): void {
   describe(`Nested property vault-wide operations (${platform})`, () => {
     it('renames a nested property across every note that has it', async () => {
       const result = await evalInObsidian({
+        // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
         async fn({ app, lib: { waitUntil } }) {
           const WAIT_TIMEOUT_IN_MILLISECONDS = 20_000;
           const FOLDER = 'np-vault-ops-rename';
@@ -49,7 +50,7 @@ export function registerNestedPropertyVaultOpsSuite(platform: string): void {
           const RENAME_COMMAND_ID = 'nested-properties:rename-nested-property-across-vault';
 
           async function cleanup(): Promise<void> {
-            for (const el of Array.from(activeDocument.querySelectorAll<HTMLElement>('.modal-container .modal-close-button'))) {
+            for (const el of activeDocument.querySelectorAll<HTMLElement>(':scope .modal-container .modal-close-button')) {
               el.click();
             }
             for (const path of [FILE_A, FILE_B, FOLDER]) {
@@ -80,23 +81,23 @@ export function registerNestedPropertyVaultOpsSuite(platform: string): void {
             // Step 1: the fuzzy picker of nested paths. Filter to our unique path, then click it.
             await waitUntil({
               message: 'nested property picker did not open',
-              predicate: () => activeDocument.querySelector('.select-item-modal .prompt-input') !== null,
+              predicate: () => activeDocument.querySelector(':scope .select-item-modal .prompt-input') !== null,
               timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
             });
-            const pickerInput = activeDocument.querySelector('.select-item-modal .prompt-input');
+            const pickerInput = activeDocument.querySelector(':scope .select-item-modal .prompt-input');
             if (!(pickerInput instanceof HTMLInputElement)) {
-              throw new Error('picker input not found');
+              throw new TypeError('picker input not found');
             }
             pickerInput.value = FROM_PATH;
             pickerInput.dispatchEvent(new Event('input'));
             await waitUntil({
               message: 'nested path suggestion did not appear',
               predicate: () =>
-                Array.from(activeDocument.querySelectorAll('.select-item-modal .suggestion-item'))
+                [...activeDocument.querySelectorAll(':scope .select-item-modal .suggestion-item')]
                   .some((el) => el.textContent.includes(FROM_PATH)),
               timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
             });
-            const suggestion = Array.from(activeDocument.querySelectorAll<HTMLElement>('.select-item-modal .suggestion-item'))
+            const suggestion = [...activeDocument.querySelectorAll<HTMLElement>(':scope .select-item-modal .suggestion-item')]
               .find((el) => el.textContent.includes(FROM_PATH));
             if (!suggestion) {
               throw new Error('nested path suggestion not found');
@@ -106,18 +107,18 @@ export function registerNestedPropertyVaultOpsSuite(platform: string): void {
             // Step 2: the rename prompt (pre-filled with the current path). Type the new path + confirm.
             await waitUntil({
               message: 'rename prompt did not open',
-              predicate: () => activeDocument.querySelector('.prompt-modal .text-box') !== null,
+              predicate: () => activeDocument.querySelector(':scope .prompt-modal .text-box') !== null,
               timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
             });
-            const promptInput = activeDocument.querySelector('.prompt-modal .text-box');
+            const promptInput = activeDocument.querySelector(':scope .prompt-modal .text-box');
             if (!(promptInput instanceof HTMLInputElement)) {
-              throw new Error('rename prompt input not found');
+              throw new TypeError('rename prompt input not found');
             }
             promptInput.value = TO_PATH;
             promptInput.dispatchEvent(new Event('input'));
-            const okButton = activeDocument.querySelector('.prompt-modal .ok-button');
+            const okButton = activeDocument.querySelector(':scope .prompt-modal .ok-button');
             if (!(okButton instanceof HTMLElement)) {
-              throw new Error('rename prompt OK button not found');
+              throw new TypeError('rename prompt OK button not found');
             }
             okButton.click();
 
@@ -152,6 +153,7 @@ export function registerNestedPropertyVaultOpsSuite(platform: string): void {
 
     it('deletes a nested property from every note that has it', async () => {
       const result = await evalInObsidian({
+        // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
         async fn({ app, lib: { waitUntil } }) {
           const WAIT_TIMEOUT_IN_MILLISECONDS = 20_000;
           const FOLDER = 'np-vault-ops-delete';
@@ -161,7 +163,7 @@ export function registerNestedPropertyVaultOpsSuite(platform: string): void {
           const DELETE_COMMAND_ID = 'nested-properties:delete-nested-property-across-vault';
 
           async function cleanup(): Promise<void> {
-            for (const el of Array.from(activeDocument.querySelectorAll<HTMLElement>('.modal-container .modal-close-button'))) {
+            for (const el of activeDocument.querySelectorAll<HTMLElement>(':scope .modal-container .modal-close-button')) {
               el.click();
             }
             for (const path of [FILE_A, FILE_B, FOLDER]) {
@@ -191,23 +193,23 @@ export function registerNestedPropertyVaultOpsSuite(platform: string): void {
             // Step 1: the fuzzy picker of nested paths.
             await waitUntil({
               message: 'nested property picker did not open',
-              predicate: () => activeDocument.querySelector('.select-item-modal .prompt-input') !== null,
+              predicate: () => activeDocument.querySelector(':scope .select-item-modal .prompt-input') !== null,
               timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
             });
-            const pickerInput = activeDocument.querySelector('.select-item-modal .prompt-input');
+            const pickerInput = activeDocument.querySelector(':scope .select-item-modal .prompt-input');
             if (!(pickerInput instanceof HTMLInputElement)) {
-              throw new Error('picker input not found');
+              throw new TypeError('picker input not found');
             }
             pickerInput.value = PATH;
             pickerInput.dispatchEvent(new Event('input'));
             await waitUntil({
               message: 'nested path suggestion did not appear',
               predicate: () =>
-                Array.from(activeDocument.querySelectorAll('.select-item-modal .suggestion-item'))
+                [...activeDocument.querySelectorAll(':scope .select-item-modal .suggestion-item')]
                   .some((el) => el.textContent.includes(PATH)),
               timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
             });
-            const suggestion = Array.from(activeDocument.querySelectorAll<HTMLElement>('.select-item-modal .suggestion-item'))
+            const suggestion = [...activeDocument.querySelectorAll<HTMLElement>(':scope .select-item-modal .suggestion-item')]
               .find((el) => el.textContent.includes(PATH));
             if (!suggestion) {
               throw new Error('nested path suggestion not found');
@@ -217,12 +219,12 @@ export function registerNestedPropertyVaultOpsSuite(platform: string): void {
             // Step 2: the delete confirmation.
             await waitUntil({
               message: 'delete confirmation did not open',
-              predicate: () => activeDocument.querySelector('.confirm-modal .ok-button') !== null,
+              predicate: () => activeDocument.querySelector(':scope .confirm-modal .ok-button') !== null,
               timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
             });
-            const okButton = activeDocument.querySelector('.confirm-modal .ok-button');
+            const okButton = activeDocument.querySelector(':scope .confirm-modal .ok-button');
             if (!(okButton instanceof HTMLElement)) {
-              throw new Error('confirm OK button not found');
+              throw new TypeError('confirm OK button not found');
             }
             okButton.click();
 

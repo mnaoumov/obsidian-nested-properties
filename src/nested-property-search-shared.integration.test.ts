@@ -56,6 +56,7 @@ export function registerNestedPropertySearchSuite(platform: string): void {
   describe(`Native search understands nested properties (${platform})`, () => {
     it('returns the note whose nested property matches and not the one that does not', async () => {
       const result = await evalInObsidian({
+        // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
         async fn({ app, lib: { waitUntil } }) {
           const WAIT_TIMEOUT_IN_MILLISECONDS = 20_000;
           const FOLDER = 'np-search';

@@ -3,7 +3,7 @@ import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 import { moment } from 'obsidian';
 import { extractDefaultExportInterop } from 'obsidian-dev-utils/object-utils';
 
-const momentFn = extractDefaultExportInterop(moment);
+const momentFunction = extractDefaultExportInterop(moment);
 
 interface ConvertValueParams {
   readonly targetType: string;
@@ -20,22 +20,28 @@ export function convertValue(params: ConvertValueParams): unknown {
   switch (targetType) {
     case 'aliases':
     case 'multitext':
-    case 'tags':
+    case 'tags': {
       return convertToSimpleList(value);
-    case 'checkbox':
+    }
+    case 'checkbox': {
       return Boolean(value);
+    }
     case 'date':
-    case 'datetime':
+    case 'datetime': {
       return convertToDate(value);
-    case 'list':
+    }
+    case 'list': {
       return convertToMixedList(value);
-    case 'number':
+    }
+    case 'number': {
       return convertToNumber(value);
-    case 'object':
+    }
+    case 'object': {
       return convertToObject(value);
-    case 'text':
-    default:
+    }
+    default: {
       return convertToString(value);
+    }
   }
 }
 
@@ -48,14 +54,18 @@ export function isLossyConversion(params: IsLossyConversionParams): boolean {
   switch (targetType) {
     case 'aliases':
     case 'multitext':
-    case 'tags':
+    case 'tags': {
       return !isSimpleArray(value);
-    case 'list':
+    }
+    case 'list': {
       return !Array.isArray(value);
-    case 'object':
+    }
+    case 'object': {
       return !isComplexValue(value) || Array.isArray(value);
-    default:
+    }
+    default: {
       return false;
+    }
   }
 }
 
@@ -64,7 +74,7 @@ export function isSimpleArray(value: unknown): boolean {
 }
 
 function convertToDate(value: unknown): null | string {
-  if (typeof value === 'string' && value && momentFn(value).isValid()) {
+  if (typeof value === 'string' && value && momentFunction(value).isValid()) {
     return value;
   }
   return null;
@@ -101,9 +111,9 @@ function convertToSimpleList(value: unknown): unknown[] {
   if (value !== null && typeof value === 'object') {
     return [];
   }
-  const str = convertToString(value);
-  if (str) {
-    return [str];
+  const $string = convertToString(value);
+  if ($string) {
+    return [$string];
   }
   return [];
 }

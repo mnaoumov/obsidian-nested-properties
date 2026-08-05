@@ -89,8 +89,8 @@ describe('isSimpleArray', () => {
 describe('convertValue', () => {
   describe('to simple list types (aliases/multitext/tags)', () => {
     it('should return simple array as-is', () => {
-      const arr = [1, 2, 3];
-      expect(convertValue({ targetType: 'multitext', value: arr })).toBe(arr);
+      const array = [1, 2, 3];
+      expect(convertValue({ targetType: 'multitext', value: array })).toBe(array);
     });
 
     it('should filter out complex items from array', () => {
@@ -128,13 +128,13 @@ describe('convertValue', () => {
 
   describe('to mixed list', () => {
     it('should return array as-is', () => {
-      const arr = [1, { a: 2 }];
-      expect(convertValue({ targetType: 'list', value: arr })).toBe(arr);
+      const array = [1, { a: 2 }];
+      expect(convertValue({ targetType: 'list', value: array })).toBe(array);
     });
 
     it('should wrap object in array', () => {
-      const obj = { a: 1 };
-      expect(convertValue({ targetType: 'list', value: obj })).toEqual([obj]);
+      const object = { a: 1 };
+      expect(convertValue({ targetType: 'list', value: object })).toEqual([object]);
     });
 
     it('should wrap primitive in array', () => {
@@ -205,8 +205,8 @@ describe('convertValue', () => {
 
   describe('to object', () => {
     it('should return objects as-is', () => {
-      const obj = { a: 1 };
-      expect(convertValue({ targetType: 'object', value: obj })).toBe(obj);
+      const object = { a: 1 };
+      expect(convertValue({ targetType: 'object', value: object })).toBe(object);
     });
 
     it('should convert arrays to empty objects', () => {

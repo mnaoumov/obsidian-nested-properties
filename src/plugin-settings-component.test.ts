@@ -54,8 +54,8 @@ function createComponent(): PluginSettingsComponent {
 function createMockPluginEventSource(): PluginEventSource {
   const source: PluginEventSource = strictProxy<PluginEventSource>({
     offref: noop,
-    on(name: string, callback: () => void, thisArg?: unknown): AsyncEventRef {
-      return { asyncEventSource: source, callback, name, thisArg };
+    on(name: string, callback: () => void, thisArgument?: unknown): AsyncEventRef {
+      return { asyncEventSource: source, callback, name, thisArgument };
     }
   });
   return source;

@@ -9,8 +9,8 @@ import {
 import {
   collectNestedPropertyEntries,
   collectNestedPropertyPaths,
-  deleteNestedProperty,
-  renameNestedProperty
+  didDeleteNestedProperty,
+  didRenameNestedProperty
 } from './nested-property-paths.ts';
 
 describe('collectNestedPropertyPaths', () => {
@@ -91,85 +91,85 @@ describe('collectNestedPropertyEntries', () => {
   });
 });
 
-describe('deleteNestedProperty', () => {
+describe('didDeleteNestedProperty', () => {
   it('returns false for an empty path', () => {
     const frontmatter: GenericObject = { a: { b: 1 } };
-    expect(deleteNestedProperty({ frontmatter, path: '' })).toBe(false);
+    expect(didDeleteNestedProperty({ frontmatter, path: '' })).toBe(false);
     expect(frontmatter).toEqual({ a: { b: 1 } });
   });
 
   it('returns false when an intermediate segment is not an object', () => {
     const frontmatter: GenericObject = { a: 5 };
-    expect(deleteNestedProperty({ frontmatter, path: 'a.b' })).toBe(false);
+    expect(didDeleteNestedProperty({ frontmatter, path: 'a.b' })).toBe(false);
     expect(frontmatter).toEqual({ a: 5 });
   });
 
   it('returns false when the leaf key is missing', () => {
     const frontmatter: GenericObject = { a: { b: 1 } };
-    expect(deleteNestedProperty({ frontmatter, path: 'a.c' })).toBe(false);
+    expect(didDeleteNestedProperty({ frontmatter, path: 'a.c' })).toBe(false);
     expect(frontmatter).toEqual({ a: { b: 1 } });
   });
 
   it('deletes the leaf and preserves the (now empty) parent', () => {
     const frontmatter: GenericObject = { a: { b: 1 } };
-    expect(deleteNestedProperty({ frontmatter, path: 'a.b' })).toBe(true);
+    expect(didDeleteNestedProperty({ frontmatter, path: 'a.b' })).toBe(true);
     expect(frontmatter).toEqual({ a: {} });
   });
 });
 
-describe('renameNestedProperty', () => {
+describe('didRenameNestedProperty', () => {
   it('returns false when either path is empty', () => {
     const frontmatter: GenericObject = { a: { b: 1 } };
-    expect(renameNestedProperty({ fromPath: '', frontmatter, toPath: 'a.c' })).toBe(false);
-    expect(renameNestedProperty({ fromPath: 'a.b', frontmatter, toPath: '' })).toBe(false);
+    expect(didRenameNestedProperty({ fromPath: '', frontmatter, toPath: 'a.c' })).toBe(false);
+    expect(didRenameNestedProperty({ fromPath: 'a.b', frontmatter, toPath: '' })).toBe(false);
   });
 
   it('returns false when the paths are equal', () => {
     const frontmatter: GenericObject = { a: { b: 1 } };
-    expect(renameNestedProperty({ fromPath: 'a.b', frontmatter, toPath: 'a.b' })).toBe(false);
+    expect(didRenameNestedProperty({ fromPath: 'a.b', frontmatter, toPath: 'a.b' })).toBe(false);
   });
 
   it('returns false when the target is a descendant of the source', () => {
     const frontmatter: GenericObject = { a: { b: 1 } };
-    expect(renameNestedProperty({ fromPath: 'a', frontmatter, toPath: 'a.b' })).toBe(false);
+    expect(didRenameNestedProperty({ fromPath: 'a', frontmatter, toPath: 'a.b' })).toBe(false);
   });
 
   it('returns false when the source is a descendant of the target', () => {
     const frontmatter: GenericObject = { a: { b: 1 } };
-    expect(renameNestedProperty({ fromPath: 'a.b', frontmatter, toPath: 'a' })).toBe(false);
+    expect(didRenameNestedProperty({ fromPath: 'a.b', frontmatter, toPath: 'a' })).toBe(false);
   });
 
   it('returns false when the source does not exist', () => {
     const frontmatter: GenericObject = { a: 5 };
-    expect(renameNestedProperty({ fromPath: 'a.b', frontmatter, toPath: 'x.y' })).toBe(false);
+    expect(didRenameNestedProperty({ fromPath: 'a.b', frontmatter, toPath: 'x.y' })).toBe(false);
   });
 
   it('returns false when the source leaf is missing', () => {
     const frontmatter: GenericObject = { a: { b: 1 } };
-    expect(renameNestedProperty({ fromPath: 'a.c', frontmatter, toPath: 'a.d' })).toBe(false);
+    expect(didRenameNestedProperty({ fromPath: 'a.c', frontmatter, toPath: 'a.d' })).toBe(false);
   });
 
   it('returns false when the target parent chain passes through a non-object', () => {
     const frontmatter: GenericObject = { a: { b: 1 }, c: 5 };
-    expect(renameNestedProperty({ fromPath: 'a.b', frontmatter, toPath: 'c.d' })).toBe(false);
+    expect(didRenameNestedProperty({ fromPath: 'a.b', frontmatter, toPath: 'c.d' })).toBe(false);
     expect(frontmatter).toEqual({ a: { b: 1 }, c: 5 });
   });
 
   it('returns false when the target already exists', () => {
     const frontmatter: GenericObject = { a: { b: 1, c: 2 } };
-    expect(renameNestedProperty({ fromPath: 'a.b', frontmatter, toPath: 'a.c' })).toBe(false);
+    expect(didRenameNestedProperty({ fromPath: 'a.b', frontmatter, toPath: 'a.c' })).toBe(false);
     expect(frontmatter).toEqual({ a: { b: 1, c: 2 } });
   });
 
   it('renames a leaf within the same parent', () => {
     const frontmatter: GenericObject = { a: { b: 1 } };
-    expect(renameNestedProperty({ fromPath: 'a.b', frontmatter, toPath: 'a.c' })).toBe(true);
+    expect(didRenameNestedProperty({ fromPath: 'a.b', frontmatter, toPath: 'a.c' })).toBe(true);
     expect(frontmatter).toEqual({ a: { c: 1 } });
   });
 
   it('moves to a new path, creating intermediate objects', () => {
     const frontmatter: GenericObject = { a: { b: { value: 1 } } };
-    expect(renameNestedProperty({ fromPath: 'a.b', frontmatter, toPath: 'x.y.z' })).toBe(true);
+    expect(didRenameNestedProperty({ fromPath: 'a.b', frontmatter, toPath: 'x.y.z' })).toBe(true);
     expect(frontmatter).toEqual({ a: {}, x: { y: { z: { value: 1 } } } });
   });
 });

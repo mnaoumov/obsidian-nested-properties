@@ -18,9 +18,9 @@ export interface NestedPropertyEntry {
 }
 
 /**
- * Parameters for {@link deleteNestedProperty}.
+ * Parameters for {@link didDeleteNestedProperty}.
  */
-interface DeleteNestedPropertyParams {
+interface DidDeleteNestedPropertyParams {
   /**
    * The frontmatter object to mutate in place.
    */
@@ -33,9 +33,9 @@ interface DeleteNestedPropertyParams {
 }
 
 /**
- * Parameters for {@link renameNestedProperty}.
+ * Parameters for {@link didRenameNestedProperty}.
  */
-interface RenameNestedPropertyParams {
+interface DidRenameNestedPropertyParams {
   /**
    * The dotted path of the nested property as it exists now (e.g. `a.b.c`).
    */
@@ -97,7 +97,7 @@ export function collectNestedPropertyPaths(frontmatter: GenericObject): string[]
  * @param params - The parameters.
  * @returns `true` when the property existed and was removed, otherwise `false`.
  */
-export function deleteNestedProperty(params: DeleteNestedPropertyParams): boolean {
+export function didDeleteNestedProperty(params: DidDeleteNestedPropertyParams): boolean {
   const { frontmatter, path } = params;
   const segments = splitPath(path);
   if (segments.length === 0) {
@@ -126,7 +126,7 @@ export function deleteNestedProperty(params: DeleteNestedPropertyParams): boolea
  * @param params - The parameters.
  * @returns `true` when the rename was applied, otherwise `false`.
  */
-export function renameNestedProperty(params: RenameNestedPropertyParams): boolean {
+export function didRenameNestedProperty(params: DidRenameNestedPropertyParams): boolean {
   const { fromPath, frontmatter, toPath } = params;
   const fromSegments = splitPath(fromPath);
   const toSegments = splitPath(toPath);
@@ -163,8 +163,8 @@ export function renameNestedProperty(params: RenameNestedPropertyParams): boolea
   return true;
 }
 
-function collectEntriesInto(obj: GenericObject, prefix: string, entries: NestedPropertyEntry[]): void {
-  for (const [key, value] of Object.entries(obj)) {
+function collectEntriesInto(object: GenericObject, prefix: string, entries: NestedPropertyEntry[]): void {
+  for (const [key, value] of Object.entries(object)) {
     const path = prefix ? `${prefix}.${key}` : key;
     if (prefix) {
       entries.push({ path, value });

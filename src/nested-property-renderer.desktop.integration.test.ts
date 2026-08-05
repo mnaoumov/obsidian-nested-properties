@@ -66,6 +66,7 @@ beforeAll(async () => {
   });
   await evalInObsidian({
     contextId,
+    // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
     fn: async ({ app, context }) => {
       const listWidget = app.metadataTypeManager.registeredTypeWidgets['list'];
       if (!listWidget) {
@@ -98,14 +99,17 @@ describe('widget rendering integration', () => {
   it('should not loop when mixed list widget receives null value', async () => {
     const onChangeCallCount = await evalInObsidian({
       contextId,
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       fn: ({ app, context: { mixedListWidget } }) => {
         // eslint-disable-next-line no-shadow -- Executed in different processes.
         let onChangeCallCount = 0;
         const el = createDiv();
         function noop(): void {
-          /* No-op */
+          /*
+          No-op
+          */
         }
-        const ctx = {
+        const context = {
           app,
           blur: noop,
           key: 'testList',
@@ -115,7 +119,7 @@ describe('widget rendering integration', () => {
           sourcePath: 'test.md'
         };
 
-        mixedListWidget.render(el, null, ctx);
+        mixedListWidget.render(el, null, context);
 
         return onChangeCallCount;
       },
@@ -128,14 +132,17 @@ describe('widget rendering integration', () => {
   it('should not loop when object widget receives null value', async () => {
     const onChangeCallCount = await evalInObsidian({
       contextId,
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       fn: ({ app, context: { mixedListWidget } }) => {
         function noop(): void {
-          /* No-op */
+          /*
+          No-op
+          */
         }
         // eslint-disable-next-line no-shadow -- Executed in different processes.
         let onChangeCallCount = 0;
         const el = createDiv();
-        const ctx = {
+        const context = {
           app,
           blur: noop,
           key: 'testObj',
@@ -145,7 +152,7 @@ describe('widget rendering integration', () => {
           sourcePath: 'test.md'
         };
 
-        mixedListWidget.render(el, null, ctx);
+        mixedListWidget.render(el, null, context);
 
         return onChangeCallCount;
       },
@@ -160,6 +167,7 @@ describe('frontmatter editing integration', () => {
   it('should not break when typing a new property name', { retry: 3 }, async () => {
     const contentAfterWait = await evalInObsidian({
       contextId,
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       fn: async ({ context: { markdownView } }) => {
         const editor = markdownView.editor;
 
@@ -181,6 +189,7 @@ describe('type inference integration', () => {
   it('should infer simple array as list, not mixed list', async () => {
     const { expectedType, inferredType } = await evalInObsidian({
       contextId,
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       fn: ({ context: { markdownView } }) => {
         const listEntry = markdownView.metadataEditor.rendered.find(
           (r) => r.entry.key === 'simpleList'
@@ -203,6 +212,7 @@ describe('multitext validate patch integration', () => {
   it('should accept simple non-string primitive array', async () => {
     const isValid = await evalInObsidian({
       contextId,
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       fn: ({ context: { simpleListWidget } }) => {
         return simpleListWidget.validate([1, 2, 3]);
       },
@@ -217,6 +227,7 @@ describe('nested property type persistence integration', () => {
   afterEach(async () => {
     await evalInObsidian({
       contextId,
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       fn: async ({ app }) => {
         await app.metadataTypeManager.unsetType('object.d');
         await app.metadataTypeManager.unsetType('versions.released');
@@ -228,6 +239,7 @@ describe('nested property type persistence integration', () => {
   it('persists a nested type (including reserved `tags`) under its dotted key', async () => {
     const assignedType = await evalInObsidian({
       contextId,
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       fn: async ({ app }) => {
         await app.metadataTypeManager.setType('object.d', 'tags');
         return app.metadataTypeManager.getAssignedWidget('object.d');
@@ -241,6 +253,7 @@ describe('nested property type persistence integration', () => {
   it('renders a nested scalar with its persisted (assigned) type', { retry: 3 }, async () => {
     const propertyType = await evalInObsidian({
       contextId,
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       fn: async ({ app, context: { markdownView } }) => {
         await app.metadataTypeManager.setType('object.d', 'number');
         const data = markdownView.metadataEditor.serialize();
@@ -248,10 +261,10 @@ describe('nested property type persistence integration', () => {
         markdownView.metadataEditor.synchronize(data);
         await sleep(500);
 
-        for (const valueEl of Array.from(activeDocument.querySelectorAll('.nested-properties-container > .metadata-property > .metadata-property-value'))) {
-          const keyInput = valueEl.parentElement?.querySelector('.metadata-property-key > .metadata-property-key-input');
+        for (const valueEl of activeDocument.querySelectorAll<HTMLElement>(':scope .nested-properties-container > .metadata-property > .metadata-property-value')) {
+          const keyInput = valueEl.parentElement?.querySelector(':scope .metadata-property-key > .metadata-property-key-input');
           if (keyInput instanceof HTMLInputElement && keyInput.value === 'd') {
-            return valueEl.getAttribute('data-property-type');
+            return valueEl.dataset['propertyType'];
           }
         }
         return null;
@@ -265,6 +278,7 @@ describe('nested property type persistence integration', () => {
   it('applies a collapsed per-field type to every array item', { retry: 3 }, async () => {
     const propertyTypes = await evalInObsidian({
       contextId,
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       fn: async ({ app, context: { markdownView } }) => {
         await app.metadataTypeManager.setType('versions.released', 'number');
         const data = markdownView.metadataEditor.serialize();
@@ -273,10 +287,10 @@ describe('nested property type persistence integration', () => {
         await sleep(500);
 
         const types: (null | string)[] = [];
-        for (const valueEl of Array.from(activeDocument.querySelectorAll('.nested-properties-container > .metadata-property > .metadata-property-value'))) {
-          const keyInput = valueEl.parentElement?.querySelector('.metadata-property-key > .metadata-property-key-input');
+        for (const valueEl of activeDocument.querySelectorAll<HTMLElement>(':scope .nested-properties-container > .metadata-property > .metadata-property-value')) {
+          const keyInput = valueEl.parentElement?.querySelector(':scope .metadata-property-key > .metadata-property-key-input');
           if (keyInput instanceof HTMLInputElement && keyInput.value === 'released') {
-            types.push(valueEl.getAttribute('data-property-type'));
+            types.push(valueEl.dataset['propertyType'] ?? null);
           }
         }
         return types;
@@ -297,16 +311,17 @@ describe('nested value preservation integration (issue #7)', () => {
   it('preserves a sibling scalar value across a later in-place edit', { retry: 3 }, async () => {
     const result = await evalInObsidian({
       contextId,
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       fn: ({ app, context: { objectWidget } }) => {
         const container = createDiv();
-        activeDocument.body.appendChild(container);
+        activeDocument.body.append(container);
 
         const textWidget = app.metadataTypeManager.registeredTypeWidgets.text;
         const originalRender = textWidget.render;
         const capturedCtxs: PropertyRenderContext[] = [];
-        textWidget.render = (el, value, ctx): ReturnType<typeof originalRender> => {
-          capturedCtxs.push(ctx);
-          return originalRender.call(textWidget, el, value, ctx);
+        textWidget.render = (el, value, context): ReturnType<typeof originalRender> => {
+          capturedCtxs.push(context);
+          return originalRender.call(textWidget, el, value, context);
         };
 
         let current: unknown = { a: '1', b: '2' };
@@ -341,16 +356,17 @@ describe('nested value preservation integration (issue #7)', () => {
   it('preserves existing nested object values when a new property is added', { retry: 3 }, async () => {
     const result = await evalInObsidian({
       contextId,
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       fn: ({ app, context: { objectWidget } }) => {
         const container = createDiv();
-        activeDocument.body.appendChild(container);
+        activeDocument.body.append(container);
 
         const textWidget = app.metadataTypeManager.registeredTypeWidgets.text;
         const originalRender = textWidget.render;
         const capturedCtxs: PropertyRenderContext[] = [];
-        textWidget.render = (el, value, ctx): ReturnType<typeof originalRender> => {
-          capturedCtxs.push(ctx);
-          return originalRender.call(textWidget, el, value, ctx);
+        textWidget.render = (el, value, context): ReturnType<typeof originalRender> => {
+          capturedCtxs.push(context);
+          return originalRender.call(textWidget, el, value, context);
         };
 
         let current: unknown = { nested: { a: '1', b: '2' } };
@@ -372,12 +388,12 @@ describe('nested value preservation integration (issue #7)', () => {
           const rootContainer = container.querySelector('.nested-properties-container');
           const addButton = rootContainer?.querySelector(':scope > .nested-properties-add-property');
           if (!(addButton instanceof HTMLElement)) {
-            throw new Error('Root add-property button not found');
+            throw new TypeError('Root add-property button not found');
           }
           addButton.click();
           const input = addButton.querySelector('input');
           if (!(input instanceof HTMLInputElement)) {
-            throw new Error('Add-property input not found');
+            throw new TypeError('Add-property input not found');
           }
           input.value = 'c';
           input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));

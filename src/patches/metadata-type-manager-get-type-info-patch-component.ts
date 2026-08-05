@@ -34,11 +34,11 @@ export class MetadataTypeManagerGetTypeInfoPatchComponent extends MonkeyAroundCo
 
   public override onload(): void {
     this.registerMethodPatch({
+      $object: this.metadataTypeManager,
       methodName: 'getTypeInfo',
-      obj: this.metadataTypeManager,
       patchHandler: ({
         fallback,
-        originalArgs: [, value]
+        originalArguments: [, value]
       }) => {
         const result = fallback();
 
