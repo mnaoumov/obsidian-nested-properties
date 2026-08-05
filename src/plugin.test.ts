@@ -132,8 +132,8 @@ describe('Plugin', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     const appMock = App.createConfigured__();
-    appMock.workspace.onLayoutReady = vi.fn((cb: () => void) => {
-      cb();
+    appMock.workspace.onLayoutReady = vi.fn((callback: () => void) => {
+      callback();
     });
     app = appMock.asOriginalType__();
   });
@@ -251,7 +251,9 @@ describe('Plugin', () => {
       const plugin = new Plugin(app, manifest);
       await plugin.onload();
 
-      expect(MockOpenDemoVaultCommandHandler).toHaveBeenCalledOnce();
+      // Since obsidian-dev-utils 89.0.0 the handler factory is invoked once per menu surface, each
+      // Getting its own instances — so the handler is constructed more than once by design.
+      expect(MockOpenDemoVaultCommandHandler).toHaveBeenCalled();
       const params = MockOpenDemoVaultCommandHandler.mock.calls[0]?.[0];
       expect(params?.app).toBe(app);
       expect(params?.pluginId).toBe(manifest.id);

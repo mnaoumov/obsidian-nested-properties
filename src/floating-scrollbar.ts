@@ -23,26 +23,26 @@ export class FloatingScrollbarComponent extends Component {
     super.onload();
     this.track = createDiv('nested-properties-floating-scrollbar');
     this.thumb = this.track.createDiv('nested-properties-floating-scrollbar-thumb');
-    activeDocument.body.appendChild(this.track);
+    activeDocument.body.append(this.track);
 
-    this.registerDomEvent(this.track, 'wheel', (e) => {
+    this.registerDomEvent(this.track, 'wheel', ($event) => {
       if (!this.activeEl || this.activeEl.scrollWidth <= this.activeEl.clientWidth) {
         return;
       }
-      const delta = e.deltaX || e.deltaY;
+      const delta = $event.deltaX || $event.deltaY;
       this.activeEl.scrollLeft += delta;
-      e.preventDefault();
-      e.stopPropagation();
+      $event.preventDefault();
+      $event.stopPropagation();
     }, { passive: false });
 
-    this.registerDomEvent(this.track, 'mousedown', (e) => {
-      this.handleTrackMousedown(e);
+    this.registerDomEvent(this.track, 'mousedown', ($event) => {
+      this.handleTrackMousedown($event);
     });
 
     const allWindowsEventComponent = this.addChild(new AllWindowsEventComponent(this.app));
     allWindowsEventComponent.registerAllDocumentsDomEvent({
-      callback: (e) => {
-        if (!this.activeEl || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) {
+      callback: ($event) => {
+        if (!this.activeEl || ($event.key !== 'ArrowLeft' && $event.key !== 'ArrowRight')) {
           return;
         }
         if (
@@ -52,8 +52,8 @@ export class FloatingScrollbarComponent extends Component {
         ) {
           return;
         }
-        this.activeEl.scrollLeft += e.key === 'ArrowLeft' ? -ARROW_SCROLL_PX : ARROW_SCROLL_PX;
-        e.preventDefault();
+        this.activeEl.scrollLeft += $event.key === 'ArrowLeft' ? -ARROW_SCROLL_PX : ARROW_SCROLL_PX;
+        $event.preventDefault();
       },
       type: 'keydown'
     });
@@ -66,15 +66,15 @@ export class FloatingScrollbarComponent extends Component {
       type: 'scroll'
     });
     allWindowsEventComponent.registerAllDocumentsDomEvent({
-      callback: (e) => {
-        this.handleNativeScrollbarWheel(e);
+      callback: ($event) => {
+        this.handleNativeScrollbarWheel($event);
       },
       options: { capture: true, passive: false },
       type: 'wheel'
     });
     allWindowsEventComponent.registerAllDocumentsDomEvent({
-      callback: (e) => {
-        this.handleNativeScrollbarCursor(e);
+      callback: ($event) => {
+        this.handleNativeScrollbarCursor($event);
       },
       type: 'mousemove'
     });
@@ -138,34 +138,34 @@ export class FloatingScrollbarComponent extends Component {
     this.syncThumb();
   }
 
-  private handleNativeScrollbarCursor(e: MouseEvent): void {
-    const target = e.target;
+  private handleNativeScrollbarCursor($event: MouseEvent): void {
+    const target = $event.target;
     if (!(target instanceof HTMLElement)) {
       return;
     }
-    const propEl = target.closest<HTMLElement>(ROOT_PROPERTY_SELECTOR);
-    if (!propEl || propEl.scrollWidth <= propEl.clientWidth) {
+    const propertyEl = target.closest<HTMLElement>(ROOT_PROPERTY_SELECTOR);
+    if (!propertyEl || propertyEl.scrollWidth <= propertyEl.clientWidth) {
       return;
     }
-    propEl.classList.toggle('nested-properties-ew-resize', isNearScrollbar(propEl, e));
+    propertyEl.classList.toggle('nested-properties-ew-resize', isNearScrollbar(propertyEl, $event));
   }
 
-  private handleNativeScrollbarWheel(e: WheelEvent): void {
-    const propEl = findScrollbarTarget(e);
-    if (!propEl) {
+  private handleNativeScrollbarWheel($event: WheelEvent): void {
+    const propertyEl = findScrollbarTarget($event);
+    if (!propertyEl) {
       return;
     }
-    const delta = e.deltaX || e.deltaY;
-    propEl.scrollLeft += delta;
-    e.preventDefault();
-    e.stopPropagation();
+    const delta = $event.deltaX || $event.deltaY;
+    propertyEl.scrollLeft += delta;
+    $event.preventDefault();
+    $event.stopPropagation();
   }
 
-  private handleTrackMousedown(e: MouseEvent): void {
+  private handleTrackMousedown($event: MouseEvent): void {
     if (!this.activeEl || !this.track) {
       return;
     }
-    e.preventDefault();
+    $event.preventDefault();
     const trackRect = this.track.getBoundingClientRect();
     const scrollTarget = this.activeEl;
 
@@ -187,7 +187,7 @@ export class FloatingScrollbarComponent extends Component {
       activeDocument.removeEventListener('mouseup', onMouseUp);
     }
 
-    scrollToRatio(toRatio(e));
+    scrollToRatio(toRatio($event));
     activeDocument.addEventListener('mousemove', onMouseMove);
     activeDocument.addEventListener('mouseup', onMouseUp);
   }
@@ -208,22 +208,22 @@ export class FloatingScrollbarComponent extends Component {
   };
 }
 
-function findScrollbarTarget(e: MouseEvent): HTMLElement | null {
-  const target = e.target;
+function findScrollbarTarget($event: MouseEvent): HTMLElement | null {
+  const target = $event.target;
   if (!(target instanceof HTMLElement)) {
     return null;
   }
-  const propEl = target.closest<HTMLElement>(ROOT_PROPERTY_SELECTOR);
-  if (!propEl || propEl.scrollWidth <= propEl.clientWidth) {
+  const propertyEl = target.closest<HTMLElement>(ROOT_PROPERTY_SELECTOR);
+  if (!propertyEl || propertyEl.scrollWidth <= propertyEl.clientWidth) {
     return null;
   }
-  if (!isNearScrollbar(propEl, e)) {
+  if (!isNearScrollbar(propertyEl, $event)) {
     return null;
   }
-  return propEl;
+  return propertyEl;
 }
 
-function isNearScrollbar(el: HTMLElement, e: MouseEvent): boolean {
+function isNearScrollbar(el: HTMLElement, $event: MouseEvent): boolean {
   const rect = el.getBoundingClientRect();
-  return e.clientY >= rect.bottom - SCROLLBAR_HIT_ZONE_PX && e.clientY <= rect.bottom;
+  return $event.clientY >= rect.bottom - SCROLLBAR_HIT_ZONE_PX && $event.clientY <= rect.bottom;
 }

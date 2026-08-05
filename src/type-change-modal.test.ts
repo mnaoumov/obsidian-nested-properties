@@ -49,8 +49,8 @@ describe('TypeChangeModal', () => {
 
     getButton(getElements(modal).contentEl, 0).click();
 
-    const result = await resultPromise;
-    expect(result).toBe(true);
+    const isResult = await resultPromise;
+    expect(isResult).toBe(true);
   });
 
   it('should resolve with false when Cancel is clicked', async () => {
@@ -59,8 +59,8 @@ describe('TypeChangeModal', () => {
 
     getButton(getElements(modal).contentEl, 1).click();
 
-    const result = await resultPromise;
-    expect(result).toBe(false);
+    const isResult = await resultPromise;
+    expect(isResult).toBe(false);
   });
 
   it('should resolve with false when closed without clicking any button', async () => {
@@ -68,7 +68,7 @@ describe('TypeChangeModal', () => {
     modal.onOpen();
     modal.onClose();
 
-    const result = await resultPromise;
-    expect(result).toBe(false);
+    const isResult = await resultPromise;
+    expect(isResult).toBe(false);
   });
 });

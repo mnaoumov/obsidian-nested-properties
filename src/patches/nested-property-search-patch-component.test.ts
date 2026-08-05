@@ -141,8 +141,8 @@ function setup(options: SearchViewSetupOptions = {}): SearchViewSetup {
   const searchView = new FakeSearchView();
 
   const appMock = App.createConfigured__();
-  appMock.workspace.onLayoutReady = vi.fn((cb: () => void) => {
-    cb();
+  appMock.workspace.onLayoutReady = vi.fn((callback: () => void) => {
+    callback();
   });
   const leaves: FakeLeaf[] = hasSearchLeaf ? [{ view: searchView }] : [];
   appMock.workspace.getLeavesOfType = castTo<typeof appMock.workspace.getLeavesOfType>(vi.fn(() => leaves));

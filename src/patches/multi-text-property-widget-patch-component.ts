@@ -14,11 +14,11 @@ export class MultiTextPropertyWidgetPatchComponent extends MonkeyAroundComponent
 
   public override onload(): void {
     this.registerMethodPatch({
+      $object: this.multiTextPropertyWidget,
       methodName: 'validate',
-      obj: this.multiTextPropertyWidget,
       patchHandler: ({
         fallback,
-        originalArgs: [value]
+        originalArguments: [value]
       }) => {
         return fallback() || isSimpleArray(value);
       }

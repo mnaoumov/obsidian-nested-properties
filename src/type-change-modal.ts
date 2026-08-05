@@ -4,7 +4,7 @@ import { Modal } from 'obsidian';
 
 export class TypeChangeModal extends Modal {
   private confirmed = false;
-  private resolve: ((value: boolean) => void) | undefined;
+  private resolve: ((isConfirmed: boolean) => void) | undefined;
   private readonly typeName: string;
 
   public constructor(app: App, typeName: string) {

@@ -23,42 +23,43 @@ import { NestedPropertyRendererComponent } from './nested-property-renderer.ts';
 import { PluginSettings } from './plugin-settings.ts';
 
 interface MockClassList {
-  add: MockFn;
-  contains: MockFn;
-  remove: MockFn;
-  toggle: MockFn;
+  add: MockFunction;
+  contains: MockFunction;
+  remove: MockFunction;
+  toggle: MockFunction;
 }
 
 interface MockDomElement {
-  addEventListener: MockFn;
-  after: MockFn;
+  addEventListener: MockFunction;
+  after: MockFunction;
   classList: MockClassList;
-  click: MockFn;
-  closest: MockFn;
-  createDiv: MockFn;
-  createEl: MockFn;
-  createSpan: MockFn;
-  empty: MockFn;
+  click: MockFunction;
+  closest: MockFunction;
+  createDiv: MockFunction;
+  createEl: MockFunction;
+  createSpan: MockFunction;
+  dataset: Record<string, string | undefined>;
+  empty: MockFunction;
   firstChild: MockDomElement | null;
-  focus: MockFn;
-  getAttribute: MockFn;
-  getAttributeNames: MockFn;
-  hasClass: MockFn;
-  insertBefore: MockFn;
-  instanceOf: MockFn;
+  focus: MockFunction;
+  getAttribute: MockFunction;
+  getAttributeNames: MockFunction;
+  hasClass: MockFunction;
+  insertBefore: MockFunction;
+  instanceOf: MockFunction;
   isConnected: boolean;
-  querySelector: MockFn;
-  querySelectorAll: MockFn;
-  remove: MockFn;
-  removeAttribute: MockFn;
-  setAttr: MockFn;
-  setAttribute: MockFn;
+  querySelector: MockFunction;
+  querySelectorAll: MockFunction;
+  remove: MockFunction;
+  removeAttribute: MockFunction;
+  setAttr: MockFunction;
+  setAttribute: MockFunction;
   size: number;
-  toggleClass: MockFn;
+  toggleClass: MockFunction;
   value: string;
 }
 
-type MockFn = ReturnType<typeof vi.fn>;
+type MockFunction = ReturnType<typeof vi.fn>;
 
 // The only allowed thin stubs are kept here. MockHTMLElementBase / MockHTMLInputElementBase back the
 // Hand-rolled DOM elements (createMockEl) so instanceof HTMLElement / HTMLInputElement resolve.
@@ -86,43 +87,43 @@ const hoisted = vi.hoisted(() => {
   }
 
   interface MenuItemDom {
-    addClass: MockFnLocal;
+    addClass: MockFunctionLocal;
   }
 
   interface MenuItemMock {
-    _onClickFn: ((...args: unknown[]) => unknown) | null;
+    _onClickFunction: ((...$arguments: unknown[]) => unknown) | null;
     dom: MenuItemDom;
-    onClick: MockFnLocal;
-    setChecked: MockFnLocal;
-    setIcon: MockFnLocal;
-    setSection: MockFnLocal;
-    setSubmenu: MockFnLocal;
-    setTitle: MockFnLocal;
+    onClick: MockFunctionLocal;
+    setChecked: MockFunctionLocal;
+    setIcon: MockFunctionLocal;
+    setSection: MockFunctionLocal;
+    setSubmenu: MockFunctionLocal;
+    setTitle: MockFunctionLocal;
   }
 
-  type MockFnLocal = ReturnType<typeof vi.fn>;
+  type MockFunctionLocal = ReturnType<typeof vi.fn>;
 
   interface SubmenuMock {
-    addItem: MockFnLocal;
+    addItem: MockFunctionLocal;
   }
 
   function createMenuItem(): MenuItemMock {
     const submenu: SubmenuMock = {
-      addItem: vi.fn((cb: (subItem: MenuItemMock) => void) => {
+      addItem: vi.fn((callback: (subItem: MenuItemMock) => void) => {
         const subItem = createMenuItem();
-        cb(subItem);
+        callback(subItem);
         submenuItems.push(subItem);
         return submenu;
       })
     };
-    let onClickFn: ((...args: unknown[]) => void) | null = null;
+    let onClickFunction: ((...$arguments: unknown[]) => void) | null = null;
     const item: MenuItemMock = {
-      get _onClickFn() {
-        return onClickFn;
+      get _onClickFunction() {
+        return onClickFunction;
       },
       dom: { addClass: vi.fn() },
-      onClick: vi.fn((fn: (...args: unknown[]) => void) => {
-        onClickFn = fn;
+      onClick: vi.fn(($function: (...$arguments: unknown[]) => void) => {
+        onClickFunction = $function;
         return item;
       }),
       setChecked: vi.fn(() => item),
@@ -139,16 +140,16 @@ const hoisted = vi.hoisted(() => {
   const submenuItems: MenuItemMock[] = [];
 
   class MenuBase {
-    public addItem = vi.fn((cb: (item: MenuItemMock) => void) => {
+    public addItem = vi.fn((callback: (item: MenuItemMock) => void) => {
       const item = createMenuItem();
-      cb(item);
+      callback(item);
       menuItems.push(item);
       return this;
     });
 
     public addSections = vi.fn(() => this);
-    public onHide = vi.fn((cb: () => void) => {
-      menuOnHideCallback = cb;
+    public onHide = vi.fn((callback: () => void) => {
+      menuOnHideCallback = callback;
       return this;
     });
 
@@ -157,15 +158,15 @@ const hoisted = vi.hoisted(() => {
 
   const setIconMock = vi.fn();
 
-  let typeChangeModalWaitResult = true;
+  let isTypeChangeModalWaitResult = true;
   class TypeChangeModalMock {
     public open = vi.fn();
-    public waitForResult = vi.fn(() => Promise.resolve(typeChangeModalWaitResult));
+    public waitForResult = vi.fn(() => Promise.resolve(isTypeChangeModalWaitResult));
   }
 
   return {
-    changeTypeChangeModalResult: (val: boolean): void => {
-      typeChangeModalWaitResult = val;
+    changeTypeChangeModalResult: (isWaitResult: boolean): void => {
+      isTypeChangeModalWaitResult = isWaitResult;
     },
     createMenuItem,
     MarkdownViewBase,
@@ -195,7 +196,7 @@ vi.mock('obsidian', async (importOriginal) => ({
   MarkdownView: hoisted.MarkdownViewBase,
   Menu: hoisted.MenuBase,
   moment: vi.fn((inp?: string) => ({
-    isValid: (): boolean => inp !== undefined && !isNaN(Date.parse(inp))
+    isValid: (): boolean => inp !== undefined && !Number.isNaN(Date.parse(inp))
   })),
   setIcon: hoisted.setIconMock
 }));
@@ -243,15 +244,15 @@ interface FakeWindow {
 }
 
 interface FakeWindowBody {
-  removeClass: MockFn;
-  toggleClass: MockFn;
+  removeClass: MockFunction;
+  toggleClass: MockFunction;
 }
 
 interface FakeWindowDocument {
   body: FakeWindowBody;
 }
 
-type GetTypeInfoFn = (p: string, v: unknown) => TypeInfo;
+type GetTypeInfoFunction = (p: string, v: unknown) => TypeInfo;
 
 interface MockApp {
   metadataTypeManager: MockMetadataTypeManager;
@@ -259,18 +260,18 @@ interface MockApp {
 }
 
 interface MockMetadataTypeManager {
-  getAssignedWidget: MockFn;
-  getTypeInfo: MockFn;
-  getWidget: MockFn;
+  getAssignedWidget: MockFunction;
+  getTypeInfo: MockFunction;
+  getWidget: MockFunction;
   registeredTypeWidgets: Record<string, PropertyWidget>;
-  setType: MockFn;
-  unsetType: MockFn;
+  setType: MockFunction;
+  unsetType: MockFunction;
 }
 
 interface MockWorkspace {
-  getLeavesOfType: MockFn;
-  iterateAllLeaves: MockFn;
-  onLayoutReady: MockFn;
+  getLeavesOfType: MockFunction;
+  iterateAllLeaves: MockFunction;
+  onLayoutReady: MockFunction;
 }
 
 interface RendererTestAccess {
@@ -282,7 +283,7 @@ interface RendererTestAccess {
 }
 
 interface ShowNestedPropertyMenuTestParams {
-  readonly evt: unknown;
+  readonly $event: unknown;
   getValue(): unknown;
   readonly label: string;
   onDelete(): void;
@@ -320,6 +321,7 @@ function createMockEl(overrides?: Partial<MockDomElement>): MockDomElement {
     createDiv: vi.fn(() => createMockEl()),
     createEl: vi.fn(() => createMockEl()),
     createSpan: vi.fn(() => createMockEl()),
+    dataset: {},
     empty: vi.fn(),
     firstChild: null,
     focus: vi.fn(),
@@ -351,7 +353,7 @@ function testAccess(r: NestedPropertyRendererComponent): RendererTestAccess {
   return castTo<RendererTestAccess>(r);
 }
 
-let getTypeInfoOriginal: MockFn;
+let getTypeInfoOriginal: MockFunction;
 let mockApp: MockApp;
 let mockPluginSettings: PluginSettings;
 let mockPluginSettingsComponent: PluginSettingsComponent;
@@ -361,7 +363,7 @@ interface RenderWidgetResult {
   readonly type: string;
 }
 
-function createMockCtx(overrides?: Partial<PropertyRenderContext>): PropertyRenderContext {
+function createMockContext(overrides?: Partial<PropertyRenderContext>): PropertyRenderContext {
   return {
     app: castTo<App>(mockApp),
     blur: vi.fn(),
@@ -380,8 +382,8 @@ function getWidget(name: string): PropertyWidget {
   return w;
 }
 
-function renderWidget(name: string, el: MockDomElement, value: unknown, ctx: PropertyRenderContext): RenderWidgetResult {
-  return getWidget(name).render(castTo<HTMLElement>(el), value, ctx);
+function renderWidget(name: string, el: MockDomElement, value: unknown, context: PropertyRenderContext): RenderWidgetResult {
+  return getWidget(name).render(castTo<HTMLElement>(el), value, context);
 }
 
 const multitextWidget: PropertyWidget = {
@@ -514,11 +516,11 @@ describe('NestedPropertyRenderer', () => {
         expected: unknownWidget,
         inferred: { ...unknownWidget, type: 'unknown' }
       }));
-      const typeInfo = (mockApp.metadataTypeManager.getTypeInfo as GetTypeInfoFn)('prop', { a: 1 });
+      const typeInfo = (mockApp.metadataTypeManager.getTypeInfo as GetTypeInfoFunction)('prop', { a: 1 });
       expect(typeInfo.inferred.type).toBe('object');
       //  - unknownWidget.render now delegates to the object widget for objects.
       const el = createMockEl();
-      const result = unknownWidget.render(castTo<HTMLElement>(el), { a: 1 }, createMockCtx());
+      const result = unknownWidget.render(castTo<HTMLElement>(el), { a: 1 }, createMockContext());
       expect(result.type).toBe('object');
     });
 
@@ -544,8 +546,8 @@ describe('NestedPropertyRenderer', () => {
       const mockRemoveEl = createMockEl();
       vi.spyOn(activeDocument, 'querySelectorAll').mockImplementation(() => asNodeList([mockRemoveEl]));
 
-      for (const fn of testAccess(renderer).cleanups__) {
-        fn();
+      for (const $function of testAccess(renderer).cleanups__) {
+        $function();
       }
 
       expect(mockApp.metadataTypeManager.registeredTypeWidgets['list']).toBeUndefined();
@@ -609,8 +611,8 @@ describe('NestedPropertyRenderer', () => {
 
     function stubWindows(win: FakeWindow): void {
       vi.stubGlobal('activeWindow', win);
-      mockApp.workspace.iterateAllLeaves = vi.fn((cb: (leaf: FakeLeaf) => void) => {
-        cb({ getContainer: () => ({ win }) });
+      mockApp.workspace.iterateAllLeaves = vi.fn((callback: (leaf: FakeLeaf) => void) => {
+        callback({ getContainer: () => ({ win }) });
       });
     }
 
@@ -682,8 +684,8 @@ describe('NestedPropertyRenderer', () => {
     it('should return true when next returns true', () => {
       loadRenderer();
 
-      const result = multitextWidget.validate(['a', 'b']);
-      expect(result).toBe(true);
+      const isResult = multitextWidget.validate(['a', 'b']);
+      expect(isResult).toBe(true);
     });
 
     it('should return true when next returns false but isSimpleArray is true', () => {
@@ -692,8 +694,8 @@ describe('NestedPropertyRenderer', () => {
       multitextWidget.validate = vi.fn(() => false);
       loadRenderer();
 
-      const result = multitextWidget.validate(['a', 'b']);
-      expect(result).toBe(true);
+      const isResult = multitextWidget.validate(['a', 'b']);
+      expect(isResult).toBe(true);
 
       multitextWidget.validate = origValidate;
     });
@@ -703,8 +705,8 @@ describe('NestedPropertyRenderer', () => {
       multitextWidget.validate = vi.fn(() => false);
       loadRenderer();
 
-      const result = multitextWidget.validate({ a: 1 });
-      expect(result).toBe(false);
+      const isResult = multitextWidget.validate({ a: 1 });
+      expect(isResult).toBe(false);
 
       multitextWidget.validate = origValidate;
     });
@@ -714,7 +716,7 @@ describe('NestedPropertyRenderer', () => {
     it('should return as-is when inferred type is not unknown', () => {
       loadRenderer();
 
-      const result = (mockApp.metadataTypeManager.getTypeInfo as GetTypeInfoFn)('prop', 'hello');
+      const result = (mockApp.metadataTypeManager.getTypeInfo as GetTypeInfoFunction)('prop', 'hello');
       expect(result.inferred).toBe(textWidget);
     });
 
@@ -725,7 +727,7 @@ describe('NestedPropertyRenderer', () => {
       }));
       loadRenderer();
 
-      const result = (mockApp.metadataTypeManager.getTypeInfo as GetTypeInfoFn)('prop', 'simple-string');
+      const result = (mockApp.metadataTypeManager.getTypeInfo as GetTypeInfoFunction)('prop', 'simple-string');
       expect(result.inferred.type).toBe('unknown');
     });
 
@@ -736,7 +738,7 @@ describe('NestedPropertyRenderer', () => {
       }));
       loadRenderer();
 
-      const result = (mockApp.metadataTypeManager.getTypeInfo as GetTypeInfoFn)('prop', ['a', 'b']);
+      const result = (mockApp.metadataTypeManager.getTypeInfo as GetTypeInfoFunction)('prop', ['a', 'b']);
       expect(result.inferred.type).toBe('multitext');
     });
 
@@ -747,7 +749,7 @@ describe('NestedPropertyRenderer', () => {
       }));
       loadRenderer();
 
-      const result = (mockApp.metadataTypeManager.getTypeInfo as GetTypeInfoFn)('prop', [1, { a: 2 }]);
+      const result = (mockApp.metadataTypeManager.getTypeInfo as GetTypeInfoFunction)('prop', [1, { a: 2 }]);
       expect(result.inferred.type).toBe('list');
     });
 
@@ -758,7 +760,7 @@ describe('NestedPropertyRenderer', () => {
       }));
       loadRenderer();
 
-      const result = (mockApp.metadataTypeManager.getTypeInfo as GetTypeInfoFn)('prop', { a: 1 });
+      const result = (mockApp.metadataTypeManager.getTypeInfo as GetTypeInfoFunction)('prop', { a: 1 });
       expect(result.inferred.type).toBe('object');
     });
   });
@@ -775,8 +777,8 @@ describe('NestedPropertyRenderer', () => {
       });
       el.closest.mockReturnValue(propertyEl);
 
-      const ctx = createMockCtx();
-      unknownWidget.render(castTo<HTMLElement>(el), ['a', 'b'], ctx);
+      const context = createMockContext();
+      unknownWidget.render(castTo<HTMLElement>(el), ['a', 'b'], context);
 
       // Check that setIcon was called with the icon element and correct icon name
       const calls = hoisted.setIconMock.mock.calls as unknown[][];
@@ -788,8 +790,8 @@ describe('NestedPropertyRenderer', () => {
       loadRenderer();
 
       const el = createMockEl();
-      const ctx = createMockCtx();
-      const result = unknownWidget.render(castTo<HTMLElement>(el), [1, { a: 2 }], ctx);
+      const context = createMockContext();
+      const result = unknownWidget.render(castTo<HTMLElement>(el), [1, { a: 2 }], context);
       expect(result).toBeDefined();
     });
 
@@ -797,8 +799,8 @@ describe('NestedPropertyRenderer', () => {
       loadRenderer();
 
       const el = createMockEl();
-      const ctx = createMockCtx();
-      const result = unknownWidget.render(castTo<HTMLElement>(el), { key: 'val' }, ctx);
+      const context = createMockContext();
+      const result = unknownWidget.render(castTo<HTMLElement>(el), { key: 'val' }, context);
       expect(result).toBeDefined();
     });
 
@@ -808,8 +810,8 @@ describe('NestedPropertyRenderer', () => {
       loadRenderer();
 
       const el = createMockEl();
-      const ctx = createMockCtx();
-      unknownWidget.render(castTo<HTMLElement>(el), 'primitive', ctx);
+      const context = createMockContext();
+      unknownWidget.render(castTo<HTMLElement>(el), 'primitive', context);
 
       unknownWidget.render = origRender;
     });
@@ -821,8 +823,8 @@ describe('NestedPropertyRenderer', () => {
       const propertyEl = createMockEl({ querySelector: vi.fn(() => null) });
       el.closest.mockReturnValue(propertyEl);
 
-      const ctx = createMockCtx();
-      unknownWidget.render(castTo<HTMLElement>(el), ['a', 'b'], ctx);
+      const context = createMockContext();
+      unknownWidget.render(castTo<HTMLElement>(el), ['a', 'b'], context);
     });
 
     it('should handle missing property element for simple arrays', () => {
@@ -831,8 +833,8 @@ describe('NestedPropertyRenderer', () => {
       const el = createMockEl();
       el.closest.mockReturnValue(null);
 
-      const ctx = createMockCtx();
-      unknownWidget.render(castTo<HTMLElement>(el), ['a', 'b'], ctx);
+      const context = createMockContext();
+      unknownWidget.render(castTo<HTMLElement>(el), ['a', 'b'], context);
     });
   });
 
@@ -841,8 +843,8 @@ describe('NestedPropertyRenderer', () => {
       loadRenderer();
 
       const el = createMockEl();
-      const ctx = createMockCtx();
-      const result = renderWidget('list', el, 'not-array', ctx);
+      const context = createMockContext();
+      const result = renderWidget('list', el, 'not-array', context);
       expect(result.type).toBe('list');
     });
 
@@ -850,8 +852,8 @@ describe('NestedPropertyRenderer', () => {
       loadRenderer();
 
       const el = createMockEl();
-      const ctx = createMockCtx();
-      const result = renderWidget('object', el, [1, 2], ctx);
+      const context = createMockContext();
+      const result = renderWidget('object', el, [1, 2], context);
       expect(result.type).toBe('object');
     });
 
@@ -859,23 +861,23 @@ describe('NestedPropertyRenderer', () => {
       loadRenderer();
 
       const el = createMockEl();
-      const ctx = createMockCtx();
-      const result = renderWidget('object', el, 'primitive', ctx);
+      const context = createMockContext();
+      const result = renderWidget('object', el, 'primitive', context);
       expect(result.type).toBe('object');
     });
 
     it('should set up collapsible UI with collapse button', () => {
       loadRenderer();
 
-      const collapseBtn = createMockEl();
+      const collapseButton = createMockEl();
       const keyEl = createMockEl({ querySelector: vi.fn(() => null) });
       const existingIcon = createMockEl();
       const propertyEl = createMockEl({
         querySelector: vi.fn((selector: string) => {
-          if (selector === '.metadata-property-key .metadata-property-icon') {
+          if (selector === ':scope .metadata-property-key .metadata-property-icon') {
             return existingIcon;
           }
-          if (selector === '.metadata-property-key') {
+          if (selector === ':scope .metadata-property-key') {
             return keyEl;
           }
           return null;
@@ -884,10 +886,10 @@ describe('NestedPropertyRenderer', () => {
 
       const el = createMockEl();
       el.closest.mockReturnValue(propertyEl);
-      vi.stubGlobal('createDiv', vi.fn(() => collapseBtn));
+      vi.stubGlobal('createDiv', vi.fn(() => collapseButton));
 
-      const ctx = createMockCtx();
-      renderWidget('list', el, ['a'], ctx);
+      const context = createMockContext();
+      renderWidget('list', el, ['a'], context);
 
       expect(propertyEl.classList.add).toHaveBeenCalledWith('nested-properties-collapsible');
       expect(propertyEl.classList.add).toHaveBeenCalledWith('is-collapsed');
@@ -899,14 +901,14 @@ describe('NestedPropertyRenderer', () => {
       const keyInput = createMockEl({ value: 'vehicle_identification_number_long_key' });
       Object.setPrototypeOf(keyInput, hoisted.MockHTMLInputElementBase.prototype);
       const keyEl = createMockEl({
-        querySelector: vi.fn((selector: string) => (selector === '.metadata-property-key-input' ? keyInput : null))
+        querySelector: vi.fn((selector: string) => (selector === ':scope .metadata-property-key-input' ? keyInput : null))
       });
       const propertyEl = createMockEl({
         querySelector: vi.fn((selector: string) => {
-          if (selector === '.metadata-property-key .metadata-property-icon') {
+          if (selector === ':scope .metadata-property-key .metadata-property-icon') {
             return createMockEl();
           }
-          if (selector === '.metadata-property-key') {
+          if (selector === ':scope .metadata-property-key') {
             return keyEl;
           }
           return null;
@@ -916,8 +918,8 @@ describe('NestedPropertyRenderer', () => {
       const el = createMockEl();
       el.closest.mockReturnValue(propertyEl);
 
-      const ctx = createMockCtx();
-      renderWidget('object', el, { vin: 'ABC' }, ctx);
+      const context = createMockContext();
+      renderWidget('object', el, { vin: 'ABC' }, context);
 
       expect(keyInput.size).toBe('vehicle_identification_number_long_key'.length);
     });
@@ -925,14 +927,14 @@ describe('NestedPropertyRenderer', () => {
     it('should handle collapse button click toggling', () => {
       loadRenderer();
 
-      const collapseBtn = createMockEl();
+      const collapseButton = createMockEl();
       const keyEl = createMockEl({ querySelector: vi.fn(() => null) });
       const propertyEl = createMockEl({
         querySelector: vi.fn((selector: string) => {
-          if (selector === '.metadata-property-key .metadata-property-icon') {
+          if (selector === ':scope .metadata-property-key .metadata-property-icon') {
             return createMockEl();
           }
-          if (selector === '.metadata-property-key') {
+          if (selector === ':scope .metadata-property-key') {
             return keyEl;
           }
           return null;
@@ -941,12 +943,12 @@ describe('NestedPropertyRenderer', () => {
 
       const el = createMockEl();
       el.closest.mockReturnValue(propertyEl);
-      vi.stubGlobal('createDiv', vi.fn(() => collapseBtn));
+      vi.stubGlobal('createDiv', vi.fn(() => collapseButton));
 
-      const ctx = createMockCtx();
-      renderWidget('list', el, ['a'], ctx);
+      const context = createMockContext();
+      renderWidget('list', el, ['a'], context);
 
-      const clickCall = findEventHandler(collapseBtn, 'click');
+      const clickCall = findEventHandler(collapseButton, 'click');
       propertyEl.hasClass.mockReturnValue(true);
       clickCall({ preventDefault: vi.fn(), stopPropagation: vi.fn() });
       expect(propertyEl.toggleClass).toHaveBeenCalledWith('is-collapsed', false);
@@ -959,14 +961,14 @@ describe('NestedPropertyRenderer', () => {
     it('should not create collapse button if one already exists', () => {
       loadRenderer();
 
-      const existingBtn = createMockEl();
-      const keyEl = createMockEl({ querySelector: vi.fn(() => existingBtn) });
+      const existingButton = createMockEl();
+      const keyEl = createMockEl({ querySelector: vi.fn(() => existingButton) });
       const propertyEl = createMockEl({
         querySelector: vi.fn((selector: string) => {
-          if (selector === '.metadata-property-key .metadata-property-icon') {
+          if (selector === ':scope .metadata-property-key .metadata-property-icon') {
             return createMockEl();
           }
-          if (selector === '.metadata-property-key') {
+          if (selector === ':scope .metadata-property-key') {
             return keyEl;
           }
           return null;
@@ -976,8 +978,8 @@ describe('NestedPropertyRenderer', () => {
       const el = createMockEl();
       el.closest.mockReturnValue(propertyEl);
 
-      const ctx = createMockCtx();
-      renderWidget('list', el, ['a'], ctx);
+      const context = createMockContext();
+      renderWidget('list', el, ['a'], context);
 
       expect(keyEl.insertBefore).not.toHaveBeenCalled();
     });
@@ -986,8 +988,8 @@ describe('NestedPropertyRenderer', () => {
       loadRenderer();
 
       const el = createMockEl();
-      const ctx = createMockCtx();
-      const result = renderWidget('list', el, ['a'], ctx);
+      const context = createMockContext();
+      const result = renderWidget('list', el, ['a'], context);
 
       expect(result.type).toBe('list');
       expect(result.focus).toBeTypeOf('function');
@@ -1000,7 +1002,7 @@ describe('NestedPropertyRenderer', () => {
       const existingIcon = createMockEl();
       const propertyEl = createMockEl({
         querySelector: vi.fn((selector: string) => {
-          if (selector === '.metadata-property-key .metadata-property-icon') {
+          if (selector === ':scope .metadata-property-key .metadata-property-icon') {
             return existingIcon;
           }
           return null;
@@ -1010,8 +1012,8 @@ describe('NestedPropertyRenderer', () => {
       const el = createMockEl();
       el.closest.mockReturnValue(propertyEl);
 
-      const ctx = createMockCtx();
-      renderWidget('list', el, ['a'], ctx);
+      const context = createMockContext();
+      renderWidget('list', el, ['a'], context);
 
       expectSetIconCalledWith(existingIcon, 'lucide-list-tree');
     });
@@ -1022,7 +1024,7 @@ describe('NestedPropertyRenderer', () => {
       const existingIcon = createMockEl();
       const propertyEl = createMockEl({
         querySelector: vi.fn((selector: string) => {
-          if (selector === '.metadata-property-key .metadata-property-icon') {
+          if (selector === ':scope .metadata-property-key .metadata-property-icon') {
             return existingIcon;
           }
           return null;
@@ -1032,8 +1034,8 @@ describe('NestedPropertyRenderer', () => {
       const el = createMockEl();
       el.closest.mockReturnValue(propertyEl);
 
-      const ctx = createMockCtx();
-      renderWidget('object', el, { a: 1 }, ctx);
+      const context = createMockContext();
+      renderWidget('object', el, { a: 1 }, context);
 
       expectSetIconCalledWith(existingIcon, 'lucide-braces');
     });
@@ -1044,8 +1046,8 @@ describe('NestedPropertyRenderer', () => {
       const el = createMockEl();
       el.closest.mockReturnValue(null);
 
-      const ctx = createMockCtx();
-      const result = renderWidget('list', el, ['a'], ctx);
+      const context = createMockContext();
+      const result = renderWidget('list', el, ['a'], context);
       expect(result).toBeDefined();
     });
 
@@ -1054,10 +1056,10 @@ describe('NestedPropertyRenderer', () => {
 
       const propertyEl = createMockEl({
         querySelector: vi.fn((selector: string) => {
-          if (selector === '.metadata-property-key .metadata-property-icon') {
+          if (selector === ':scope .metadata-property-key .metadata-property-icon') {
             return createMockEl();
           }
-          if (selector === '.metadata-property-key') {
+          if (selector === ':scope .metadata-property-key') {
             return null;
           }
           return null;
@@ -1067,8 +1069,8 @@ describe('NestedPropertyRenderer', () => {
       const el = createMockEl();
       el.closest.mockReturnValue(propertyEl);
 
-      const ctx = createMockCtx();
-      renderWidget('list', el, ['a'], ctx);
+      const context = createMockContext();
+      renderWidget('list', el, ['a'], context);
     });
 
     it('should handle missing existingIcon', () => {
@@ -1077,10 +1079,10 @@ describe('NestedPropertyRenderer', () => {
       const keyEl = createMockEl({ querySelector: vi.fn(() => null) });
       const propertyEl = createMockEl({
         querySelector: vi.fn((selector: string) => {
-          if (selector === '.metadata-property-key .metadata-property-icon') {
+          if (selector === ':scope .metadata-property-key .metadata-property-icon') {
             return null;
           }
-          if (selector === '.metadata-property-key') {
+          if (selector === ':scope .metadata-property-key') {
             return keyEl;
           }
           return null;
@@ -1091,8 +1093,8 @@ describe('NestedPropertyRenderer', () => {
       el.closest.mockReturnValue(propertyEl);
       vi.stubGlobal('createDiv', vi.fn(() => createMockEl()));
 
-      const ctx = createMockCtx();
-      renderWidget('list', el, ['a'], ctx);
+      const context = createMockContext();
+      renderWidget('list', el, ['a'], context);
     });
   });
 
@@ -1101,8 +1103,8 @@ describe('NestedPropertyRenderer', () => {
       loadRenderer();
 
       const el = createMockEl();
-      const ctx = createMockCtx();
-      renderWidget('object', el, { nested: { a: 1 } }, ctx);
+      const context = createMockContext();
+      renderWidget('object', el, { nested: { a: 1 } }, context);
       vi.runAllTimers();
     });
 
@@ -1110,8 +1112,8 @@ describe('NestedPropertyRenderer', () => {
       loadRenderer();
 
       const el = createMockEl();
-      const ctx = createMockCtx();
-      renderWidget('object', el, { simple: 'hello' }, ctx);
+      const context = createMockContext();
+      renderWidget('object', el, { simple: 'hello' }, context);
       vi.runAllTimers();
     });
 
@@ -1125,8 +1127,8 @@ describe('NestedPropertyRenderer', () => {
       const el = createMockEl();
       el.createDiv.mockReturnValue(containerEl);
 
-      const ctx = createMockCtx();
-      renderWidget('object', el, { nested: { a: 1 } }, ctx);
+      const context = createMockContext();
+      renderWidget('object', el, { nested: { a: 1 } }, context);
 
       const handler = findEventHandler(propertyDiv, 'contextmenu');
       handler({ stopPropagation: vi.fn() });
@@ -1142,8 +1144,8 @@ describe('NestedPropertyRenderer', () => {
       const el = createMockEl();
       el.createDiv.mockReturnValue(containerEl);
 
-      const ctx = createMockCtx();
-      renderWidget('object', el, { simple: 'hello' }, ctx);
+      const context = createMockContext();
+      renderWidget('object', el, { simple: 'hello' }, context);
 
       const handler = findEventHandler(propertyDiv, 'contextmenu');
       handler({ stopPropagation: vi.fn() });
@@ -1155,8 +1157,8 @@ describe('NestedPropertyRenderer', () => {
       loadRenderer();
 
       const el = createMockEl();
-      const ctx = createMockCtx();
-      renderWidget('list', el, ['item1', 'item2'], ctx);
+      const context = createMockContext();
+      renderWidget('list', el, ['item1', 'item2'], context);
       vi.runAllTimers();
     });
 
@@ -1165,17 +1167,17 @@ describe('NestedPropertyRenderer', () => {
 
       const el = createMockEl();
       const onChange = vi.fn();
-      const ctx = createMockCtx({ onChange });
+      const context = createMockContext({ onChange });
       vi.mocked(textWidget.render).mockClear();
-      renderWidget('list', el, ['a', 'b'], ctx);
+      renderWidget('list', el, ['a', 'b'], context);
       vi.runAllTimers();
 
       // Extract the onChange callback passed to the simple widget render
       const renderCalls = vi.mocked(textWidget.render).mock.calls as unknown[][];
       const firstCall = renderCalls[0];
       if (firstCall) {
-        const renderCtx = firstCall[2] as PropertyRenderContext;
-        renderCtx.onChange('newValue');
+        const renderContext = firstCall[2] as PropertyRenderContext;
+        renderContext.onChange('newValue');
         expect(onChange).toHaveBeenCalledWith(['newValue', 'b']);
       }
     });
@@ -1191,8 +1193,8 @@ describe('NestedPropertyRenderer', () => {
       el.createDiv.mockReturnValue(containerEl);
 
       const onChange = vi.fn();
-      const ctx = createMockCtx({ onChange });
-      renderWidget('list', el, ['a', 'b', 'c'], ctx);
+      const context = createMockContext({ onChange });
+      renderWidget('list', el, ['a', 'b', 'c'], context);
       vi.runAllTimers();
 
       // Trigger contextmenu on the first entry
@@ -1203,8 +1205,8 @@ describe('NestedPropertyRenderer', () => {
       // Click the "Remove" item (last menu item)
       const removeItem = hoisted.menuItems.at(-1);
       if (removeItem) {
-        const clickFn = removeItem._onClickFn;
-        clickFn?.();
+        const clickFunction = removeItem._onClickFunction;
+        clickFunction?.();
         expect(onChange).toHaveBeenCalled();
       }
     });
@@ -1215,8 +1217,8 @@ describe('NestedPropertyRenderer', () => {
       loadRenderer();
 
       const el = createMockEl();
-      const ctx = createMockCtx();
-      renderWidget('object', el, { key1: 'val1', key2: 'val2' }, ctx);
+      const context = createMockContext();
+      renderWidget('object', el, { key1: 'val1', key2: 'val2' }, context);
       vi.runAllTimers();
     });
 
@@ -1225,8 +1227,8 @@ describe('NestedPropertyRenderer', () => {
 
       const el = createMockEl();
       const onChange = vi.fn();
-      const ctx = createMockCtx({ onChange });
-      renderWidget('object', el, { key: 'val' }, ctx);
+      const context = createMockContext({ onChange });
+      renderWidget('object', el, { key: 'val' }, context);
       vi.runAllTimers();
     });
 
@@ -1235,8 +1237,8 @@ describe('NestedPropertyRenderer', () => {
 
       const el = createMockEl();
       const onChange = vi.fn();
-      const ctx = createMockCtx({ onChange });
-      renderWidget('object', el, { key: 'val' }, ctx);
+      const context = createMockContext({ onChange });
+      renderWidget('object', el, { key: 'val' }, context);
       vi.runAllTimers();
     });
   });
@@ -1250,17 +1252,17 @@ describe('NestedPropertyRenderer', () => {
 
       const el = createMockEl();
       const onChange = vi.fn();
-      const ctx = createMockCtx({ onChange });
+      const context = createMockContext({ onChange });
       vi.mocked(textWidget.render).mockClear();
-      renderWidget('object', el, { a: 'x', b: 'y' }, ctx);
+      renderWidget('object', el, { a: 'x', b: 'y' }, context);
       vi.runAllTimers();
 
       const renderCalls = vi.mocked(textWidget.render).mock.calls as unknown[][];
-      const ctxA = renderCalls[0]?.[2] as PropertyRenderContext;
-      const ctxB = renderCalls[1]?.[2] as PropertyRenderContext;
+      const contextA = renderCalls[0]?.[2] as PropertyRenderContext;
+      const contextB = renderCalls[1]?.[2] as PropertyRenderContext;
 
-      ctxA.onChange('A');
-      ctxB.onChange('B');
+      contextA.onChange('A');
+      contextB.onChange('B');
 
       // Without the shared-mutable-model fix, filling `b` would spread a stale `a: 'x'`.
       expect(onChange).toHaveBeenLastCalledWith({ a: 'A', b: 'B' });
@@ -1271,18 +1273,18 @@ describe('NestedPropertyRenderer', () => {
 
       const el = createMockEl();
       const onChange = vi.fn();
-      const ctx = createMockCtx({ onChange });
+      const context = createMockContext({ onChange });
       vi.mocked(textWidget.render).mockClear();
       const original = ['x', 'y'];
-      renderWidget('list', el, original, ctx);
+      renderWidget('list', el, original, context);
       vi.runAllTimers();
 
       const renderCalls = vi.mocked(textWidget.render).mock.calls as unknown[][];
-      const ctx0 = renderCalls[0]?.[2] as PropertyRenderContext;
-      const ctx1 = renderCalls[1]?.[2] as PropertyRenderContext;
+      const context0 = renderCalls[0]?.[2] as PropertyRenderContext;
+      const context1 = renderCalls[1]?.[2] as PropertyRenderContext;
 
-      ctx0.onChange('X');
-      ctx1.onChange('Y');
+      context0.onChange('X');
+      context1.onChange('Y');
 
       expect(onChange).toHaveBeenLastCalledWith(['X', 'Y']);
       expect(original).toEqual(['x', 'y']);
@@ -1292,14 +1294,14 @@ describe('NestedPropertyRenderer', () => {
       loadRenderer();
 
       const el = createMockEl();
-      const ctx = createMockCtx();
+      const context = createMockContext();
       vi.mocked(textWidget.render).mockClear();
       const original = { a: 'x', b: 'y' };
-      renderWidget('object', el, original, ctx);
+      renderWidget('object', el, original, context);
       vi.runAllTimers();
 
-      const ctxA = (vi.mocked(textWidget.render).mock.calls as unknown[][])[0]?.[2] as PropertyRenderContext;
-      ctxA.onChange('A');
+      const contextA = (vi.mocked(textWidget.render).mock.calls as unknown[][])[0]?.[2] as PropertyRenderContext;
+      contextA.onChange('A');
 
       expect(original).toEqual({ a: 'x', b: 'y' });
     });
@@ -1313,20 +1315,20 @@ describe('NestedPropertyRenderer', () => {
       const el = createMockEl();
       el.createDiv.mockReturnValue(containerEl);
 
-      const ctx = createMockCtx();
+      const context = createMockContext();
       vi.mocked(textWidget.render).mockClear();
-      renderWidget('object', el, { a: 'x' }, ctx);
+      renderWidget('object', el, { a: 'x' }, context);
       vi.runAllTimers();
 
-      const scalarCtx = (vi.mocked(textWidget.render).mock.calls as unknown[][])[0]?.[2] as PropertyRenderContext;
-      scalarCtx.onChange('A');
+      const scalarContext = (vi.mocked(textWidget.render).mock.calls as unknown[][])[0]?.[2] as PropertyRenderContext;
+      scalarContext.onChange('A');
 
       hoisted.menuItems.length = 0;
       const contextHandler = findEventHandler(propertyEl, 'contextmenu');
       contextHandler({ stopPropagation: vi.fn() });
 
       const copyItem = hoisted.menuItems.at(2);
-      await copyItem?._onClickFn?.();
+      await copyItem?._onClickFunction?.();
 
       // Reads the live value ('A'), not the render-time snapshot ('x').
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith('{"a":"A"}');
@@ -1351,8 +1353,8 @@ describe('NestedPropertyRenderer', () => {
 
       const cutItem = hoisted.menuItems.at(1);
       if (cutItem) {
-        const clickFn = cutItem._onClickFn;
-        await clickFn?.();
+        const clickFunction = cutItem._onClickFunction;
+        await clickFunction?.();
         expect(navigator.clipboard.writeText).toHaveBeenCalled();
       }
     });
@@ -1365,8 +1367,8 @@ describe('NestedPropertyRenderer', () => {
 
       const copyItem = hoisted.menuItems.at(2);
       if (copyItem) {
-        const clickFn = copyItem._onClickFn;
-        await clickFn?.();
+        const clickFunction = copyItem._onClickFunction;
+        await clickFunction?.();
         expect(navigator.clipboard.writeText).toHaveBeenCalled();
       }
     });
@@ -1380,8 +1382,8 @@ describe('NestedPropertyRenderer', () => {
 
       const pasteItem = hoisted.menuItems.at(3);
       if (pasteItem) {
-        const clickFn = pasteItem._onClickFn;
-        await clickFn?.();
+        const clickFunction = pasteItem._onClickFunction;
+        await clickFunction?.();
       }
     });
 
@@ -1395,8 +1397,8 @@ describe('NestedPropertyRenderer', () => {
 
       const pasteItem = hoisted.menuItems.at(3);
       if (pasteItem) {
-        const clickFn = pasteItem._onClickFn;
-        await clickFn?.();
+        const clickFunction = pasteItem._onClickFunction;
+        await clickFunction?.();
       }
 
       expect(consoleSpy).toHaveBeenCalled();
@@ -1412,8 +1414,8 @@ describe('NestedPropertyRenderer', () => {
 
       const pasteItem = hoisted.menuItems.at(3);
       if (pasteItem) {
-        const clickFn = pasteItem._onClickFn;
-        await clickFn?.();
+        const clickFunction = pasteItem._onClickFunction;
+        await clickFunction?.();
       }
     });
 
@@ -1426,8 +1428,8 @@ describe('NestedPropertyRenderer', () => {
 
       const pasteItem = hoisted.menuItems.at(3);
       if (pasteItem) {
-        const clickFn = pasteItem._onClickFn;
-        await clickFn?.();
+        const clickFunction = pasteItem._onClickFunction;
+        await clickFunction?.();
       }
     });
 
@@ -1440,8 +1442,8 @@ describe('NestedPropertyRenderer', () => {
 
       const pasteItem = hoisted.menuItems.at(3);
       if (pasteItem) {
-        const clickFn = pasteItem._onClickFn;
-        await clickFn?.();
+        const clickFunction = pasteItem._onClickFunction;
+        await clickFunction?.();
       }
     });
 
@@ -1453,8 +1455,8 @@ describe('NestedPropertyRenderer', () => {
 
       const removeItem = hoisted.menuItems.at(4);
       if (removeItem) {
-        const clickFn = removeItem._onClickFn;
-        clickFn?.();
+        const clickFunction = removeItem._onClickFunction;
+        clickFunction?.();
       }
     });
 
@@ -1465,9 +1467,9 @@ describe('NestedPropertyRenderer', () => {
       triggerContextMenu();
       const firstCount = hoisted.menuItems.length;
 
-      const onHideCb = hoisted.menuOnHideCallback.get();
-      if (onHideCb) {
-        onHideCb();
+      const onHideCallback = hoisted.menuOnHideCallback.get();
+      if (onHideCallback) {
+        onHideCallback();
       }
 
       hoisted.menuItems.length = 0;
@@ -1487,7 +1489,7 @@ describe('NestedPropertyRenderer', () => {
       // "all items" default alongside the per-item "this item only" override.
       hoisted.menuItems.length = 0;
       testAccess(renderer).showNestedPropertyMenu({
-        evt: { stopPropagation: vi.fn() },
+        $event: { stopPropagation: vi.fn() },
         getValue: () => true,
         label: 'released',
         onDelete: vi.fn(),
@@ -1519,11 +1521,11 @@ describe('NestedPropertyRenderer', () => {
       hoisted.submenuItems.length = 0;
       triggerContextMenu();
 
-      const offeredReserved = hoisted.submenuItems.some((subItem) => {
+      const isOfferedReserved = hoisted.submenuItems.some((subItem) => {
         const titleCalls = subItem.setTitle.mock.calls as unknown[][];
         return titleCalls.some((call) => call[0] === 'Reserved');
       });
-      expect(offeredReserved).toBe(true);
+      expect(isOfferedReserved).toBe(true);
     });
 
     it('should handle type submenu with checked state for current widget', () => {
@@ -1551,8 +1553,8 @@ describe('NestedPropertyRenderer', () => {
       if (hoisted.submenuItems.length > 0) {
         const subItem = hoisted.submenuItems.at(0);
         if (subItem) {
-          const clickFn = subItem._onClickFn;
-          await clickFn?.();
+          const clickFunction = subItem._onClickFunction;
+          await clickFunction?.();
         }
       }
     });
@@ -1576,8 +1578,8 @@ describe('NestedPropertyRenderer', () => {
       if (hoisted.submenuItems.length > 0) {
         const subItem = hoisted.submenuItems.at(0);
         if (subItem) {
-          const clickFn = subItem._onClickFn;
-          await clickFn?.();
+          const clickFunction = subItem._onClickFunction;
+          await clickFunction?.();
         }
       }
 
@@ -1600,8 +1602,8 @@ describe('NestedPropertyRenderer', () => {
       if (hoisted.submenuItems.length > 0) {
         const subItem = hoisted.submenuItems.at(0);
         if (subItem) {
-          const clickFn = subItem._onClickFn;
-          await clickFn?.();
+          const clickFunction = subItem._onClickFunction;
+          await clickFunction?.();
         }
       }
     });
@@ -1617,8 +1619,8 @@ describe('NestedPropertyRenderer', () => {
       for (const subItem of hoisted.submenuItems) {
         const titleCalls = subItem.setTitle.mock.calls as unknown[][];
         if (titleCalls.some((call) => call[0] === 'Text')) {
-          const clickFn = subItem._onClickFn;
-          await clickFn?.();
+          const clickFunction = subItem._onClickFunction;
+          await clickFunction?.();
           break;
         }
       }
@@ -1637,8 +1639,8 @@ describe('NestedPropertyRenderer', () => {
       for (const subItem of hoisted.submenuItems) {
         const titleCalls = subItem.setTitle.mock.calls as unknown[][];
         if (titleCalls.some((call) => call[0] === 'Mixed list')) {
-          const clickFn = subItem._onClickFn;
-          await clickFn?.();
+          const clickFunction = subItem._onClickFunction;
+          await clickFunction?.();
           break;
         }
       }
@@ -1656,7 +1658,7 @@ describe('NestedPropertyRenderer', () => {
       for (const subItem of hoisted.submenuItems) {
         const titleCalls = subItem.setTitle.mock.calls as unknown[][];
         if (titleCalls.some((call) => call[0] === 'Text')) {
-          await subItem._onClickFn?.();
+          await subItem._onClickFunction?.();
           break;
         }
       }
@@ -1676,7 +1678,7 @@ describe('NestedPropertyRenderer', () => {
       for (const subItem of hoisted.submenuItems) {
         const titleCalls = subItem.setTitle.mock.calls as unknown[][];
         if (titleCalls.some((call) => call[0] === 'Object')) {
-          await subItem._onClickFn?.();
+          await subItem._onClickFunction?.();
           break;
         }
       }
@@ -1694,8 +1696,8 @@ describe('NestedPropertyRenderer', () => {
       mockApp.metadataTypeManager.getAssignedWidget.mockReturnValue('nonexistent');
 
       const el = createMockEl();
-      const ctx = createMockCtx();
-      renderWidget('object', el, { test: 'val' }, ctx);
+      const context = createMockContext();
+      renderWidget('object', el, { test: 'val' }, context);
       vi.runAllTimers();
     });
 
@@ -1703,8 +1705,8 @@ describe('NestedPropertyRenderer', () => {
       loadRenderer();
 
       const el = createMockEl();
-      const ctx = createMockCtx();
-      renderWidget('object', el, { key: 'val' }, ctx);
+      const context = createMockContext();
+      renderWidget('object', el, { key: 'val' }, context);
       vi.runAllTimers();
     });
   });
@@ -1713,11 +1715,11 @@ describe('NestedPropertyRenderer', () => {
     it('should add empty string to array on click', () => {
       loadRenderer();
 
-      const addBtn = createMockEl();
+      const addButton = createMockEl();
       const containerEl = createMockEl();
-      containerEl.createDiv.mockImplementation((opts?: Record<string, unknown>) => {
-        if (opts && (opts['cls'] as string) === 'nested-properties-add-item') {
-          return addBtn;
+      containerEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
+        if (options && (options['cls'] as string) === 'nested-properties-add-item') {
+          return addButton;
         }
         return createMockEl();
       });
@@ -1726,10 +1728,10 @@ describe('NestedPropertyRenderer', () => {
       el.createDiv.mockReturnValue(containerEl);
 
       const onChange = vi.fn();
-      const ctx = createMockCtx({ onChange });
-      renderWidget('list', el, ['a'], ctx);
+      const context = createMockContext({ onChange });
+      renderWidget('list', el, ['a'], context);
 
-      const handler = findEventHandler(addBtn, 'click');
+      const handler = findEventHandler(addButton, 'click');
       handler({ preventDefault: vi.fn(), stopPropagation: vi.fn() });
 
       vi.runAllTimers();
@@ -1742,12 +1744,12 @@ describe('NestedPropertyRenderer', () => {
 
       const input = createMockEl();
       input.value = 'newKey';
-      const addBtn = createMockEl();
-      addBtn.createEl.mockReturnValue(input);
+      const addButton = createMockEl();
+      addButton.createEl.mockReturnValue(input);
       const containerEl = createMockEl();
-      containerEl.createDiv.mockImplementation((opts?: Record<string, unknown>) => {
-        if (opts && (opts['cls'] as string) === 'nested-properties-add-property') {
-          return addBtn;
+      containerEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
+        if (options && (options['cls'] as string) === 'nested-properties-add-property') {
+          return addButton;
         }
         return createMockEl();
       });
@@ -1756,11 +1758,11 @@ describe('NestedPropertyRenderer', () => {
       el.createDiv.mockReturnValue(containerEl);
 
       const onChange = vi.fn();
-      const ctx = createMockCtx({ onChange });
-      renderWidget('object', el, { existing: 'val' }, ctx);
+      const context = createMockContext({ onChange });
+      renderWidget('object', el, { existing: 'val' }, context);
       vi.runAllTimers();
 
-      const addClickHandler = findEventHandler(addBtn, 'click');
+      const addClickHandler = findEventHandler(addButton, 'click');
       addClickHandler({ preventDefault: vi.fn(), stopPropagation: vi.fn() });
 
       const keydownHandler = findEventHandler(input, 'keydown');
@@ -1772,12 +1774,12 @@ describe('NestedPropertyRenderer', () => {
 
       const input = createMockEl();
       input.value = 'newTabKey';
-      const addBtn = createMockEl();
-      addBtn.createEl.mockReturnValue(input);
+      const addButton = createMockEl();
+      addButton.createEl.mockReturnValue(input);
       const containerEl = createMockEl();
-      containerEl.createDiv.mockImplementation((opts?: Record<string, unknown>) => {
-        if (opts && (opts['cls'] as string) === 'nested-properties-add-property') {
-          return addBtn;
+      containerEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
+        if (options && (options['cls'] as string) === 'nested-properties-add-property') {
+          return addButton;
         }
         return createMockEl();
       });
@@ -1786,11 +1788,11 @@ describe('NestedPropertyRenderer', () => {
       el.createDiv.mockReturnValue(containerEl);
 
       const onChange = vi.fn();
-      const ctx = createMockCtx({ onChange });
-      renderWidget('object', el, {}, ctx);
+      const context = createMockContext({ onChange });
+      renderWidget('object', el, {}, context);
       vi.runAllTimers();
 
-      const addClickHandler = findEventHandler(addBtn, 'click');
+      const addClickHandler = findEventHandler(addButton, 'click');
       addClickHandler({ preventDefault: vi.fn(), stopPropagation: vi.fn() });
 
       const keydownHandler = findEventHandler(input, 'keydown');
@@ -1802,12 +1804,12 @@ describe('NestedPropertyRenderer', () => {
 
       const input = createMockEl();
       input.value = 'test';
-      const addBtn = createMockEl();
-      addBtn.createEl.mockReturnValue(input);
+      const addButton = createMockEl();
+      addButton.createEl.mockReturnValue(input);
       const containerEl = createMockEl();
-      containerEl.createDiv.mockImplementation((opts?: Record<string, unknown>) => {
-        if (opts && (opts['cls'] as string) === 'nested-properties-add-property') {
-          return addBtn;
+      containerEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
+        if (options && (options['cls'] as string) === 'nested-properties-add-property') {
+          return addButton;
         }
         return createMockEl();
       });
@@ -1815,17 +1817,17 @@ describe('NestedPropertyRenderer', () => {
       const el = createMockEl();
       el.createDiv.mockReturnValue(containerEl);
 
-      const ctx = createMockCtx();
-      renderWidget('object', el, {}, ctx);
+      const context = createMockContext();
+      renderWidget('object', el, {}, context);
       vi.runAllTimers();
 
-      const addClickHandler = findEventHandler(addBtn, 'click');
+      const addClickHandler = findEventHandler(addButton, 'click');
       addClickHandler({ preventDefault: vi.fn(), stopPropagation: vi.fn() });
 
       const keydownHandler = findEventHandler(input, 'keydown');
       keydownHandler({ key: 'Escape', preventDefault: vi.fn(), stopPropagation: vi.fn() });
 
-      expect(addBtn.empty).toHaveBeenCalled();
+      expect(addButton.empty).toHaveBeenCalled();
     });
 
     it('should handle blur event when connected', () => {
@@ -1834,12 +1836,12 @@ describe('NestedPropertyRenderer', () => {
       const input = createMockEl();
       input.value = 'blurKey';
       input.isConnected = true;
-      const addBtn = createMockEl();
-      addBtn.createEl.mockReturnValue(input);
+      const addButton = createMockEl();
+      addButton.createEl.mockReturnValue(input);
       const containerEl = createMockEl();
-      containerEl.createDiv.mockImplementation((opts?: Record<string, unknown>) => {
-        if (opts && (opts['cls'] as string) === 'nested-properties-add-property') {
-          return addBtn;
+      containerEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
+        if (options && (options['cls'] as string) === 'nested-properties-add-property') {
+          return addButton;
         }
         return createMockEl();
       });
@@ -1848,11 +1850,11 @@ describe('NestedPropertyRenderer', () => {
       el.createDiv.mockReturnValue(containerEl);
 
       const onChange = vi.fn();
-      const ctx = createMockCtx({ onChange });
-      renderWidget('object', el, {}, ctx);
+      const context = createMockContext({ onChange });
+      renderWidget('object', el, {}, context);
       vi.runAllTimers();
 
-      const addClickHandler = findEventHandler(addBtn, 'click');
+      const addClickHandler = findEventHandler(addButton, 'click');
       addClickHandler({ preventDefault: vi.fn(), stopPropagation: vi.fn() });
 
       const blurHandler = findEventHandler(input, 'blur');
@@ -1865,12 +1867,12 @@ describe('NestedPropertyRenderer', () => {
       const input = createMockEl();
       input.value = 'disconnectedKey';
       input.isConnected = false;
-      const addBtn = createMockEl();
-      addBtn.createEl.mockReturnValue(input);
+      const addButton = createMockEl();
+      addButton.createEl.mockReturnValue(input);
       const containerEl = createMockEl();
-      containerEl.createDiv.mockImplementation((opts?: Record<string, unknown>) => {
-        if (opts && (opts['cls'] as string) === 'nested-properties-add-property') {
-          return addBtn;
+      containerEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
+        if (options && (options['cls'] as string) === 'nested-properties-add-property') {
+          return addButton;
         }
         return createMockEl();
       });
@@ -1879,11 +1881,11 @@ describe('NestedPropertyRenderer', () => {
       el.createDiv.mockReturnValue(containerEl);
 
       const onChange = vi.fn();
-      const ctx = createMockCtx({ onChange });
-      renderWidget('object', el, {}, ctx);
+      const context = createMockContext({ onChange });
+      renderWidget('object', el, {}, context);
       vi.runAllTimers();
 
-      const addClickHandler = findEventHandler(addBtn, 'click');
+      const addClickHandler = findEventHandler(addButton, 'click');
       addClickHandler({ preventDefault: vi.fn(), stopPropagation: vi.fn() });
 
       const blurHandler = findEventHandler(input, 'blur');
@@ -1895,13 +1897,13 @@ describe('NestedPropertyRenderer', () => {
       loadRenderer();
 
       const input = createMockEl();
-      input.value = '   ';
-      const addBtn = createMockEl();
-      addBtn.createEl.mockReturnValue(input);
+      input.value = ' '.repeat(3);
+      const addButton = createMockEl();
+      addButton.createEl.mockReturnValue(input);
       const containerEl = createMockEl();
-      containerEl.createDiv.mockImplementation((opts?: Record<string, unknown>) => {
-        if (opts && (opts['cls'] as string) === 'nested-properties-add-property') {
-          return addBtn;
+      containerEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
+        if (options && (options['cls'] as string) === 'nested-properties-add-property') {
+          return addButton;
         }
         return createMockEl();
       });
@@ -1909,17 +1911,17 @@ describe('NestedPropertyRenderer', () => {
       const el = createMockEl();
       el.createDiv.mockReturnValue(containerEl);
 
-      const ctx = createMockCtx();
-      renderWidget('object', el, {}, ctx);
+      const context = createMockContext();
+      renderWidget('object', el, {}, context);
       vi.runAllTimers();
 
-      const addClickHandler = findEventHandler(addBtn, 'click');
+      const addClickHandler = findEventHandler(addButton, 'click');
       addClickHandler({ preventDefault: vi.fn(), stopPropagation: vi.fn() });
 
       const keydownHandler = findEventHandler(input, 'keydown');
       keydownHandler({ key: 'Enter', preventDefault: vi.fn(), stopPropagation: vi.fn() });
 
-      expect(addBtn.empty).toHaveBeenCalled();
+      expect(addButton.empty).toHaveBeenCalled();
     });
 
     it('should restore button when key already exists in object', () => {
@@ -1927,12 +1929,12 @@ describe('NestedPropertyRenderer', () => {
 
       const input = createMockEl();
       input.value = 'existing';
-      const addBtn = createMockEl();
-      addBtn.createEl.mockReturnValue(input);
+      const addButton = createMockEl();
+      addButton.createEl.mockReturnValue(input);
       const containerEl = createMockEl();
-      containerEl.createDiv.mockImplementation((opts?: Record<string, unknown>) => {
-        if (opts && (opts['cls'] as string) === 'nested-properties-add-property') {
-          return addBtn;
+      containerEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
+        if (options && (options['cls'] as string) === 'nested-properties-add-property') {
+          return addButton;
         }
         return createMockEl();
       });
@@ -1941,11 +1943,11 @@ describe('NestedPropertyRenderer', () => {
       el.createDiv.mockReturnValue(containerEl);
 
       const onChange = vi.fn();
-      const ctx = createMockCtx({ onChange });
-      renderWidget('object', el, { existing: 'val' }, ctx);
+      const context = createMockContext({ onChange });
+      renderWidget('object', el, { existing: 'val' }, context);
       vi.runAllTimers();
 
-      const addClickHandler = findEventHandler(addBtn, 'click');
+      const addClickHandler = findEventHandler(addButton, 'click');
       addClickHandler({ preventDefault: vi.fn(), stopPropagation: vi.fn() });
 
       const keydownHandler = findEventHandler(input, 'keydown');
@@ -1962,12 +1964,12 @@ describe('NestedPropertyRenderer', () => {
       input.remove.mockImplementation(() => {
         throw new Error('Already removed');
       });
-      const addBtn = createMockEl();
-      addBtn.createEl.mockReturnValue(input);
+      const addButton = createMockEl();
+      addButton.createEl.mockReturnValue(input);
       const containerEl = createMockEl();
-      containerEl.createDiv.mockImplementation((opts?: Record<string, unknown>) => {
-        if (opts && (opts['cls'] as string) === 'nested-properties-add-property') {
-          return addBtn;
+      containerEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
+        if (options && (options['cls'] as string) === 'nested-properties-add-property') {
+          return addButton;
         }
         return createMockEl();
       });
@@ -1976,11 +1978,11 @@ describe('NestedPropertyRenderer', () => {
       el.createDiv.mockReturnValue(containerEl);
 
       const onChange = vi.fn();
-      const ctx = createMockCtx({ onChange });
-      renderWidget('object', el, {}, ctx);
+      const context = createMockContext({ onChange });
+      renderWidget('object', el, {}, context);
       vi.runAllTimers();
 
-      const addClickHandler = findEventHandler(addBtn, 'click');
+      const addClickHandler = findEventHandler(addButton, 'click');
       addClickHandler({ preventDefault: vi.fn(), stopPropagation: vi.fn() });
 
       const keydownHandler = findEventHandler(input, 'keydown');
@@ -1994,12 +1996,12 @@ describe('NestedPropertyRenderer', () => {
 
       const input = createMockEl();
       input.value = 'test';
-      const addBtn = createMockEl();
-      addBtn.createEl.mockReturnValue(input);
+      const addButton = createMockEl();
+      addButton.createEl.mockReturnValue(input);
       const containerEl = createMockEl();
-      containerEl.createDiv.mockImplementation((opts?: Record<string, unknown>) => {
-        if (opts && (opts['cls'] as string) === 'nested-properties-add-property') {
-          return addBtn;
+      containerEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
+        if (options && (options['cls'] as string) === 'nested-properties-add-property') {
+          return addButton;
         }
         return createMockEl();
       });
@@ -2007,11 +2009,11 @@ describe('NestedPropertyRenderer', () => {
       const el = createMockEl();
       el.createDiv.mockReturnValue(containerEl);
 
-      const ctx = createMockCtx();
-      renderWidget('object', el, {}, ctx);
+      const context = createMockContext();
+      renderWidget('object', el, {}, context);
       vi.runAllTimers();
 
-      const addClickHandler = findEventHandler(addBtn, 'click');
+      const addClickHandler = findEventHandler(addButton, 'click');
       addClickHandler({ preventDefault: vi.fn(), stopPropagation: vi.fn() });
 
       const keydownHandler = findEventHandler(input, 'keydown');
@@ -2040,8 +2042,8 @@ describe('NestedPropertyRenderer', () => {
       });
       el.createDiv.mockReturnValue(containerEl);
 
-      const ctx = createMockCtx();
-      renderWidget('list', el, ['a'], ctx);
+      const context = createMockContext();
+      renderWidget('list', el, ['a'], context);
       vi.runAllTimers();
     });
 
@@ -2066,8 +2068,8 @@ describe('NestedPropertyRenderer', () => {
       });
       el.createDiv.mockReturnValue(containerEl);
 
-      const ctx = createMockCtx();
-      renderWidget('list', el, ['a'], ctx);
+      const context = createMockContext();
+      renderWidget('list', el, ['a'], context);
       vi.runAllTimers();
     });
 
@@ -2095,8 +2097,8 @@ describe('NestedPropertyRenderer', () => {
       });
       el.createDiv.mockReturnValue(containerEl);
 
-      const ctx = createMockCtx();
-      renderWidget('list', el, ['a'], ctx);
+      const context = createMockContext();
+      renderWidget('list', el, ['a'], context);
       vi.runAllTimers();
     });
 
@@ -2133,8 +2135,8 @@ describe('NestedPropertyRenderer', () => {
       const el = createMockEl();
       el.createDiv.mockReturnValue(containerEl);
 
-      const ctx = createMockCtx();
-      renderWidget('list', el, ['a'], ctx);
+      const context = createMockContext();
+      renderWidget('list', el, ['a'], context);
       vi.runAllTimers();
 
       const handler = findEventHandler(toggleButton, 'click');
@@ -2172,15 +2174,15 @@ describe('NestedPropertyRenderer', () => {
           }
           return null;
         }),
-        querySelectorAll: vi.fn((selector: string) => (selector === '.metadata-property-key-input' ? [topLevelKeyInput] : [collapsibleEl]))
+        querySelectorAll: vi.fn((selector: string) => (selector === ':scope .metadata-property-key-input' ? [topLevelKeyInput] : [collapsibleEl]))
       });
 
       const containerEl = createMockEl({ closest: vi.fn(() => metaContainer) });
       const el = createMockEl();
       el.createDiv.mockReturnValue(containerEl);
 
-      const ctx = createMockCtx();
-      renderWidget('list', el, ['a'], ctx);
+      const context = createMockContext();
+      renderWidget('list', el, ['a'], context);
       vi.runAllTimers();
 
       expect(topLevelKeyInput.size).toBe('a-long-top-level-key'.length);
@@ -2216,15 +2218,15 @@ describe('NestedPropertyRenderer', () => {
           }
           return null;
         }),
-        querySelectorAll: vi.fn((selector: string) => (selector === '.metadata-property-key-input' ? [nestedKeyInput] : [collapsibleEl]))
+        querySelectorAll: vi.fn((selector: string) => (selector === ':scope .metadata-property-key-input' ? [nestedKeyInput] : [collapsibleEl]))
       });
 
       const containerEl = createMockEl({ closest: vi.fn(() => metaContainer) });
       const el = createMockEl();
       el.createDiv.mockReturnValue(containerEl);
 
-      const ctx = createMockCtx();
-      renderWidget('list', el, ['a'], ctx);
+      const context = createMockContext();
+      renderWidget('list', el, ['a'], context);
       vi.runAllTimers();
 
       expect(nestedKeyInput.size).toBe(0);
@@ -2263,8 +2265,8 @@ describe('NestedPropertyRenderer', () => {
       const el = createMockEl();
       el.createDiv.mockReturnValue(containerEl);
 
-      const ctx = createMockCtx();
-      renderWidget('list', el, ['a'], ctx);
+      const context = createMockContext();
+      renderWidget('list', el, ['a'], context);
       vi.runAllTimers();
 
       const handler = findEventHandler(fullKeyButton, 'click');
@@ -2306,8 +2308,8 @@ describe('NestedPropertyRenderer', () => {
       const el = createMockEl();
       el.createDiv.mockReturnValue(containerEl);
 
-      const ctx = createMockCtx();
-      renderWidget('list', el, ['a'], ctx);
+      const context = createMockContext();
+      renderWidget('list', el, ['a'], context);
       vi.runAllTimers();
 
       const handler = findEventHandler(toggleButton, 'click');
@@ -2343,8 +2345,8 @@ describe('NestedPropertyRenderer', () => {
       const el = createMockEl();
       el.createDiv.mockReturnValue(containerEl);
 
-      const ctx = createMockCtx();
-      renderWidget('list', el, ['a'], ctx);
+      const context = createMockContext();
+      renderWidget('list', el, ['a'], context);
       vi.runAllTimers();
 
       const handler = findEventHandler(toggleButton, 'click');
@@ -2386,8 +2388,8 @@ describe('NestedPropertyRenderer', () => {
       const el = createMockEl();
       el.createDiv.mockReturnValue(containerEl);
 
-      const ctx = createMockCtx();
-      renderWidget('list', el, ['a'], ctx);
+      const context = createMockContext();
+      renderWidget('list', el, ['a'], context);
       vi.runAllTimers();
 
       // Click toggle to expand all (since all are collapsed)
@@ -2431,8 +2433,8 @@ describe('NestedPropertyRenderer', () => {
       const el = createMockEl();
       el.createDiv.mockReturnValue(containerEl);
 
-      const ctx = createMockCtx();
-      renderWidget('list', el, ['a'], ctx);
+      const context = createMockContext();
+      renderWidget('list', el, ['a'], context);
       vi.runAllTimers();
 
       const handler = findEventHandler(toggleButton, 'click');
@@ -2448,8 +2450,8 @@ describe('NestedPropertyRenderer', () => {
       const propertyEl = createMockEl({ querySelector: vi.fn(() => null) });
       el.closest.mockReturnValue(propertyEl);
 
-      const ctx = createMockCtx();
-      renderWidget('list', el, ['a', 'b'], ctx);
+      const context = createMockContext();
+      renderWidget('list', el, ['a', 'b'], context);
 
       expect(el.createSpan).toHaveBeenCalledWith(expect.objectContaining({ text: '[ ... ]' }));
     });
@@ -2461,8 +2463,8 @@ describe('NestedPropertyRenderer', () => {
       const propertyEl = createMockEl({ querySelector: vi.fn(() => null) });
       el.closest.mockReturnValue(propertyEl);
 
-      const ctx = createMockCtx();
-      renderWidget('object', el, { a: 1 }, ctx);
+      const context = createMockContext();
+      renderWidget('object', el, { a: 1 }, context);
 
       expect(el.createSpan).toHaveBeenCalledWith(expect.objectContaining({ text: '{ ... }' }));
     });
@@ -2477,8 +2479,8 @@ describe('NestedPropertyRenderer', () => {
       const propertyEl = createMockEl({ querySelector: vi.fn(() => null) });
       el.closest.mockReturnValue(propertyEl);
 
-      const ctx = createMockCtx();
-      renderWidget('list', el, ['a'], ctx);
+      const context = createMockContext();
+      renderWidget('list', el, ['a'], context);
 
       const handler = findEventHandler(summary, 'click');
       handler({ preventDefault: vi.fn(), stopPropagation: vi.fn() });
@@ -2519,8 +2521,8 @@ describe('NestedPropertyRenderer', () => {
       const el = createMockEl();
       el.createDiv.mockReturnValue(containerEl);
 
-      const ctx = createMockCtx();
-      renderWidget('list', el, ['a'], ctx);
+      const context = createMockContext();
+      renderWidget('list', el, ['a'], context);
       vi.runAllTimers();
 
       expectSetIconCalledWith(toggleButton, 'chevrons-up-down');
@@ -2558,8 +2560,8 @@ describe('NestedPropertyRenderer', () => {
       const el = createMockEl();
       el.createDiv.mockReturnValue(containerEl);
 
-      const ctx = createMockCtx();
-      renderWidget('list', el, ['a'], ctx);
+      const context = createMockContext();
+      renderWidget('list', el, ['a'], context);
       vi.runAllTimers();
 
       expectSetIconCalledWith(toggleButton, 'chevrons-down-up');
@@ -2574,8 +2576,8 @@ describe('NestedPropertyRenderer', () => {
       const el = createMockEl();
       el.createDiv.mockReturnValue(containerEl);
 
-      const ctx = createMockCtx();
-      renderWidget('list', el, ['a'], ctx);
+      const context = createMockContext();
+      renderWidget('list', el, ['a'], context);
       vi.runAllTimers();
     });
 
@@ -2586,8 +2588,8 @@ describe('NestedPropertyRenderer', () => {
       const el = createMockEl();
       el.createDiv.mockReturnValue(containerEl);
 
-      const ctx = createMockCtx();
-      renderWidget('list', el, ['a'], ctx);
+      const context = createMockContext();
+      renderWidget('list', el, ['a'], context);
       vi.runAllTimers();
     });
 
@@ -2596,11 +2598,11 @@ describe('NestedPropertyRenderer', () => {
 
       const focusTarget = createMockEl();
       const valueEl = createMockEl({ querySelector: vi.fn(() => focusTarget) });
-      const propEl = createMockEl({ querySelector: vi.fn(() => valueEl) });
+      const propertyEl = createMockEl({ querySelector: vi.fn(() => valueEl) });
       const input = createMockEl();
       input.value = 'target';
       input.instanceOf.mockReturnValue(true);
-      input.closest.mockReturnValue(propEl);
+      input.closest.mockReturnValue(propertyEl);
 
       const containerEl = createMockEl({
         closest: vi.fn(() => null),
@@ -2612,8 +2614,8 @@ describe('NestedPropertyRenderer', () => {
 
       testAccess(renderer).pendingFocusKey = 'target';
 
-      const ctx = createMockCtx();
-      renderWidget('object', el, {}, ctx);
+      const context = createMockContext();
+      renderWidget('object', el, {}, context);
       vi.runAllTimers();
 
       expect(focusTarget.focus).toHaveBeenCalled();
@@ -2623,11 +2625,11 @@ describe('NestedPropertyRenderer', () => {
       loadRenderer();
 
       const valueEl = createMockEl({ querySelector: vi.fn(() => null) });
-      const propEl = createMockEl({ querySelector: vi.fn(() => valueEl) });
+      const propertyEl = createMockEl({ querySelector: vi.fn(() => valueEl) });
       const input = createMockEl();
       input.value = 'target';
       input.instanceOf.mockReturnValue(true);
-      input.closest.mockReturnValue(propEl);
+      input.closest.mockReturnValue(propertyEl);
 
       const containerEl = createMockEl({
         closest: vi.fn(() => null),
@@ -2639,8 +2641,8 @@ describe('NestedPropertyRenderer', () => {
 
       testAccess(renderer).pendingFocusKey = 'target';
 
-      const ctx = createMockCtx();
-      renderWidget('object', el, {}, ctx);
+      const context = createMockContext();
+      renderWidget('object', el, {}, context);
       vi.runAllTimers();
 
       expect(valueEl.click).toHaveBeenCalled();
@@ -2663,8 +2665,8 @@ describe('NestedPropertyRenderer', () => {
 
       testAccess(renderer).pendingFocusKey = 'differentKey';
 
-      const ctx = createMockCtx();
-      renderWidget('object', el, {}, ctx);
+      const context = createMockContext();
+      renderWidget('object', el, {}, context);
       vi.runAllTimers();
     });
 
@@ -2684,8 +2686,8 @@ describe('NestedPropertyRenderer', () => {
 
       testAccess(renderer).pendingFocusKey = 'someKey';
 
-      const ctx = createMockCtx();
-      renderWidget('object', el, {}, ctx);
+      const context = createMockContext();
+      renderWidget('object', el, {}, context);
       vi.runAllTimers();
     });
 
@@ -2707,19 +2709,19 @@ describe('NestedPropertyRenderer', () => {
 
       testAccess(renderer).pendingFocusKey = 'target';
 
-      const ctx = createMockCtx();
-      renderWidget('object', el, {}, ctx);
+      const context = createMockContext();
+      renderWidget('object', el, {}, context);
       vi.runAllTimers();
     });
 
     it('should handle prop with no valueEl from querySelector', () => {
       loadRenderer();
 
-      const propEl = createMockEl({ querySelector: vi.fn(() => null) });
+      const propertyEl = createMockEl({ querySelector: vi.fn(() => null) });
       const input = createMockEl();
       input.value = 'target';
       input.instanceOf.mockReturnValue(true);
-      input.closest.mockReturnValue(propEl);
+      input.closest.mockReturnValue(propertyEl);
 
       const containerEl = createMockEl({
         closest: vi.fn(() => null),
@@ -2731,8 +2733,8 @@ describe('NestedPropertyRenderer', () => {
 
       testAccess(renderer).pendingFocusKey = 'target';
 
-      const ctx = createMockCtx();
-      renderWidget('object', el, {}, ctx);
+      const context = createMockContext();
+      renderWidget('object', el, {}, context);
       vi.runAllTimers();
     });
   });
@@ -2741,22 +2743,22 @@ describe('NestedPropertyRenderer', () => {
     it('should treat entry as complex when assigned type is list', () => {
       loadRenderer();
 
-      mockApp.metadataTypeManager.getAssignedWidget.mockImplementation((key: string) => key === 'testKey.myProp' ? 'list' : null);
+      mockApp.metadataTypeManager.getAssignedWidget.mockImplementation((key: string) => key === 'testKey.myProperty' ? 'list' : null);
 
       const el = createMockEl();
-      const ctx = createMockCtx();
-      renderWidget('object', el, { myProp: 'simple-string' }, ctx);
+      const context = createMockContext();
+      renderWidget('object', el, { myProperty: 'simple-string' }, context);
       vi.runAllTimers();
     });
 
     it('should treat entry as complex when assigned type is object', () => {
       loadRenderer();
 
-      mockApp.metadataTypeManager.getAssignedWidget.mockImplementation((key: string) => key === 'testKey.myProp' ? 'object' : null);
+      mockApp.metadataTypeManager.getAssignedWidget.mockImplementation((key: string) => key === 'testKey.myProperty' ? 'object' : null);
 
       const el = createMockEl();
-      const ctx = createMockCtx();
-      renderWidget('object', el, { myProp: 'simple-string' }, ctx);
+      const context = createMockContext();
+      renderWidget('object', el, { myProperty: 'simple-string' }, context);
       vi.runAllTimers();
     });
   });
@@ -2765,7 +2767,7 @@ describe('NestedPropertyRenderer', () => {
     it('should toggle collapse state on nested entry collapse button click', () => {
       loadRenderer();
 
-      const collapseBtn = createMockEl();
+      const collapseButton = createMockEl();
       const iconEl = createMockEl();
       const keyInput = createMockEl();
       const valueEl = createMockEl();
@@ -2773,16 +2775,16 @@ describe('NestedPropertyRenderer', () => {
       valueEl.createDiv.mockReturnValue(nestedContainer);
 
       const keyEl = createMockEl();
-      keyEl.createDiv.mockReturnValue(collapseBtn);
+      keyEl.createDiv.mockReturnValue(collapseButton);
       keyEl.createSpan.mockReturnValue(iconEl);
       keyEl.createEl.mockReturnValue(keyInput);
 
       const propertyEl = createMockEl();
-      propertyEl.createDiv.mockImplementation((opts?: Record<string, unknown>) => {
-        if (opts && typeof opts['cls'] === 'string' && opts['cls'] === 'metadata-property-key') {
+      propertyEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
+        if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-key') {
           return keyEl;
         }
-        if (opts && typeof opts['cls'] === 'string' && opts['cls'] === 'metadata-property-value') {
+        if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-value') {
           return valueEl;
         }
         return createMockEl();
@@ -2807,11 +2809,11 @@ describe('NestedPropertyRenderer', () => {
         };
       });
 
-      const ctx = createMockCtx();
-      renderWidget('object', el, { nested: { a: 1 } }, ctx);
+      const context = createMockContext();
+      renderWidget('object', el, { nested: { a: 1 } }, context);
       vi.runAllTimers();
 
-      const handler = findEventHandler(collapseBtn, 'click');
+      const handler = findEventHandler(collapseButton, 'click');
       propertyEl.hasClass.mockReturnValue(true);
       handler({ preventDefault: vi.fn(), stopPropagation: vi.fn() });
       expect(propertyEl.toggleClass).toHaveBeenCalledWith('is-collapsed', false);
@@ -2827,8 +2829,8 @@ describe('NestedPropertyRenderer', () => {
       loadRenderer();
 
       const el = createMockEl();
-      const ctx = createMockCtx();
-      renderWidget('object', el, { key: 'val' }, ctx);
+      const context = createMockContext();
+      renderWidget('object', el, { key: 'val' }, context);
       vi.runAllTimers();
     });
 
@@ -2842,11 +2844,11 @@ describe('NestedPropertyRenderer', () => {
       keyEl.createSpan.mockReturnValue(iconEl);
 
       const propertyEl = createMockEl();
-      propertyEl.createDiv.mockImplementation((opts?: Record<string, unknown>) => {
-        if (opts && typeof opts['cls'] === 'string' && opts['cls'] === 'metadata-property-key') {
+      propertyEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
+        if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-key') {
           return keyEl;
         }
-        if (opts && typeof opts['cls'] === 'string' && opts['cls'] === 'metadata-property-value') {
+        if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-value') {
           return createMockEl();
         }
         return createMockEl();
@@ -2857,8 +2859,8 @@ describe('NestedPropertyRenderer', () => {
       const el = createMockEl();
       el.createDiv.mockReturnValue(containerEl);
 
-      const ctx = createMockCtx();
-      renderWidget('object', el, { key: 'val' }, ctx);
+      const context = createMockContext();
+      renderWidget('object', el, { key: 'val' }, context);
       vi.runAllTimers();
 
       // Find the icon click handler
@@ -2875,23 +2877,23 @@ describe('NestedPropertyRenderer', () => {
       loadRenderer();
 
       const iconEl = createMockEl();
-      const collapseBtn = createMockEl();
+      const collapseButton = createMockEl();
       const keyInput = createMockEl();
       const valueEl = createMockEl();
       const nestedContainer = createMockEl();
       valueEl.createDiv.mockReturnValue(nestedContainer);
 
       const keyEl = createMockEl();
-      keyEl.createDiv.mockReturnValue(collapseBtn);
+      keyEl.createDiv.mockReturnValue(collapseButton);
       keyEl.createSpan.mockReturnValue(iconEl);
       keyEl.createEl.mockReturnValue(keyInput);
 
       const propertyEl = createMockEl();
-      propertyEl.createDiv.mockImplementation((opts?: Record<string, unknown>) => {
-        if (opts && typeof opts['cls'] === 'string' && opts['cls'] === 'metadata-property-key') {
+      propertyEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
+        if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-key') {
           return keyEl;
         }
-        if (opts && typeof opts['cls'] === 'string' && opts['cls'] === 'metadata-property-value') {
+        if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-value') {
           return valueEl;
         }
         return createMockEl();
@@ -2915,8 +2917,8 @@ describe('NestedPropertyRenderer', () => {
         };
       });
 
-      const ctx = createMockCtx();
-      renderWidget('object', el, { nested: { a: 1 } }, ctx);
+      const context = createMockContext();
+      renderWidget('object', el, { nested: { a: 1 } }, context);
       vi.runAllTimers();
 
       // Find the icon click handler on the complex entry
@@ -2935,23 +2937,23 @@ describe('NestedPropertyRenderer', () => {
 
       // Render an object with a nested object entry
       const iconEl = createMockEl();
-      const collapseBtn = createMockEl();
+      const collapseButton = createMockEl();
       const keyInput = createMockEl();
       const valueEl = createMockEl();
       const nestedContainer = createMockEl();
       valueEl.createDiv.mockReturnValue(nestedContainer);
 
       const keyEl = createMockEl();
-      keyEl.createDiv.mockReturnValue(collapseBtn);
+      keyEl.createDiv.mockReturnValue(collapseButton);
       keyEl.createSpan.mockReturnValue(iconEl);
       keyEl.createEl.mockReturnValue(keyInput);
 
       const propertyEl = createMockEl();
-      propertyEl.createDiv.mockImplementation((opts?: Record<string, unknown>) => {
-        if (opts && typeof opts['cls'] === 'string' && opts['cls'] === 'metadata-property-key') {
+      propertyEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
+        if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-key') {
           return keyEl;
         }
-        if (opts && typeof opts['cls'] === 'string' && opts['cls'] === 'metadata-property-value') {
+        if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-value') {
           return valueEl;
         }
         return createMockEl();
@@ -2976,8 +2978,8 @@ describe('NestedPropertyRenderer', () => {
       });
 
       const onChange = vi.fn();
-      const ctx = createMockCtx({ onChange });
-      renderWidget('object', el, { nested: { a: 1 } }, ctx);
+      const context = createMockContext({ onChange });
+      renderWidget('object', el, { nested: { a: 1 } }, context);
       vi.runAllTimers();
 
       // Set up activeDocument.activeElement as HTMLElement to test blur
@@ -3000,8 +3002,8 @@ describe('NestedPropertyRenderer', () => {
       for (const subItem of hoisted.submenuItems) {
         const titleCalls = subItem.setTitle.mock.calls as unknown[][];
         if (titleCalls.some((call) => call[0] === 'Text')) {
-          const clickFn = subItem._onClickFn;
-          await clickFn?.();
+          const clickFunction = subItem._onClickFunction;
+          await clickFunction?.();
           break;
         }
       }
@@ -3016,23 +3018,23 @@ describe('NestedPropertyRenderer', () => {
       hoisted.changeTypeChangeModalResult(false);
 
       const iconEl = createMockEl();
-      const collapseBtn = createMockEl();
+      const collapseButton = createMockEl();
       const keyInput = createMockEl();
       const valueEl = createMockEl();
       const nestedContainer = createMockEl();
       valueEl.createDiv.mockReturnValue(nestedContainer);
 
       const keyEl = createMockEl();
-      keyEl.createDiv.mockReturnValue(collapseBtn);
+      keyEl.createDiv.mockReturnValue(collapseButton);
       keyEl.createSpan.mockReturnValue(iconEl);
       keyEl.createEl.mockReturnValue(keyInput);
 
       const propertyEl = createMockEl();
-      propertyEl.createDiv.mockImplementation((opts?: Record<string, unknown>) => {
-        if (opts && typeof opts['cls'] === 'string' && opts['cls'] === 'metadata-property-key') {
+      propertyEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
+        if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-key') {
           return keyEl;
         }
-        if (opts && typeof opts['cls'] === 'string' && opts['cls'] === 'metadata-property-value') {
+        if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-value') {
           return valueEl;
         }
         return createMockEl();
@@ -3057,8 +3059,8 @@ describe('NestedPropertyRenderer', () => {
       });
 
       const onChange = vi.fn();
-      const ctx = createMockCtx({ onChange });
-      renderWidget('object', el, { nested: { a: 1 } }, ctx);
+      const context = createMockContext({ onChange });
+      renderWidget('object', el, { nested: { a: 1 } }, context);
       vi.runAllTimers();
 
       // Open menu on nested entry
@@ -3071,8 +3073,8 @@ describe('NestedPropertyRenderer', () => {
       for (const subItem of hoisted.submenuItems) {
         const titleCalls = subItem.setTitle.mock.calls as unknown[][];
         if (titleCalls.some((call) => call[0] === 'Mixed list')) {
-          const clickFn = subItem._onClickFn;
-          await clickFn?.();
+          const clickFunction = subItem._onClickFunction;
+          await clickFunction?.();
           break;
         }
       }
@@ -3088,23 +3090,23 @@ describe('NestedPropertyRenderer', () => {
       hoisted.changeTypeChangeModalResult(true);
 
       const iconEl = createMockEl();
-      const collapseBtn = createMockEl();
+      const collapseButton = createMockEl();
       const keyInput = createMockEl();
       const valueEl = createMockEl();
       const nestedContainer = createMockEl();
       valueEl.createDiv.mockReturnValue(nestedContainer);
 
       const keyEl = createMockEl();
-      keyEl.createDiv.mockReturnValue(collapseBtn);
+      keyEl.createDiv.mockReturnValue(collapseButton);
       keyEl.createSpan.mockReturnValue(iconEl);
       keyEl.createEl.mockReturnValue(keyInput);
 
       const propertyEl = createMockEl();
-      propertyEl.createDiv.mockImplementation((opts?: Record<string, unknown>) => {
-        if (opts && typeof opts['cls'] === 'string' && opts['cls'] === 'metadata-property-key') {
+      propertyEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
+        if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-key') {
           return keyEl;
         }
-        if (opts && typeof opts['cls'] === 'string' && opts['cls'] === 'metadata-property-value') {
+        if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-value') {
           return valueEl;
         }
         return createMockEl();
@@ -3129,9 +3131,9 @@ describe('NestedPropertyRenderer', () => {
       });
 
       const onChange = vi.fn();
-      const ctx = createMockCtx({ onChange });
+      const context = createMockContext({ onChange });
       // Use an object value and convert to object type (same) → converted === value
-      renderWidget('object', el, { nested: { a: 1 } }, ctx);
+      renderWidget('object', el, { nested: { a: 1 } }, context);
       vi.runAllTimers();
 
       // Open menu on the nested entry
@@ -3146,8 +3148,8 @@ describe('NestedPropertyRenderer', () => {
       for (const subItem of hoisted.submenuItems) {
         const titleCalls = subItem.setTitle.mock.calls as unknown[][];
         if (titleCalls.some((call) => call[0] === 'Object')) {
-          const clickFn = subItem._onClickFn;
-          await clickFn?.();
+          const clickFunction = subItem._onClickFunction;
+          await clickFunction?.();
           break;
         }
       }
@@ -3168,8 +3170,8 @@ describe('NestedPropertyRenderer', () => {
       const el = createMockEl();
       el.closest.mockReturnValue(propertyEl);
 
-      const ctx = createMockCtx();
-      renderWidget('list', el, ['a'], ctx);
+      const context = createMockContext();
+      renderWidget('list', el, ['a'], context);
 
       // ClassList.add should have been called with 'nested-properties-collapsible' but NOT 'is-collapsed'
       const addCalls = propertyEl.classList.add.mock.calls as unknown[][];
@@ -3202,8 +3204,8 @@ describe('NestedPropertyRenderer', () => {
       });
 
       const el = createMockEl();
-      const ctx = createMockCtx();
-      renderWidget('object', el, { nested: { a: 1 } }, ctx);
+      const context = createMockContext();
+      renderWidget('object', el, { nested: { a: 1 } }, context);
       vi.runAllTimers();
     });
   });
@@ -3218,13 +3220,13 @@ describe('NestedPropertyRenderer', () => {
         inferred: multitextWidget,
         property
       }));
-      mockApp.metadataTypeManager.getAssignedWidget.mockImplementation((key: string) => key === 'testKey.myProp' ? 'text' : null);
+      mockApp.metadataTypeManager.getAssignedWidget.mockImplementation((key: string) => key === 'testKey.myProperty' ? 'text' : null);
 
       const el = createMockEl();
-      const ctx = createMockCtx();
+      const context = createMockContext();
       vi.mocked(textWidget.render).mockClear();
       vi.mocked(multitextWidget.render).mockClear();
-      renderWidget('object', el, { myProp: 'val' }, ctx);
+      renderWidget('object', el, { myProperty: 'val' }, context);
       vi.runAllTimers();
 
       // TextWidget (assigned) should have been used for rendering, not the inferred multitext.
@@ -3239,14 +3241,14 @@ describe('NestedPropertyRenderer', () => {
     expect(matchingCall).toBeDefined();
   }
 
-  function findEventHandler(el: MockDomElement, eventName: string): (...args: unknown[]) => void {
+  function findEventHandler(el: MockDomElement, eventName: string): (...$arguments: unknown[]) => void {
     const call = el.addEventListener.mock.calls.find(
       (c: unknown[]) => c[0] === eventName
     );
     if (!call) {
       throw new Error(`No event handler found for '${eventName}'`);
     }
-    return call[1] as (...args: unknown[]) => void;
+    return call[1] as (...$arguments: unknown[]) => void;
   }
 
   function triggerContextMenu(): void {
@@ -3259,11 +3261,11 @@ describe('NestedPropertyRenderer', () => {
     keyEl.createEl.mockReturnValue(keyInput);
 
     const propertyEl = createMockEl();
-    propertyEl.createDiv.mockImplementation((opts?: Record<string, unknown>) => {
-      if (opts && typeof opts['cls'] === 'string' && opts['cls'] === 'metadata-property-key') {
+    propertyEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
+      if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-key') {
         return keyEl;
       }
-      if (opts && typeof opts['cls'] === 'string' && opts['cls'] === 'metadata-property-value') {
+      if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-value') {
         return createMockEl();
       }
       return createMockEl();
@@ -3286,15 +3288,15 @@ describe('NestedPropertyRenderer', () => {
       };
     });
 
-    const ctx = createMockCtx();
-    renderWidget('object', el, { nested: { a: 1 } }, ctx);
+    const context = createMockContext();
+    renderWidget('object', el, { nested: { a: 1 } }, context);
     vi.runAllTimers();
 
     const handler = findEventHandler(propertyEl, 'contextmenu');
     handler({ stopPropagation: vi.fn() });
   }
 
-  function triggerContextMenuWithValue(value: unknown, onChange?: MockFn): void {
+  function triggerContextMenuWithValue(value: unknown, onChange?: MockFunction): void {
     const el = createMockEl();
     const iconEl = createMockEl();
     const keyInput = createMockEl();
@@ -3304,11 +3306,11 @@ describe('NestedPropertyRenderer', () => {
     keyEl.createEl.mockReturnValue(keyInput);
 
     const simplePropertyEl = createMockEl();
-    simplePropertyEl.createDiv.mockImplementation((opts?: Record<string, unknown>) => {
-      if (opts && typeof opts['cls'] === 'string' && opts['cls'] === 'metadata-property-key') {
+    simplePropertyEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
+      if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-key') {
         return keyEl;
       }
-      if (opts && typeof opts['cls'] === 'string' && opts['cls'] === 'metadata-property-value') {
+      if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-value') {
         return createMockEl();
       }
       return createMockEl();
@@ -3318,8 +3320,8 @@ describe('NestedPropertyRenderer', () => {
     containerEl.createDiv.mockReturnValue(simplePropertyEl);
     el.createDiv.mockReturnValue(containerEl);
 
-    const ctx = createMockCtx({ onChange: castTo<PropertyRenderContext['onChange']>(onChange ?? vi.fn()) });
-    renderWidget('object', el, { prop: value }, ctx);
+    const context = createMockContext({ onChange: castTo<PropertyRenderContext['onChange']>(onChange ?? vi.fn()) });
+    renderWidget('object', el, { property: value }, context);
     vi.runAllTimers();
 
     const handler = findEventHandler(simplePropertyEl, 'contextmenu');

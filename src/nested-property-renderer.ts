@@ -80,15 +80,15 @@ interface NestedPropertyRendererComponentGetWidgetParams {
 }
 
 interface NestedPropertyRendererComponentRenderArrayParams {
-  readonly arr: unknown[];
+  readonly array: unknown[];
   readonly containerEl: HTMLElement;
-  readonly ctx: PropertyRenderContext;
+  readonly context: PropertyRenderContext;
   onArrayChange(this: void, newValue: unknown): void;
   readonly parentPath: string;
 }
 
 interface NestedPropertyRendererComponentRenderComplexWidgetParams {
-  readonly ctx: PropertyRenderContext;
+  readonly context: PropertyRenderContext;
   readonly el: HTMLElement;
   readonly value: unknown;
   readonly widgetType: string;
@@ -96,7 +96,7 @@ interface NestedPropertyRendererComponentRenderComplexWidgetParams {
 
 interface NestedPropertyRendererComponentRenderEntryParams {
   readonly containerEl: HTMLElement;
-  readonly ctx: PropertyRenderContext;
+  readonly context: PropertyRenderContext;
   getValue(this: void): unknown;
   readonly label: string;
   onDelete(this: void): void;
@@ -117,22 +117,22 @@ interface NestedPropertyRendererComponentRenderKeyElParams {
 
 interface NestedPropertyRendererComponentRenderNestedValueParams {
   readonly containerEl: HTMLElement;
-  readonly ctx: PropertyRenderContext;
+  readonly context: PropertyRenderContext;
   onValueChange(this: void, newValue: unknown): void;
   readonly path: string;
   readonly value: unknown;
 }
 
 interface NestedPropertyRendererComponentRenderObjectParams {
+  readonly $object: GenericObject;
   readonly containerEl: HTMLElement;
-  readonly ctx: PropertyRenderContext;
-  readonly obj: GenericObject;
+  readonly context: PropertyRenderContext;
   onValueChange(this: void, newValue: unknown): void;
   readonly parentPath: string;
 }
 
 interface NestedPropertyRendererComponentShowNestedPropertyMenuParams {
-  readonly evt: MouseEvent;
+  readonly $event: MouseEvent;
   getValue(this: void): unknown;
   readonly label: string;
   onDelete(this: void): void;
@@ -141,14 +141,14 @@ interface NestedPropertyRendererComponentShowNestedPropertyMenuParams {
 }
 
 interface RenderAddItemButtonParams {
-  readonly arr: unknown[];
+  readonly array: unknown[];
   readonly containerEl: HTMLElement;
   onValueChange(this: void, newValue: unknown): void;
 }
 
 interface RenderAddPropertyButtonParams {
+  readonly $object: GenericObject;
   readonly containerEl: HTMLElement;
-  readonly obj: GenericObject;
   onValueChange(this: void, newValue: unknown): void;
   setPendingFocusKey(this: void, key: string): void;
 }
@@ -193,7 +193,7 @@ export class NestedPropertyRendererComponent extends Component {
     this._mixedListWidget = {
       icon: 'lucide-list-tree',
       name: (): string => 'Mixed list',
-      render: (el, value, ctx): PropertyWidgetComponentBase => this.renderComplexWidget({ ctx, el, value, widgetType: LIST_WIDGET_TYPE }),
+      render: (el, value, context): PropertyWidgetComponentBase => this.renderComplexWidget({ context, el, value, widgetType: LIST_WIDGET_TYPE }),
       type: LIST_WIDGET_TYPE,
       validate: (value): boolean => Array.isArray(value)
     };
@@ -201,7 +201,7 @@ export class NestedPropertyRendererComponent extends Component {
     this._objectWidget = {
       icon: 'lucide-braces',
       name: (): string => 'Object',
-      render: (el, value, ctx): PropertyWidgetComponentBase => this.renderComplexWidget({ ctx, el, value, widgetType: OBJECT_WIDGET_TYPE }),
+      render: (el, value, context): PropertyWidgetComponentBase => this.renderComplexWidget({ context, el, value, widgetType: OBJECT_WIDGET_TYPE }),
       type: OBJECT_WIDGET_TYPE,
       validate: (value): boolean => value !== null && typeof value === 'object' && !Array.isArray(value)
     };
@@ -349,39 +349,41 @@ export class NestedPropertyRendererComponent extends Component {
 
   private reloadAllProperties(): void {
     for (const leaf of this.app.workspace.getLeavesOfType('markdown')) {
-      if (leaf.view instanceof MarkdownView) {
-        const data = leaf.view.metadataEditor.serialize();
-        leaf.view.metadataEditor.synchronize({});
-        leaf.view.metadataEditor.synchronize(data);
+      if (!(leaf.view instanceof MarkdownView)) {
+        continue;
       }
+
+      const data = leaf.view.metadataEditor.serialize();
+      leaf.view.metadataEditor.synchronize({});
+      leaf.view.metadataEditor.synchronize(data);
     }
   }
 
   private renderArray(params: NestedPropertyRendererComponentRenderArrayParams): void {
-    const { arr, containerEl, ctx, onArrayChange, parentPath } = params;
-    for (const [index, item] of arr.entries()) {
+    const { array, containerEl, context, onArrayChange, parentPath } = params;
+    for (const [index, item] of array.entries()) {
       this.renderEntry({
         containerEl,
-        ctx,
-        getValue: () => arr[index],
+        context,
+        getValue: () => array[index],
         label: String(index),
         onDelete: () => {
-          const newArr = arr.filter((_, i) => i !== index);
-          onArrayChange(newArr);
+          const newArray = array.filter((_, index_) => index_ !== index);
+          onArrayChange(newArray);
         },
         onValueChange: (newValue: unknown) => {
-          arr[index] = newValue;
-          onArrayChange([...arr]);
+          array[index] = newValue;
+          onArrayChange([...array]);
         },
         parentPath,
         value: item
       });
     }
-    renderAddItemButton({ arr, containerEl, onValueChange: onArrayChange });
+    renderAddItemButton({ array, containerEl, onValueChange: onArrayChange });
   }
 
   private renderComplexWidget(params: NestedPropertyRendererComponentRenderComplexWidgetParams): PropertyWidgetComponentBase {
-    const { ctx, el, widgetType } = params;
+    const { context, el, widgetType } = params;
     let value = params.value;
     if (widgetType === LIST_WIDGET_TYPE && !Array.isArray(value)) {
       value = [];
@@ -396,33 +398,33 @@ export class NestedPropertyRendererComponent extends Component {
     // eslint-disable-next-line n/no-unsupported-features/node-builtins -- structuredClone is a Web/Electron API available in Obsidian's renderer; the rule wrongly flags it against the Node engines range.
     value = structuredClone(value);
 
-    const rootPath = `${ctx.sourcePath}:${ctx.key}`;
+    const rootPath = `${context.sourcePath}:${context.key}`;
 
     const propertyEl = el.closest('.metadata-property');
     if (propertyEl instanceof HTMLElement) {
       const isExpanded = this.expandedPaths.has(rootPath);
       propertyEl.classList.add('nested-properties-collapsible');
-      propertyEl.setAttribute('data-path', rootPath);
+      propertyEl.dataset['path'] = rootPath;
       if (!isExpanded) {
         propertyEl.classList.add('is-collapsed');
       }
 
-      const existingIcon = propertyEl.querySelector('.metadata-property-key .metadata-property-icon');
+      const existingIcon = propertyEl.querySelector(':scope .metadata-property-key .metadata-property-icon');
       if (existingIcon instanceof HTMLElement) {
         setIcon(existingIcon, widgetType === LIST_WIDGET_TYPE ? 'lucide-list-tree' : 'lucide-braces');
       }
 
-      const keyEl = propertyEl.querySelector('.metadata-property-key');
+      const keyEl = propertyEl.querySelector(':scope .metadata-property-key');
       if (keyEl && !keyEl.querySelector('.nested-properties-collapse-btn')) {
-        const collapseBtn = createDiv('nested-properties-collapse-btn');
-        setIcon(collapseBtn, 'right-triangle');
-        keyEl.insertBefore(collapseBtn, keyEl.firstChild);
-        collapseBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          e.preventDefault();
-          const collapsed = propertyEl.hasClass('is-collapsed');
-          propertyEl.toggleClass('is-collapsed', !collapsed);
-          if (collapsed) {
+        const collapseButton = createDiv('nested-properties-collapse-btn');
+        setIcon(collapseButton, 'right-triangle');
+        keyEl.insertBefore(collapseButton, keyEl.firstChild);
+        collapseButton.addEventListener('click', ($event) => {
+          $event.stopPropagation();
+          $event.preventDefault();
+          const isCollapsed = propertyEl.hasClass('is-collapsed');
+          propertyEl.toggleClass('is-collapsed', !isCollapsed);
+          if (isCollapsed) {
             this.expandedPaths.add(rootPath);
           } else {
             this.expandedPaths.delete(rootPath);
@@ -434,7 +436,7 @@ export class NestedPropertyRendererComponent extends Component {
       // Size the native key input to its content so the full-key-display toggle (`width: auto`) can
       // Expand it. Obsidian's default input width overrides `size` while the toggle is off, so this is
       // Inert until the body class is present — mirroring the nested inputs in `renderKeyEl`.
-      const keyInputEl = keyEl?.querySelector('.metadata-property-key-input');
+      const keyInputEl = keyEl?.querySelector(':scope .metadata-property-key-input');
       if (keyInputEl instanceof HTMLInputElement) {
         keyInputEl.size = Math.max(1, keyInputEl.value.length);
       }
@@ -447,9 +449,9 @@ export class NestedPropertyRendererComponent extends Component {
     const containerEl = el.createDiv({ cls: 'nested-properties-container' });
     this.renderNestedValue({
       containerEl,
-      ctx,
+      context,
       onValueChange: (newValue: unknown) => {
-        ctx.onChange(newValue);
+        context.onChange(newValue);
       },
       path: rootPath,
       value
@@ -471,10 +473,10 @@ export class NestedPropertyRendererComponent extends Component {
       if (this.pendingFocusKey) {
         const key = this.pendingFocusKey;
         this.pendingFocusKey = null;
-        for (const input of containerEl.querySelectorAll('.metadata-property-key-input')) {
+        for (const input of containerEl.querySelectorAll(':scope .metadata-property-key-input')) {
           if (input.instanceOf(HTMLInputElement) && input.value === key) {
-            const prop = input.closest('.metadata-property');
-            const valueEl = prop?.querySelector(':scope > .metadata-property-value');
+            const property = input.closest('.metadata-property');
+            const valueEl = property?.querySelector(':scope > .metadata-property-value');
             if (valueEl instanceof HTMLElement) {
               const focusTargetEl = valueEl.querySelector('input, textarea, [contenteditable]');
               if (focusTargetEl instanceof HTMLElement) {
@@ -499,7 +501,7 @@ export class NestedPropertyRendererComponent extends Component {
   }
 
   private renderEntry(params: NestedPropertyRendererComponentRenderEntryParams): void {
-    const { containerEl, ctx, getValue, label, onDelete, onValueChange, parentPath, value } = params;
+    const { containerEl, context, getValue, label, onDelete, onValueChange, parentPath, value } = params;
     const path = `${parentPath}.${label}`;
     const assignedWidget = this.getAssignedWidgetForPath(path);
     const isComplex = assignedWidget?.type === LIST_WIDGET_TYPE || assignedWidget?.type === OBJECT_WIDGET_TYPE
@@ -511,21 +513,21 @@ export class NestedPropertyRendererComponent extends Component {
         attr: { 'data-path': path },
         cls: ['metadata-property', 'nested-properties-collapsible', ...(isExpanded ? [] : ['is-collapsed'])]
       });
-      propertyEl.addEventListener('contextmenu', (e) => {
-        e.stopPropagation();
-        this.showNestedPropertyMenu({ evt: e, getValue, label, onDelete, onValueChange, path });
+      propertyEl.addEventListener('contextmenu', ($event) => {
+        $event.stopPropagation();
+        this.showNestedPropertyMenu({ $event, getValue, label, onDelete, onValueChange, path });
       });
 
       const keyEl = propertyEl.createDiv({ cls: 'metadata-property-key' });
 
-      const collapseBtn = keyEl.createDiv({ cls: 'nested-properties-collapse-btn' });
-      setIcon(collapseBtn, 'right-triangle');
-      collapseBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        const collapsed = propertyEl.hasClass('is-collapsed');
-        propertyEl.toggleClass('is-collapsed', !collapsed);
-        if (collapsed) {
+      const collapseButton = keyEl.createDiv({ cls: 'nested-properties-collapse-btn' });
+      setIcon(collapseButton, 'right-triangle');
+      collapseButton.addEventListener('click', ($event) => {
+        $event.stopPropagation();
+        $event.preventDefault();
+        const isCollapsed = propertyEl.hasClass('is-collapsed');
+        propertyEl.toggleClass('is-collapsed', !isCollapsed);
+        if (isCollapsed) {
           this.expandedPaths.add(path);
         } else {
           this.expandedPaths.delete(path);
@@ -535,9 +537,9 @@ export class NestedPropertyRendererComponent extends Component {
       const complexWidget = this.getWidget({ label, path, value });
       const iconEl = keyEl.createSpan({ cls: 'metadata-property-icon' });
       setIcon(iconEl, complexWidget.icon);
-      iconEl.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.showNestedPropertyMenu({ evt: e, getValue, label, onDelete, onValueChange, path });
+      iconEl.addEventListener('click', ($event) => {
+        $event.stopPropagation();
+        this.showNestedPropertyMenu({ $event, getValue, label, onDelete, onValueChange, path });
       });
       const keyInput = keyEl.createEl('input', {
         attr: { readonly: '', tabindex: '-1' },
@@ -549,13 +551,13 @@ export class NestedPropertyRendererComponent extends Component {
       const valueEl = propertyEl.createDiv({ cls: 'metadata-property-value' });
       createSummary({ expandedPaths: this.expandedPaths, parentEl: valueEl, path, propertyEl, value });
       const nestedContainer = valueEl.createDiv({ cls: 'nested-properties-container' });
-      this.renderNestedValue({ containerEl: nestedContainer, ctx, onValueChange, path, value });
+      this.renderNestedValue({ containerEl: nestedContainer, context, onValueChange, path, value });
       return;
     }
     const propertyEl = containerEl.createDiv({ cls: 'metadata-property' });
-    propertyEl.addEventListener('contextmenu', (e) => {
-      e.stopPropagation();
-      this.showNestedPropertyMenu({ evt: e, getValue, label, onDelete, onValueChange, path });
+    propertyEl.addEventListener('contextmenu', ($event) => {
+      $event.stopPropagation();
+      this.showNestedPropertyMenu({ $event, getValue, label, onDelete, onValueChange, path });
     });
     this.renderKeyEl({ getValue, label, onDelete, onValueChange, parentEl: propertyEl, path, value });
 
@@ -563,11 +565,11 @@ export class NestedPropertyRendererComponent extends Component {
     const valueEl = propertyEl.createDiv({ cls: 'metadata-property-value' });
     valueEl.setAttr('data-property-type', widget.type);
     widget.render(valueEl, value, {
-      app: ctx.app,
-      blur: ctx.blur.bind(ctx),
+      app: context.app,
+      blur: context.blur.bind(context),
       key: label,
       onChange: onValueChange,
-      sourcePath: ctx.sourcePath
+      sourcePath: context.sourcePath
     });
   }
 
@@ -578,9 +580,9 @@ export class NestedPropertyRendererComponent extends Component {
     const widget = this.getWidget({ label, path, value });
     const iconEl = keyEl.createSpan({ cls: 'metadata-property-icon' });
     setIcon(iconEl, widget.icon);
-    iconEl.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.showNestedPropertyMenu({ evt: e, getValue, label, onDelete, onValueChange, path });
+    iconEl.addEventListener('click', ($event) => {
+      $event.stopPropagation();
+      this.showNestedPropertyMenu({ $event, getValue, label, onDelete, onValueChange, path });
     });
 
     const keyInput = keyEl.createEl('input', {
@@ -592,39 +594,39 @@ export class NestedPropertyRendererComponent extends Component {
   }
 
   private renderNestedValue(params: NestedPropertyRendererComponentRenderNestedValueParams): void {
-    const { containerEl, ctx, onValueChange, path, value } = params;
+    const { containerEl, context, onValueChange, path, value } = params;
     if (Array.isArray(value)) {
-      this.renderArray({ arr: value, containerEl, ctx, onArrayChange: onValueChange, parentPath: path });
+      this.renderArray({ array: value, containerEl, context, onArrayChange: onValueChange, parentPath: path });
     } else {
-      this.renderObject({ containerEl, ctx, obj: value as GenericObject, onValueChange, parentPath: path });
+      this.renderObject({ $object: value as GenericObject, containerEl, context, onValueChange, parentPath: path });
     }
   }
 
   private renderObject(params: NestedPropertyRendererComponentRenderObjectParams): void {
-    const { containerEl, ctx, obj, onValueChange, parentPath } = params;
-    for (const [key, val] of Object.entries(obj)) {
+    const { $object, containerEl, context, onValueChange, parentPath } = params;
+    for (const [key, value] of Object.entries($object)) {
       this.renderEntry({
         containerEl,
-        ctx,
-        getValue: () => obj[key],
+        context,
+        getValue: () => $object[key],
         label: key,
         onDelete: () => {
-          const newObj = { ...obj };
+          const newObject = { ...$object };
           // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- Need to delete the key.
-          delete newObj[key];
-          onValueChange(newObj);
+          delete newObject[key];
+          onValueChange(newObject);
         },
         onValueChange: (newValue: unknown) => {
-          obj[key] = newValue;
-          onValueChange({ ...obj });
+          $object[key] = newValue;
+          onValueChange({ ...$object });
         },
         parentPath,
-        value: val
+        value
       });
     }
     renderAddPropertyButton({
+      $object,
       containerEl,
-      obj,
       onValueChange,
       setPendingFocusKey: (key) => {
         this.pendingFocusKey = key;
@@ -633,7 +635,7 @@ export class NestedPropertyRendererComponent extends Component {
   }
 
   private showNestedPropertyMenu(params: NestedPropertyRendererComponentShowNestedPropertyMenuParams): void {
-    const { evt, getValue, label, onDelete, onValueChange, path } = params;
+    const { $event, getValue, label, onDelete, onValueChange, path } = params;
     const MENU_DELAY_IN_MILLISECONDS = 200;
     if (Date.now() - this.lastMenuCloseTime < MENU_DELAY_IN_MILLISECONDS) {
       return;
@@ -713,8 +715,8 @@ export class NestedPropertyRendererComponent extends Component {
                 onValueChange(firstValue);
               }
             }
-          } catch (e) {
-            console.error(e);
+          } catch (error) {
+            console.error(error);
           }
         }));
     });
@@ -725,14 +727,14 @@ export class NestedPropertyRendererComponent extends Component {
         .setSection('danger')
         .onClick(onDelete);
     });
-    menu.showAtMouseEvent(evt);
+    menu.showAtMouseEvent($event);
   }
 }
 
 function collapseAllIn(parentNode: ParentNode, expandedPaths: Set<string>): void {
-  for (const el of parentNode.querySelectorAll('.nested-properties-collapsible')) {
+  for (const el of parentNode.querySelectorAll<HTMLElement>(':scope .nested-properties-collapsible')) {
     el.classList.add('is-collapsed');
-    const path = el.getAttribute('data-path');
+    const path = el.dataset['path'];
     if (path) {
       expandedPaths.delete(path);
     }
@@ -742,18 +744,18 @@ function collapseAllIn(parentNode: ParentNode, expandedPaths: Set<string>): void
 function createSummary(params: CreateSummaryParams): void {
   const { expandedPaths, parentEl, path, propertyEl, value } = params;
   const summary = parentEl.createSpan({ cls: 'nested-properties-summary', text: Array.isArray(value) ? '[ ... ]' : '{ ... }' });
-  summary.addEventListener('click', (e) => {
-    e.stopPropagation();
-    e.preventDefault();
+  summary.addEventListener('click', ($event) => {
+    $event.stopPropagation();
+    $event.preventDefault();
     propertyEl.classList.remove('is-collapsed');
     expandedPaths.add(path);
   });
 }
 
 function expandAllIn(parentNode: ParentNode, expandedPaths: Set<string>): void {
-  for (const el of parentNode.querySelectorAll('.nested-properties-collapsible')) {
+  for (const el of parentNode.querySelectorAll<HTMLElement>(':scope .nested-properties-collapsible')) {
     el.classList.remove('is-collapsed');
-    const path = el.getAttribute('data-path');
+    const path = el.dataset['path'];
     if (path) {
       expandedPaths.add(path);
     }
@@ -775,7 +777,7 @@ function getFieldTypeKey(path: string): null | string {
 
 // The persisted type key for an exact node: the plugin's dotted `path` with the leading
 // `sourcePath:` dropped so the key is vault-global (matching Obsidian's flat `types.json`).
-// `ctx.sourcePath` is vault-relative and never contains a colon, so the first `:` is safe to split on.
+// `context.sourcePath` is vault-relative and never contains a colon, so the first `:` is safe to split on.
 function getItemTypeKey(path: string): string {
   return path.slice(path.indexOf(':') + 1);
 }
@@ -801,12 +803,12 @@ function injectHeaderButtons(params: InjectHeaderButtonsParams): void {
   const toggleButton = actionsEl.createDiv({ cls: 'clickable-icon' });
   updateToggleButton({ metadataContainerEl, toggleButton });
 
-  toggleButton.addEventListener('click', (e) => {
-    e.stopPropagation();
-    e.preventDefault();
+  toggleButton.addEventListener('click', ($event) => {
+    $event.stopPropagation();
+    $event.preventDefault();
     const allCollapsibles = metadataContainerEl.querySelectorAll('.nested-properties-collapsible');
-    const allCollapsed = allCollapsibles.length > 0 && Array.from(allCollapsibles).every((el) => el.classList.contains('is-collapsed'));
-    if (allCollapsed) {
+    const isAllCollapsed = allCollapsibles.length > 0 && [...allCollapsibles].every((el) => el.classList.contains('is-collapsed'));
+    if (isAllCollapsed) {
       expandAllIn(metadataContainerEl, expandedPaths);
     } else {
       collapseAllIn(metadataContainerEl, expandedPaths);
@@ -817,54 +819,56 @@ function injectHeaderButtons(params: InjectHeaderButtonsParams): void {
   const fullKeyToggleButton = actionsEl.createDiv({ cls: 'clickable-icon nested-properties-full-key-toggle' });
   setIcon(fullKeyToggleButton, 'lucide-wrap-text');
   fullKeyToggleButton.setAttribute('aria-label', 'Toggle full key display');
-  fullKeyToggleButton.addEventListener('click', (e) => {
-    e.stopPropagation();
-    e.preventDefault();
+  fullKeyToggleButton.addEventListener('click', ($event) => {
+    $event.stopPropagation();
+    $event.preventDefault();
     onToggleFullKeyDisplay();
   });
 }
 
 function renderAddItemButton(params: RenderAddItemButtonParams): void {
-  const { arr, containerEl, onValueChange } = params;
-  const addItemButton = containerEl.createDiv({ cls: 'nested-properties-add-item' });
-  setIcon(addItemButton, 'plus');
-  addItemButton.createSpan({ text: 'Add item' });
-  addItemButton.addEventListener('click', (e) => {
-    e.stopPropagation();
-    e.preventDefault();
-    onValueChange([...arr, '']);
+  const { array, containerEl, onValueChange } = params;
+  const newItemButtonEl = containerEl.createDiv({ cls: 'nested-properties-add-item' });
+  setIcon(newItemButtonEl, 'plus');
+  newItemButtonEl.createSpan({ text: 'Add item' });
+  newItemButtonEl.addEventListener('click', ($event) => {
+    $event.stopPropagation();
+    $event.preventDefault();
+    onValueChange([...array, '']);
   });
 }
 
 function renderAddPropertyButton(params: RenderAddPropertyButtonParams): void {
-  const { containerEl, obj, onValueChange, setPendingFocusKey } = params;
-  const addPropertyButton = containerEl.createDiv({ cls: 'nested-properties-add-property' });
-  setIcon(addPropertyButton, 'plus');
-  addPropertyButton.createSpan({ text: 'Add property' });
-  addPropertyButton.addEventListener('click', (e) => {
-    e.stopPropagation();
-    e.preventDefault();
+  const { $object, containerEl, onValueChange, setPendingFocusKey } = params;
+  const newPropertyButtonEl = containerEl.createDiv({ cls: 'nested-properties-add-property' });
+  setIcon(newPropertyButtonEl, 'plus');
+  newPropertyButtonEl.createSpan({ text: 'Add property' });
+  newPropertyButtonEl.addEventListener('click', ($event) => {
+    $event.stopPropagation();
+    $event.preventDefault();
 
-    addPropertyButton.empty();
-    const input = addPropertyButton.createEl('input', {
+    newPropertyButtonEl.empty();
+    const input = newPropertyButtonEl.createEl('input', {
       attr: { placeholder: 'Property name', type: 'text' },
       cls: 'nested-properties-add-property-input'
     });
     input.focus();
 
     function restoreButton(): void {
-      addPropertyButton.empty();
-      setIcon(addPropertyButton, 'plus');
-      addPropertyButton.createSpan({ text: 'Add property' });
+      newPropertyButtonEl.empty();
+      setIcon(newPropertyButtonEl, 'plus');
+      newPropertyButtonEl.createSpan({ text: 'Add property' });
     }
 
-    function addKey(focusValue: boolean): void {
+    function addKey(shouldFocusValue: boolean): void {
       const key = input.value.trim();
-      if (key && !(key in obj)) {
-        if (focusValue) {
+      // `Object.keys` rather than `hasOwn`: the latter is a type guard, and its false branch narrows
+      // `$object` to something the spread below can no longer accept.
+      if (key && !Object.keys($object).includes(key)) {
+        if (shouldFocusValue) {
           setPendingFocusKey(key);
         }
-        onValueChange({ ...obj, [key]: '' });
+        onValueChange({ ...$object, [key]: '' });
       } else {
         restoreButton();
       }
@@ -877,7 +881,9 @@ function renderAddPropertyButton(params: RenderAddPropertyButtonParams): void {
         try {
           input.remove();
         } catch {
-          /* Already removed by blur */
+          /*
+          Already removed by blur
+          */
         }
         addKey(ke.key === 'Tab');
         return;
@@ -901,7 +907,7 @@ function sizeTopLevelKeyInputs(metadataContainerEl: HTMLElement): void {
   // The object/list keys and nested keys the plugin never set their `size` - without this they stay
   // Truncated even when full key display is on. The `size` is inert while the toggle is off, because
   // Obsidian's default input width overrides it until the body class switches to `width: auto`.
-  for (const input of metadataContainerEl.querySelectorAll('.metadata-property-key-input')) {
+  for (const input of metadataContainerEl.querySelectorAll(':scope .metadata-property-key-input')) {
     if (input.instanceOf(HTMLInputElement) && !input.closest('.nested-properties-container')) {
       input.size = Math.max(1, input.value.length);
     }
@@ -911,9 +917,9 @@ function sizeTopLevelKeyInputs(metadataContainerEl: HTMLElement): void {
 function updateToggleButton(params: UpdateToggleButtonParams): void {
   const { metadataContainerEl, toggleButton } = params;
   const allCollapsibles = metadataContainerEl.querySelectorAll('.nested-properties-collapsible');
-  const allCollapsed = allCollapsibles.length > 0 && Array.from(allCollapsibles).every((el) => el.classList.contains('is-collapsed'));
+  const isAllCollapsed = allCollapsibles.length > 0 && [...allCollapsibles].every((el) => el.classList.contains('is-collapsed'));
 
-  toggleButton.setAttribute('aria-label', allCollapsed ? 'Expand all nested properties' : 'Collapse all nested properties');
+  toggleButton.setAttribute('aria-label', isAllCollapsed ? 'Expand all nested properties' : 'Collapse all nested properties');
   toggleButton.empty();
-  setIcon(toggleButton, allCollapsed ? 'chevrons-up-down' : 'chevrons-down-up');
+  setIcon(toggleButton, isAllCollapsed ? 'chevrons-up-down' : 'chevrons-down-up');
 }
