@@ -2440,6 +2440,73 @@ describe('NestedPropertyRenderer', () => {
       const handler = findEventHandler(toggleButton, 'click');
       handler({ preventDefault: vi.fn(), stopPropagation: vi.fn() });
     });
+
+    it('should remember the path of every element expandAllIn expands', () => {
+      loadRenderer();
+
+      const collapsibleEl = createMockEl({ dataset: { path: 'test.md:expanded' } });
+      // All collapsed, so the toggle expands.
+      collapsibleEl.classList.contains.mockReturnValue(true);
+
+      clickHeaderToggle(collapsibleEl);
+
+      expect(collapsibleEl.classList.remove).toHaveBeenCalledWith('is-collapsed');
+      expect([...testAccess(renderer).expandedPaths]).toContain('test.md:expanded');
+    });
+
+    it('should forget the path of every element collapseAllIn collapses', () => {
+      loadRenderer();
+      testAccess(renderer).expandedPaths.add('test.md:collapsed');
+
+      const collapsibleEl = createMockEl({ dataset: { path: 'test.md:collapsed' } });
+      // Nothing collapsed, so the toggle collapses.
+      collapsibleEl.classList.contains.mockReturnValue(false);
+
+      clickHeaderToggle(collapsibleEl);
+
+      expect(collapsibleEl.classList.add).toHaveBeenCalledWith('is-collapsed');
+      expect([...testAccess(renderer).expandedPaths]).not.toContain('test.md:collapsed');
+    });
+
+    /**
+     * Renders a widget whose metadata container holds the given collapsible, then clicks the
+     * expand/collapse-all button the renderer injects into the header.
+     *
+     * @param collapsibleEl - The one collapsible the container reports.
+     */
+    function clickHeaderToggle(collapsibleEl: MockDomElement): void {
+      const toggleButton = createMockEl();
+      const headingEl = createMockEl();
+      const actionsEl = createMockEl();
+      actionsEl.createDiv.mockReturnValue(toggleButton);
+
+      const metaContainer = createMockEl({
+        createDiv: vi.fn(() => actionsEl),
+        querySelector: vi.fn((selector: string) => {
+          if (selector === '.nested-properties-header-actions') {
+            return null;
+          }
+          if (selector === '.nested-properties-collapsible') {
+            return createMockEl();
+          }
+          if (selector === '.metadata-properties-heading') {
+            return headingEl;
+          }
+          return null;
+        }),
+        querySelectorAll: vi.fn(() => [collapsibleEl])
+      });
+
+      const containerEl = createMockEl({ closest: vi.fn(() => metaContainer) });
+      const el = createMockEl();
+      el.createDiv.mockReturnValue(containerEl);
+
+      renderWidget('list', el, ['a'], createMockContext());
+      vi.runAllTimers();
+
+      const handler = findEventHandler(toggleButton, 'click');
+      handler({ preventDefault: vi.fn(), stopPropagation: vi.fn() });
+    }
   });
 
   describe('createSummary', () => {
