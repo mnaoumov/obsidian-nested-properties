@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## 1.4.1
+
+- test: cover the expanded-path bookkeeping of expand/collapse all
+- fix: await the settings load before the renderer that reads them
+- chore: update libs
+- refactor(test): collapse the shared integration suites per G47
+- chore: update libs
+- chore(vitest): adopt the shared Obsidian plugin vitest configuration
+- chore: update libs and clear the npm audit
+- docs: fix the demo vault download instructions
+
 ## 1.4.0
 
 - feat: re #1

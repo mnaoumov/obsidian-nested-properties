@@ -6,6 +6,6 @@
   "id": "nested-properties",
   "isDesktopOnly": false,
   "name": "Nested Properties",
-  "version": "1.4.0",
-  "minAppVersion": "1.12.7"
+  "version": "1.4.1",
+  "minAppVersion": "1.13.4"
 }
