@@ -10,7 +10,7 @@ import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettings } from './plugin-settings.ts';
 
 export class Plugin extends PluginBase {
-  protected override onloadImpl(): void {
+  protected override async onloadImpl(): Promise<void> {
     const dataHandler = new PluginDataHandler(this);
     const pluginSettingsComponent = this.addChild(
       new PluginSettingsComponent({
@@ -57,7 +57,7 @@ export class Plugin extends PluginBase {
         app: this.app
       })
     );
-    this.commandHandlerComponent.registerCommandHandlers(() => [
+    await this.commandHandlerComponent.registerCommandHandlers(() => [
       new OpenDemoVaultCommandHandler({
         app: this.app,
         pluginId: this.manifest.id,
