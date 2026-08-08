@@ -11,7 +11,7 @@ import {
   ContextId,
   evalInObsidian
 } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   beforeAll,
   beforeEach,
@@ -20,7 +20,7 @@ import {
   it
 } from 'vitest';
 
-const vault = getTempVault();
+const vault = getTemporaryVault();
 
 interface Context {
   file: TFile;
@@ -57,9 +57,7 @@ beforeAll(async () => {
     'test.md': ''
   });
   await evalInObsidian({
-    contextId,
-    // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-    fn: async ({ app, context }) => {
+    callback: async ({ app, context }) => {
       const listWidget = app.metadataTypeManager.registeredTypeWidgets['list'];
       if (!listWidget) {
         throw new Error('Mixed list widget is not registered');
@@ -79,6 +77,7 @@ beforeAll(async () => {
       await app.workspace.getLeaf(true).openFile(file);
       context.markdownView = app.workspace.getActiveFileView() as MarkdownView;
     },
+    contextId,
     vaultPath: vault.path
   });
 });
@@ -87,11 +86,10 @@ describe('type conversion integration', () => {
   describe('list -> mixed list', () => {
     it('should keep array as-is', async () => {
       const isValid = await evalInObsidian({
-        contextId,
-        // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-        fn: ({ context: { mixedListWidget } }) => {
+        callback: ({ context: { mixedListWidget } }) => {
           return mixedListWidget.validate([1, 2, 3]);
         },
+        contextId,
         vaultPath: vault.path
       });
 
@@ -102,11 +100,10 @@ describe('type conversion integration', () => {
   describe('list -> object', () => {
     it('should warn and convert to empty object', async () => {
       const isValid = await evalInObsidian({
-        contextId,
-        // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-        fn: ({ context: { objectWidget } }) => {
+        callback: ({ context: { objectWidget } }) => {
           return objectWidget.validate([1, 2, 3]);
         },
+        contextId,
         vaultPath: vault.path
       });
 
@@ -117,11 +114,10 @@ describe('type conversion integration', () => {
   describe('mixed list -> list (simple)', () => {
     it('should not warn for simple string array', async () => {
       const isValid = await evalInObsidian({
-        contextId,
-        // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-        fn: ({ context: { simpleListWidget } }) => {
+        callback: ({ context: { simpleListWidget } }) => {
           return simpleListWidget.validate(['a', 'b', 'c']);
         },
+        contextId,
         vaultPath: vault.path
       });
 
@@ -130,11 +126,10 @@ describe('type conversion integration', () => {
 
     it('should filter complex items from mixed array', async () => {
       const isValid = await evalInObsidian({
-        contextId,
-        // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-        fn: ({ context: { simpleListWidget } }) => {
+        callback: ({ context: { simpleListWidget } }) => {
           return simpleListWidget.validate(['a', { a: 2 }, 'b', [4]]);
         },
+        contextId,
         vaultPath: vault.path
       });
 
@@ -145,16 +140,14 @@ describe('type conversion integration', () => {
   describe('mixed list -> object', () => {
     it('should warn and convert to empty object', async () => {
       const isValid = await evalInObsidian({
-        // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-        args: { value: [1, { a: 2 }, 3] },
-        // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-        fn: ({ app, value }) => {
+        callback: ({ app, value }) => {
           const widget = app.metadataTypeManager.registeredTypeWidgets['object'];
           if (!widget) {
             throw new Error('Widget is not registered');
           }
           return widget.validate(value);
         },
+        input: { value: [1, { a: 2 }, 3] },
         vaultPath: vault.path
       });
       expect(isValid).toBe(false);
@@ -164,11 +157,10 @@ describe('type conversion integration', () => {
   describe('object -> list (simple)', () => {
     it('should warn and convert to empty array', async () => {
       const isValid = await evalInObsidian({
-        contextId,
-        // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-        fn: ({ context: { simpleListWidget } }) => {
+        callback: ({ context: { simpleListWidget } }) => {
           return simpleListWidget.validate({ a: 1, b: 2 });
         },
+        contextId,
         vaultPath: vault.path
       });
 
@@ -179,11 +171,10 @@ describe('type conversion integration', () => {
   describe('object -> mixed list', () => {
     it('should warn and wrap object in array', async () => {
       const isValid = await evalInObsidian({
-        contextId,
-        // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-        fn: ({ context: { mixedListWidget } }) => {
+        callback: ({ context: { mixedListWidget } }) => {
           return mixedListWidget.validate({ a: 1, b: 2 });
         },
+        contextId,
         vaultPath: vault.path
       });
 
@@ -194,11 +185,10 @@ describe('type conversion integration', () => {
   describe('primitive -> mixed list', () => {
     it('should warn and wrap string in array', async () => {
       const isValid = await evalInObsidian({
-        contextId,
-        // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-        fn: ({ context: { mixedListWidget } }) => {
+        callback: ({ context: { mixedListWidget } }) => {
           return mixedListWidget.validate('hello');
         },
+        contextId,
         vaultPath: vault.path
       });
 
@@ -207,11 +197,10 @@ describe('type conversion integration', () => {
 
     it('should warn and wrap number in array', async () => {
       const isValid = await evalInObsidian({
-        contextId,
-        // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-        fn: ({ context: { mixedListWidget } }) => {
+        callback: ({ context: { mixedListWidget } }) => {
           return mixedListWidget.validate(42);
         },
+        contextId,
         vaultPath: vault.path
       });
 

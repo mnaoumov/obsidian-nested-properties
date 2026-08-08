@@ -12,7 +12,7 @@ import {
   ContextId,
   evalInObsidian
 } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   afterAll,
   afterEach,
@@ -23,7 +23,7 @@ import {
   it
 } from 'vitest';
 
-const vault = getTempVault();
+const vault = getTemporaryVault();
 
 interface Context {
   file: TFile;
@@ -65,9 +65,7 @@ beforeAll(async () => {
     'test.md': ''
   });
   await evalInObsidian({
-    contextId,
-    // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-    fn: async ({ app, context }) => {
+    callback: async ({ app, context }) => {
       const listWidget = app.metadataTypeManager.registeredTypeWidgets['list'];
       if (!listWidget) {
         throw new Error('Mixed list widget is not registered');
@@ -87,6 +85,7 @@ beforeAll(async () => {
       await app.workspace.getLeaf(true).openFile(file);
       context.markdownView = app.workspace.getActiveFileView() as MarkdownView;
     },
+    contextId,
     vaultPath: vault.path
   });
 });
@@ -98,9 +97,7 @@ afterAll(async () => {
 describe('widget rendering integration', () => {
   it('should not loop when mixed list widget receives null value', async () => {
     const onChangeCallCount = await evalInObsidian({
-      contextId,
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      fn: ({ app, context: { mixedListWidget } }) => {
+      callback: ({ app, context: { mixedListWidget } }) => {
         // eslint-disable-next-line no-shadow -- Executed in different processes.
         let onChangeCallCount = 0;
         const el = createDiv();
@@ -123,6 +120,7 @@ describe('widget rendering integration', () => {
 
         return onChangeCallCount;
       },
+      contextId,
       vaultPath: vault.path
     });
 
@@ -131,9 +129,7 @@ describe('widget rendering integration', () => {
 
   it('should not loop when object widget receives null value', async () => {
     const onChangeCallCount = await evalInObsidian({
-      contextId,
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      fn: ({ app, context: { mixedListWidget } }) => {
+      callback: ({ app, context: { mixedListWidget } }) => {
         function noop(): void {
           /*
           No-op
@@ -156,6 +152,7 @@ describe('widget rendering integration', () => {
 
         return onChangeCallCount;
       },
+      contextId,
       vaultPath: vault.path
     });
 
@@ -166,9 +163,7 @@ describe('widget rendering integration', () => {
 describe('frontmatter editing integration', () => {
   it('should not break when typing a new property name', { retry: 3 }, async () => {
     const contentAfterWait = await evalInObsidian({
-      contextId,
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      fn: async ({ context: { markdownView } }) => {
+      callback: async ({ context: { markdownView } }) => {
         const editor = markdownView.editor;
 
         editor.setCursor({ ch: 0, line: 1 });
@@ -178,6 +173,7 @@ describe('frontmatter editing integration', () => {
 
         return editor.getValue();
       },
+      contextId,
       vaultPath: vault.path
     });
 
@@ -188,9 +184,7 @@ describe('frontmatter editing integration', () => {
 describe('type inference integration', () => {
   it('should infer simple array as list, not mixed list', async () => {
     const { expectedType, inferredType } = await evalInObsidian({
-      contextId,
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      fn: ({ context: { markdownView } }) => {
+      callback: ({ context: { markdownView } }) => {
         const listEntry = markdownView.metadataEditor.rendered.find(
           (r) => r.entry.key === 'simpleList'
         );
@@ -200,6 +194,7 @@ describe('type inference integration', () => {
           inferredType: listEntry?.typeInfo.inferred.type
         };
       },
+      contextId,
       vaultPath: vault.path
     });
 
@@ -211,11 +206,10 @@ describe('type inference integration', () => {
 describe('multitext validate patch integration', () => {
   it('should accept simple non-string primitive array', async () => {
     const isValid = await evalInObsidian({
-      contextId,
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      fn: ({ context: { simpleListWidget } }) => {
+      callback: ({ context: { simpleListWidget } }) => {
         return simpleListWidget.validate([1, 2, 3]);
       },
+      contextId,
       vaultPath: vault.path
     });
 
@@ -226,24 +220,22 @@ describe('multitext validate patch integration', () => {
 describe('nested property type persistence integration', () => {
   afterEach(async () => {
     await evalInObsidian({
-      contextId,
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      fn: async ({ app }) => {
+      callback: async ({ app }) => {
         await app.metadataTypeManager.unsetType('object.d');
         await app.metadataTypeManager.unsetType('versions.released');
       },
+      contextId,
       vaultPath: vault.path
     });
   });
 
   it('persists a nested type (including reserved `tags`) under its dotted key', async () => {
     const assignedType = await evalInObsidian({
-      contextId,
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      fn: async ({ app }) => {
+      callback: async ({ app }) => {
         await app.metadataTypeManager.setType('object.d', 'tags');
         return app.metadataTypeManager.getAssignedWidget('object.d');
       },
+      contextId,
       vaultPath: vault.path
     });
 
@@ -252,9 +244,7 @@ describe('nested property type persistence integration', () => {
 
   it('renders a nested scalar with its persisted (assigned) type', { retry: 3 }, async () => {
     const propertyType = await evalInObsidian({
-      contextId,
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      fn: async ({ app, context: { markdownView } }) => {
+      callback: async ({ app, context: { markdownView } }) => {
         await app.metadataTypeManager.setType('object.d', 'number');
         const data = markdownView.metadataEditor.serialize();
         markdownView.metadataEditor.synchronize({});
@@ -269,6 +259,7 @@ describe('nested property type persistence integration', () => {
         }
         return null;
       },
+      contextId,
       vaultPath: vault.path
     });
 
@@ -277,9 +268,7 @@ describe('nested property type persistence integration', () => {
 
   it('applies a collapsed per-field type to every array item', { retry: 3 }, async () => {
     const propertyTypes = await evalInObsidian({
-      contextId,
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      fn: async ({ app, context: { markdownView } }) => {
+      callback: async ({ app, context: { markdownView } }) => {
         await app.metadataTypeManager.setType('versions.released', 'number');
         const data = markdownView.metadataEditor.serialize();
         markdownView.metadataEditor.synchronize({});
@@ -295,6 +284,7 @@ describe('nested property type persistence integration', () => {
         }
         return types;
       },
+      contextId,
       vaultPath: vault.path
     });
 
@@ -310,9 +300,7 @@ describe('nested value preservation integration (issue #7)', () => {
   // Obsidian performs for a scalar edit, which is what issue #7 regressed.
   it('preserves a sibling scalar value across a later in-place edit', { retry: 3 }, async () => {
     const result = await evalInObsidian({
-      contextId,
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      fn: ({ app, context: { objectWidget } }) => {
+      callback: ({ app, context: { objectWidget } }) => {
         const container = createDiv();
         activeDocument.body.append(container);
 
@@ -346,6 +334,7 @@ describe('nested value preservation integration (issue #7)', () => {
 
         return current;
       },
+      contextId,
       vaultPath: vault.path
     });
 
@@ -355,9 +344,7 @@ describe('nested value preservation integration (issue #7)', () => {
 
   it('preserves existing nested object values when a new property is added', { retry: 3 }, async () => {
     const result = await evalInObsidian({
-      contextId,
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      fn: ({ app, context: { objectWidget } }) => {
+      callback: ({ app, context: { objectWidget } }) => {
         const container = createDiv();
         activeDocument.body.append(container);
 
@@ -404,6 +391,7 @@ describe('nested value preservation integration (issue #7)', () => {
 
         return current;
       },
+      contextId,
       vaultPath: vault.path
     });
 

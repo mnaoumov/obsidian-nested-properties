@@ -1,5 +1,5 @@
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   beforeEach,
   describe,
@@ -7,7 +7,7 @@ import {
   it
 } from 'vitest';
 
-const vault = getTempVault();
+const vault = getTemporaryVault();
 
 beforeEach(() => {
   vault.populate({
@@ -43,8 +43,7 @@ interface KeyDisplayMeasurement {
 describe('full key display command', () => {
   it('toggles nested property key truncation', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      fn: async ({ app, obsidianModule }) => {
+      callback: async ({ app, obsidianModule }) => {
         const TRUNCATION_TOLERANCE_IN_PIXELS = 2;
         const SETTLE_IN_MILLISECONDS = 300;
 
@@ -112,8 +111,7 @@ describe('full key display command', () => {
 
   it('toggles truncation of a top-level object property key', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      fn: async ({ app, obsidianModule }) => {
+      callback: async ({ app, obsidianModule }) => {
         const TRUNCATION_TOLERANCE_IN_PIXELS = 2;
         const SETTLE_IN_MILLISECONDS = 300;
         const TOP_LEVEL_KEY_SELECTOR = '.metadata-property.nested-properties-collapsible > .metadata-property-key > .metadata-property-key-input';
@@ -188,8 +186,7 @@ describe('full key display command', () => {
 
   it('toggles truncation of a plain top-level scalar property key', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      fn: async ({ app, obsidianModule }) => {
+      callback: async ({ app, obsidianModule }) => {
         const TRUNCATION_TOLERANCE_IN_PIXELS = 2;
         const SETTLE_IN_MILLISECONDS = 300;
         const SCALAR_KEY = 'a_very_long_top_level_scalar_property_key_that_gets_truncated';
@@ -255,8 +252,7 @@ describe('full key display command', () => {
 
   it('toggles nested property key truncation via the header button', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      fn: async ({ app, obsidianModule }) => {
+      callback: async ({ app, obsidianModule }) => {
         const TRUNCATION_TOLERANCE_IN_PIXELS = 2;
         const SETTLE_IN_MILLISECONDS = 300;
 
@@ -321,8 +317,7 @@ describe('full key display command', () => {
 
   it('persists full key display across a plugin reload', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      fn: async ({ app }) => {
+      callback: async ({ app }) => {
         const SETTLE_IN_MILLISECONDS = 300;
         const PLUGIN_ID = 'nested-properties';
         const FULL_KEY_CLASS = 'nested-properties-full-key-display';

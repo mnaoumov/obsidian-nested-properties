@@ -19,7 +19,7 @@
  */
 
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
   expect,
@@ -43,8 +43,7 @@ interface SearchViewLike {
 describe('Native search understands nested properties', () => {
   it('returns the note whose nested property matches and not the one that does not', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, lib: { waitUntil } }) {
+      async callback({ app, lib: { waitUntil } }) {
         const WAIT_TIMEOUT_IN_MILLISECONDS = 20_000;
         const FOLDER = 'np-search';
         const MATCH_PATH = `${FOLDER}/match.md`;
@@ -124,7 +123,7 @@ describe('Native search understands nested properties', () => {
           await cleanup();
         }
       },
-      vaultPath: getTempVault().path
+      vaultPath: getTemporaryVault().path
     });
 
     // A nested value query returns only the matching book, not the other author.

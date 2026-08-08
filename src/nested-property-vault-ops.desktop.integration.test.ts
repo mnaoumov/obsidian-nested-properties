@@ -17,7 +17,7 @@
  */
 
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
   expect,
@@ -27,8 +27,7 @@ import {
 describe('Nested property vault-wide operations', () => {
   it('renames a nested property across every note that has it', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, lib: { waitUntil } }) {
+      async callback({ app, lib: { waitUntil } }) {
         const WAIT_TIMEOUT_IN_MILLISECONDS = 20_000;
         const FOLDER = 'np-vault-ops-rename';
         const FROM_PATH = 'npVaultOpsRename.owner';
@@ -130,7 +129,7 @@ describe('Nested property vault-wide operations', () => {
           await cleanup();
         }
       },
-      vaultPath: getTempVault().path
+      vaultPath: getTemporaryVault().path
     });
 
     expect(result.contentA).toContain('maintainer: alice');
@@ -141,8 +140,7 @@ describe('Nested property vault-wide operations', () => {
 
   it('deletes a nested property from every note that has it', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, lib: { waitUntil } }) {
+      async callback({ app, lib: { waitUntil } }) {
         const WAIT_TIMEOUT_IN_MILLISECONDS = 20_000;
         const FOLDER = 'np-vault-ops-delete';
         const PATH = 'npVaultOpsDelete.channel';
@@ -236,7 +234,7 @@ describe('Nested property vault-wide operations', () => {
           await cleanup();
         }
       },
-      vaultPath: getTempVault().path
+      vaultPath: getTemporaryVault().path
     });
 
     expect(result.contentA).not.toContain('channel:');
