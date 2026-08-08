@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.4.2
+
+- chore: update libs and adopt obsidian-integration-testing 10
+
 ## 1.4.1
 
 - test: cover the expanded-path bookkeeping of expand/collapse all
