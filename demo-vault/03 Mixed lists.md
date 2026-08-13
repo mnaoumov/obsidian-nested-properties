@@ -10,8 +10,6 @@ mixedList:
   - nested: value
   - [a, b, c]
 ---
-[Docs](https://github.com/mnaoumov/obsidian-nested-properties#features)
-
 # Mixed lists
 
 When every item in an array is the same simple type, Nested Properties shows it as a normal **list**. When the items are of **mixed** types (text, number, boolean, nested object, nested array), it shows a **Mixed list** widget instead, so each item keeps its own type and stays editable.

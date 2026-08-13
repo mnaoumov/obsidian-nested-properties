@@ -14,8 +14,6 @@ config:
           maxConnections: 20
           timeoutMs: 30000
 ---
-[Docs](https://github.com/mnaoumov/obsidian-nested-properties#features)
-
 # Deeply nested and scrolling
 
 Deeply nested structures can grow wider than the Properties panel. Nested Properties keeps them on one line and adds a **floating horizontal scrollbar** so you can scroll sideways without losing your place.

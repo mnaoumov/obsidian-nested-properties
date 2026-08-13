@@ -15,8 +15,6 @@ address:
     latitude: 40.7128
     longitude: -74.006
 ---
-[Docs](https://github.com/mnaoumov/obsidian-nested-properties#features)
-
 # Nested objects
 
 A YAML **object** (a mapping of key/value pairs) renders as a collapsible node in the Properties editor, with each nested key on its own indented row.

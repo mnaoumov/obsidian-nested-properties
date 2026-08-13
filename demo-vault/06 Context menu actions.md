@@ -8,8 +8,6 @@ project:
     name: Ada
     email: ada@example.com
 ---
-[Docs](https://github.com/mnaoumov/obsidian-nested-properties#features)
-
 # Context menu actions
 
 Right-click any nested key for a context menu: **Cut**, **Copy**, **Paste**, and **Remove**. You can also add new properties at any level. Cut, copy, and paste move JSON between nodes, so you can restructure frontmatter without touching the raw YAML.

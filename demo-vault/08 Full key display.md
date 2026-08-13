@@ -4,8 +4,6 @@ metadata:
   anotherRatherLongNestedKeyThatAlsoGetsTruncatedWhenSpaceIsTight: value
   short: ok
 ---
-[Docs](https://github.com/mnaoumov/obsidian-nested-properties#commands)
-
 # Full key display
 
 By default, long keys are **truncated with a trailing ellipsis** to save space - both plain top-level keys (like `aVeryLongPropertyKeyName…` above) and nested ones. The **Toggle full key display** command (and the matching button in the Properties header) switches keys to their full text, widening each field and scrolling horizontally where needed.
