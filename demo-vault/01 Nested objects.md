@@ -21,6 +21,8 @@ A YAML **object** (a mapping of key/value pairs) renders as a collapsible node i
 
 ## Look at the Properties panel
 
+![Nested properties rendered as a collapsible tree in the Properties panel](<./_assets/images/screenshot.png>)
+
 1. Make sure the **Properties** are visible at the top of this note.
 2. Find `level1Nested` and `address` - each shows a `{ ... }` summary chip when collapsed.
 3. Click the triangle to expand a node, or use the **collapse/expand all** button in the Properties header.

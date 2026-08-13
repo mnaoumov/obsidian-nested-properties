@@ -5,9 +5,12 @@
 [![GitHub downloads](https://img.shields.io/github/downloads/mnaoumov/obsidian-nested-properties/total)](https://github.com/mnaoumov/obsidian-nested-properties/releases)
 [![Coverage: 100%](https://img.shields.io/badge/coverage-100%25-brightgreen)](https://github.com/mnaoumov/obsidian-nested-properties)
 
-This is a plugin for [Obsidian](https://obsidian.md/) that allows to view/edit nested frontmatter properties.
+YAML frontmatter nests, but [Obsidian](https://obsidian.md/)'s Properties editor does not. Give a note
+a nested structure and the panel shows you nothing useful — the values are there in the file, and the
+only way to read or change them is to edit the raw YAML by hand and hope you get the indentation right.
 
-Inspired by the [Feature request](https://forum.obsidian.md/t/properties-bases-support-multi-level-yaml-mapping-of-mappings-nested-attributes/63826).
+This plugin renders nested objects and arrays as a collapsible tree in the Properties panel, where you
+can read them, edit them, change their types, and rename or delete a nested key across the whole vault.
 
 ```yaml
 ---
@@ -23,87 +26,41 @@ level1Nested:
 ---
 ```
 
-![Nested Properties Screenshot](<./images/screenshot.png>)
-
-## Features
-
-- Render nested YAML objects and arrays as a collapsible tree inside the Properties editor
-- Collapse/expand individual properties or all at once
-- Context menu (Cut, Copy, Paste, Remove) on nested properties
-- Set and **persist** the type of any nested property — text, number, checkbox, date, list, object, and even **Tags** (which Obsidian's UI won't let you assign). The choice is saved to the vault's `types.json` under the property's dotted path (e.g. `foo.bar.property`), so it survives reload and applies across notes (see [Nested property types](#nested-property-types))
-- Add new properties at any nesting level
-- Horizontal scrolling for deeply nested structures
-- Toggle full display of nested property keys (see [Commands](#commands))
-- **Find notes by nested property in Obsidian's own search** — type a dotted key such as `[book.author: value]` right in the search bar (see [Nested property search](#nested-property-search))
-
-## Commands
-
-The plugin adds the following commands to the command palette (they can be bound to a hotkey):
-
-- **`Toggle full key display`** — An on/off toggle that switches nested property keys between the default view (long keys truncated with a trailing ellipsis) and the full key text. Deeply nested keys scroll horizontally.
-- **`Rename a nested property in all notes`** — Pick a nested property path (shown with the number of notes that use it), then enter the new dotted path. The key is renamed in every note that contains it. Notes where the target path already exists are skipped so nothing is overwritten. This complements Obsidian's built-in **Properties view: Show all properties**, which only exposes top-level property names.
-- **`Delete a nested property from all notes`** — Pick a nested property path and confirm; the key is removed from every note that contains it.
-
-The same on/off toggle is also available as a button in the Properties header (next to the collapse/expand-all button), so you can flip it directly from the frontmatter without opening the command palette. The button is highlighted while full key display is on.
-
-## Nested property search
-
-Obsidian's built-in search understands *top-level* property operators like `[author]` or `[status: done]`, but out of the box it cannot reach into nested frontmatter such as `book.author`. This plugin extends Obsidian's **own search** so a nested path written as a dotted key works directly in the search bar — no separate command, and results appear in the normal search pane:
-
-- `[book.author]` — notes that have the nested `book.author` property.
-- `[book.author: Ursula K. Le Guin]` — notes whose nested `book.author` equals that value.
-- `[book.genres: fantasy]` — a query value matches any member of a nested list.
-
-Because this is real Obsidian search, a nested-property operator composes with every other search feature — content terms, `path:`, `OR`, `-` negation — and works inside embedded ` ```query ` blocks. Top-level property operators keep working exactly as before; this only adds the nested paths Obsidian could not previously reach.
-
-The chosen state is remembered and restored the next time Obsidian starts.
-
-## Nested property types
-
-Right-click any nested key (or click its type icon) and open the **Property type** submenu to convert a value to another type — text, number, checkbox, date, list, or object. Converting a rich value to a simpler one can lose data, so a confirmation dialog appears first.
-
-Unlike Obsidian's built-in property types, the submenu also offers reserved types such as **Tags**, which Obsidian's own UI won't let you assign. This is handy when you want, for example, a nested `tags` list to behave exactly like the top-level one.
-
-The chosen type is **persisted** to the vault's `.obsidian/types.json` under the property's dotted path, so it survives reloads and is shared across notes:
-
-```yaml
-foo:
-  bar:
-    property: "Value"
-```
-
-```json
-{
-  "types": {
-    "foo.bar.property": "text"
-  }
-}
-```
-
-For arrays of objects, a field's type is stored once for the whole array (the item index is collapsed), so it applies to every item:
-
-```yaml
-versions:
-  - version: "1.0.0"
-    released: 2026-03-06
-  - version: "1.1.0"
-    released: 2026-03-21
-```
-
-```json
-{
-  "types": {
-    "versions.version": "text",
-    "versions.released": "date"
-  }
-}
-```
-
-The context menu offers two scopes for a field inside an array item: **Property type (all items)** writes the shared per-field key (`versions.released`), while **Property type (this item only)** writes a per-index override (`versions.0.released`) that wins for just that item. When a chosen type matches what the plugin would infer from the value anyway, the entry is removed from `types.json` to keep it tidy.
+Inspired by this [feature request](https://forum.obsidian.md/t/properties-bases-support-multi-level-yaml-mapping-of-mappings-nested-attributes/63826).
 
 ## Demo vault
 
-A ready-made [demo vault](./demo-vault/README.md) ships with the plugin. Run the **`Open demo vault`** command to download the current release's vault and open it in a new window. Each note's frontmatter showcases one feature (nested objects, arrays, mixed lists, deeply nested structures, type changes, and the full-key-display toggle) — open a note and look at the Properties panel.
+**The documentation is a demo vault.** Every feature has a note whose own frontmatter demonstrates it —
+open the note, look at the Properties panel, and you are looking at the feature.
+
+**[Start reading here](<./demo-vault/00 Start.md>)** — it is plain markdown, so it works on GitHub with
+nothing installed.
+
+A copy of the vault ships with every release. You can access it via any of the following:
+
+1. Running the **Nested Properties: Open demo vault** command.
+2. Downloading `nested-properties-demo-vault-<version>.zip` (`<version>` is the release version) from the [Releases](https://github.com/mnaoumov/obsidian-nested-properties/releases).
+3. Browsing its source in [`demo-vault/`](./demo-vault/README.md) in this repository.
+
+## What it does
+
+- **Nested objects and arrays as a tree** in the Properties panel, collapsible to any depth.
+  [01 Nested objects](<./demo-vault/01 Nested objects.md>) ·
+  [02 Nested arrays](<./demo-vault/02 Nested arrays.md>) ·
+  [05 Deeply nested and scrolling](<./demo-vault/05 Deeply nested and scrolling.md>)
+- **Mixed and complex shapes** — lists holding different types, and arrays of objects.
+  [03 Mixed lists](<./demo-vault/03 Mixed lists.md>) ·
+  [04 Array of objects](<./demo-vault/04 Array of objects.md>)
+- **Edit in place** — add, remove and reorder entries from the context menu, and change a nested
+  property's type without rewriting the YAML.
+  [06 Context menu actions](<./demo-vault/06 Context menu actions.md>) ·
+  [07 Changing property types](<./demo-vault/07 Changing property types.md>)
+- **Rename or delete a nested key across the whole vault**, not just in the note you are looking at.
+  [09 Vault-wide rename and delete](<./demo-vault/09 Vault-wide rename and delete.md>)
+- **Find them** — search nested properties the way you search anything else.
+  [10 Search nested properties](<./demo-vault/10 Search nested properties.md>)
+- **See the full key** of a nested entry when the short name is ambiguous.
+  [08 Full key display](<./demo-vault/08 Full key display.md>)
 
 ## Installation
 
@@ -128,6 +85,14 @@ window.DEBUG.enable('nested-properties');
 ```
 
 For more details, refer to the [documentation](https://mnaoumov.dev/obsidian-dev-utils/guides/debugging/).
+
+## Changelog
+
+All notable changes to this project will be documented in the [CHANGELOG](./CHANGELOG.md).
+
+## Contributing
+
+Contributions are welcome — see [CONTRIBUTING](./CONTRIBUTING.md) to get set up.
 
 ## Support
 
