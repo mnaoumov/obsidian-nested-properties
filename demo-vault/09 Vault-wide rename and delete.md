@@ -10,8 +10,10 @@ project:
 
 Obsidian's built-in **Properties view: Show all properties** lists only *top-level* property names, so nested keys like `project.meta.owner` cannot be renamed or removed across the whole vault from there. This plugin adds two commands that operate on nested properties across **every** note that contains them:
 
-- **Rename a nested property in all notes** - pick a nested path (shown with the number of notes that use it), then type the new dotted path.
-- **Delete a nested property from all notes** - pick a nested path and confirm; it is removed from every note that has it.
+- **Rename a nested property in all notes**
+  - pick a nested path (shown with the number of notes that use it), then type the new dotted path.
+- **Delete a nested property from all notes**
+  - pick a nested path and confirm; it is removed from every note that has it.
 
 ## Seed a few notes first
 

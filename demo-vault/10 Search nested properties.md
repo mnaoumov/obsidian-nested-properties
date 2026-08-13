@@ -11,9 +11,12 @@ Obsidian's built-in search understands *top-level* property operators like `[aut
 
 Write the nested key as a dotted path inside the property brackets:
 
-- `[book.author]` - notes that have the nested `book.author` property.
-- `[book.author: Ursula K. Le Guin]` - notes whose `book.author` equals that value.
-- `[book.genres: fantasy]` - a query value matches any member of a nested list, so this matches the note above.
+- `[book.author]`
+  - notes that have the nested `book.author` property.
+- `[book.author: Ursula K. Le Guin]`
+  - notes whose `book.author` equals that value.
+- `[book.genres: fantasy]`
+  - a query value matches any member of a nested list, so this matches the note above.
 
 Because it is real Obsidian search, a nested-property operator composes with everything else - content terms, `path:`, `OR`, `-`, and so on (e.g. `[book.genres: fantasy] -[book.author: Ursula K. Le Guin]`), and it works inside embedded ` ```query ` blocks too.
 
