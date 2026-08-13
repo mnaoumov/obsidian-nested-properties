@@ -12,8 +12,6 @@ weeklyHours:
   - [9, 17]
   - [0, 0]
 ---
-[Docs](https://github.com/mnaoumov/obsidian-nested-properties#features)
-
 # Nested arrays
 
 An array renders as a collapsible list. An **array of arrays** (like `matrix`) nests one list inside another, each row expandable on its own.

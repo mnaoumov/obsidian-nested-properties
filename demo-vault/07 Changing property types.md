@@ -14,8 +14,6 @@ releases:
   - version: "1.1.0"
     released: "2026-03-21"
 ---
-[Docs](https://github.com/mnaoumov/obsidian-nested-properties#nested-property-types)
-
 # Changing property types
 
 Right-click any nested key and open the **Property type** submenu to convert a value to another type - text, number, checkbox, date, list, object, and even **Tags**. Converting a rich value to a simpler one can lose data, so Nested Properties shows a confirmation dialog first. The chosen type is **saved** to the vault's `.obsidian/types.json` under the property's dotted path, so it survives a reload.

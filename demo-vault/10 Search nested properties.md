@@ -5,8 +5,6 @@ book:
     - fantasy
     - sci-fi
 ---
-[Docs](https://github.com/mnaoumov/obsidian-nested-properties#commands)
-
 # Search nested properties
 
 Obsidian's built-in search understands *top-level* property operators like `[author]` or `[status: done]`, but out of the box it cannot reach into nested frontmatter such as `book.author`. This plugin teaches Obsidian's **own search** to understand nested paths - so you just type the query into the normal search bar, and results appear in the search pane like any other query. No separate command, and no Base required.

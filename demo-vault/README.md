@@ -1,3 +1,5 @@
+# Nested Properties demo vault
+
 This is an [Obsidian](https://obsidian.md/) vault demonstrating features of the [Nested Properties](https://github.com/mnaoumov/obsidian-nested-properties) plugin.
 
 ## Opening this vault
