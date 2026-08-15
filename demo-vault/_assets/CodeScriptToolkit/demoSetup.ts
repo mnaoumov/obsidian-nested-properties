@@ -46,6 +46,84 @@ export async function seedSearchDemoNotes(app: App): Promise<void> {
   new Notice(`Seeded ${String(Object.keys(notes).length)} books. Now run "Find notes by nested property" and try book.genres: fantasy.`);
 }
 
+// Both seeders above are idempotent - pressing one again rewrites its notes - so re-seeding IS the
+// reset after a vault-wide rename or delete. What re-seeding cannot do is get rid of the folders, so
+// this removes them once you are done.
+export async function removeDemoFolders(app: App): Promise<void> {
+  let removedCount = 0;
+  for (const folder of [VAULT_WIDE_DEMO_FOLDER, SEARCH_DEMO_FOLDER]) {
+    const abstractFile = app.vault.getFolderByPath(folder);
+    if (abstractFile) {
+      await app.fileManager.trashFile(abstractFile);
+      removedCount++;
+    }
+  }
+  new Notice(removedCount > 0 ? `Removed ${String(removedCount)} demo folder(s).` : 'No demo folders to remove.');
+}
+
+// Runs one of the plugin's vault-wide commands. Both open a picker, so the choosing stays yours - this
+// only saves hunting through the command palette while reading about them.
+export function runCommand(app: App, commandId: string): void {
+  app.commands.executeCommandById(`nested-properties:${commandId}`);
+}
+
+// `07 Changing property types` is the one cumulative walkthrough here: each conversion rewrites this
+// note's own frontmatter AND records the chosen type in `.obsidian/types.json`, which the note points
+// out survives a reload. Without this, trying step 3 twice is impossible - the second run starts from
+// the converted value rather than the original.
+export async function resetPropertyTypesDemo(app: App): Promise<void> {
+  const NOTE_PATH = '07 Changing property types.md';
+  const ORIGINAL_FRONTMATTER = [
+    'countAsText: "42"',
+    'enabledAsText: "true"',
+    'dueDate: 2026-07-18',
+    'apiConfig:',
+    '  retries: 3',
+    '  verbose: false',
+    '  labels:',
+    '    - urgent',
+    '    - backend',
+    'releases:',
+    '  - version: "1.0.0"',
+    '    released: "2026-03-06"',
+    '  - version: "1.1.0"',
+    '    released: "2026-03-21"'
+  ].join('\n');
+
+  const note = app.vault.getFileByPath(NOTE_PATH);
+  if (!note) {
+    new Notice(`${NOTE_PATH} is not in this vault.`);
+    return;
+  }
+
+  await app.vault.process(note, (content) => {
+    const match = /^---\n[\s\S]*?\n---\n/.exec(content);
+    const body = match ? content.slice(match[0].length) : content;
+    return `---\n${ORIGINAL_FRONTMATTER}\n---\n${body}`;
+  });
+
+  await forgetDemoPropertyTypes(app);
+  new Notice('Property-type demo reset — frontmatter and saved types are back to how they shipped.');
+}
+
+// Unset through `metadataTypeManager.unsetType`, the same API the plugin itself writes with
+// (`nested-property-renderer.ts`), rather than editing `.obsidian/types.json` behind Obsidian's back —
+// The manager holds the map in memory and would overwrite a hand-edited file on its next save.
+// The chosen type is stored under the property's DOTTED path, so the demo's entries are the ones whose
+// Key is or starts with one of these. Anything you typed yourself is left alone.
+async function forgetDemoPropertyTypes(app: App): Promise<void> {
+  const DEMO_TYPE_KEYS = ['countAsText', 'enabledAsText', 'dueDate', 'apiConfig', 'releases'];
+  // `assignedWidgets` is the map of keys with an EXPLICITLY assigned type — the ones `unsetType`
+  // Clears. Not `properties`, which also lists every property merely seen in the vault.
+  const typeKeys = Object.keys(app.metadataTypeManager.assignedWidgets ?? {});
+
+  for (const typeKey of typeKeys) {
+    if (DEMO_TYPE_KEYS.some((demoKey) => typeKey === demoKey || typeKey.startsWith(`${demoKey}.`))) {
+      await app.metadataTypeManager.unsetType(typeKey);
+    }
+  }
+}
+
 async function writeDemoNotes(app: App, folder: string, notes: Record<string, string>): Promise<void> {
   if (!app.vault.getAbstractFileByPath(folder)) {
     await app.vault.createFolder(folder);

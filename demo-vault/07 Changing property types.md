@@ -25,3 +25,16 @@ Right-click any nested key and open the **Property type** submenu to convert a v
 3. Right-click `apiConfig` (an object), choose **Property type -> Text**. Because that would flatten an object into a string, a **Display as text?** confirmation appears - confirm or cancel.
 4. Expand `apiConfig`, right-click `labels`, and choose **Property type -> Tags** - a type Obsidian's own UI won't let you assign. Reload the vault and the choice sticks.
 5. Expand a `releases` item and right-click `released`. Use **Property type (all items) -> Date** to type that field for every release at once, or **Property type (this item only)** to override a single one.
+
+## Start over
+
+This is the one walkthrough here that accumulates: each conversion rewrites this note's own frontmatter **and** records the chosen type, which - as step 4 points out - survives a reload. So trying step 3 a second time would otherwise start from the already-converted value.
+
+```code-button
+---
+caption: Reset this note's properties and forget the saved types
+---
+await require('/demoSetup.ts').resetPropertyTypesDemo(app);
+```
+
+Manual equivalent: restore this note's frontmatter by hand, and reset each property's type back to the one Obsidian infers. Only the types this note's own keys use are forgotten - anything you set elsewhere is untouched.

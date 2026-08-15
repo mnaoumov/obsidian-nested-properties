@@ -11,3 +11,7 @@
 !.obsidian/plugins/nested-properties/
 .obsidian/plugins/nested-properties/*
 !.obsidian/plugins/nested-properties/data.json
+
+# Created by the seeding buttons in `09 Vault-wide rename and delete.md` and `10 Search nested properties.md`.
+Vault-wide demo/
+Search demo/

@@ -30,6 +30,34 @@ await require('/demoSetup.ts').seedVaultWideDemoNotes(app);
 
 1. Click **Seed vault-wide demo notes** above (or add your own notes with a shared nested key).
 2. Run the **Rename a nested property in all notes** command. Choose `project.meta.owner` - the picker shows how many notes use it - and enter `project.meta.maintainer`. Every note that had `project.meta.owner` now uses the new key.
+
+   ```code-button
+   ---
+   caption: Rename a nested property in all notes
+   ---
+   require('/demoSetup.ts').runCommand(app, 'rename-nested-property-across-vault');
+   ```
+
 3. Run the **Delete a nested property from all notes** command, choose `project.release.channel`, and confirm - it is removed everywhere, while sibling keys like `project.meta.status` are left intact.
+
+   ```code-button
+   ---
+   caption: Delete a nested property from all notes
+   ---
+   require('/demoSetup.ts').runCommand(app, 'delete-nested-property-across-vault');
+   ```
+
+Manual equivalent for both: the Command Palette entries of the same names. Each opens a picker, so the choosing is still yours.
+
+Both operations change the seeded notes, so press **Seed vault-wide demo notes** again to start over - it rewrites them. When you have finished with this note and [10 Search nested properties](<./10 Search nested properties.md>), clear up:
+
+```code-button
+---
+caption: Remove the seeded demo folders
+---
+await require('/demoSetup.ts').removeDemoFolders(app);
+```
+
+Manual equivalent: delete the `Vault-wide demo` and `Search demo` folders.
 
 Only nested paths (two or more segments) are offered; plain top-level keys are still managed by Obsidian's own "All properties" view. When renaming, notes where the target path already exists are skipped so nothing is overwritten.
