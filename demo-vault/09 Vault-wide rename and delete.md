@@ -28,24 +28,25 @@ await require('/demoSetup.ts').seedVaultWideDemoNotes(app);
 
 ## Try it
 
-1. Click **Seed vault-wide demo notes** above (or add your own notes with a shared nested key).
-2. Run the **Rename a nested property in all notes** command. Choose `project.meta.owner` - the picker shows how many notes use it - and enter `project.meta.maintainer`. Every note that had `project.meta.owner` now uses the new key.
+**Step 1.** Click **Seed vault-wide demo notes** above (or add your own notes with a shared nested key).
 
-   ```code-button
-   ---
-   caption: Rename a nested property in all notes
-   ---
-   require('/demoSetup.ts').runCommand(app, 'rename-nested-property-across-vault');
-   ```
+**Step 2.** Run the **Rename a nested property in all notes** command. Choose `project.meta.owner` - the picker shows how many notes use it - and enter `project.meta.maintainer`. Every note that had `project.meta.owner` now uses the new key.
 
-3. Run the **Delete a nested property from all notes** command, choose `project.release.channel`, and confirm - it is removed everywhere, while sibling keys like `project.meta.status` are left intact.
+```code-button
+---
+caption: Rename a nested property in all notes
+---
+require('/demoSetup.ts').runCommand(app, 'rename-nested-property-across-vault');
+```
 
-   ```code-button
-   ---
-   caption: Delete a nested property from all notes
-   ---
-   require('/demoSetup.ts').runCommand(app, 'delete-nested-property-across-vault');
-   ```
+**Step 3.** Run the **Delete a nested property from all notes** command, choose `project.release.channel`, and confirm - it is removed everywhere, while sibling keys like `project.meta.status` are left intact.
+
+```code-button
+---
+caption: Delete a nested property from all notes
+---
+require('/demoSetup.ts').runCommand(app, 'delete-nested-property-across-vault');
+```
 
 Manual equivalent for both: the Command Palette entries of the same names. Each opens a picker, so the choosing is still yours.
 
