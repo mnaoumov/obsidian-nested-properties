@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 1.5.0
+
+- chore(deps): sweep caret-ranged dependencies to latest
+- fix(deps): move to obsidian-integration-testing 11 and obsidian-dev-utils 96.5.2
+- fix(deps): drop the brace-expansion file: override that breaks a clean install
+- feat: left margin from 144px to 20px re PR #11
+- test(nested-properties): record the deliberate untrusted-input exception
+- test(nested-properties): right-click and dismiss with trusted input in the capture suite
+
 ## 1.4.4
 
 - docs(readme): render the same in Obsidian's plugin page as on GitHub
