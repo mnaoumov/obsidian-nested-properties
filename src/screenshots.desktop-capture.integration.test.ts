@@ -210,7 +210,7 @@ async function dismissMenu(): Promise<void> {
       const SETTLE_DELAY_IN_MILLISECONDS = 600;
 
       // A trusted Escape — the key press a user makes, rather than an event Obsidian is free to ignore.
-      pressKey({ key: 'Escape' });
+      await pressKey({ key: 'Escape' });
       document.body.click();
 
       await waitUntil({
@@ -247,7 +247,7 @@ async function openKeyContextMenu(keyName: string): Promise<void> {
       // Are where it anchors the menu — without them it lands in the top-left
       // Corner, over the properties it is supposed to sit beside. A TRUSTED right
       // Click carries real coordinates and is the gesture a user performs.
-      clickElement({ button: 'right', element: keyEl });
+      await clickElement({ button: 'right', element: keyEl });
 
       await waitUntil({
         message: 'the nested-key context menu to open',
