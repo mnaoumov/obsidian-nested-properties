@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 1.6.0
+
+- test: read the mock Component's renamed _loaded flag
+- chore: lint
+- chore: update libs
+- feat: re #12
+- fix(build): wire build:compile to buildCompile and drop the duplicate leaf script
+
 ## 1.5.0
 
 - chore(deps): sweep caret-ranged dependencies to latest
