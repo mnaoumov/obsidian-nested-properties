@@ -286,9 +286,9 @@ interface MockWorkspace {
 }
 
 interface RendererTestAccess {
+  _loaded: boolean;
   cleanups__: (() => unknown)[];
   expansionOverrides: Map<string, boolean>;
-  loaded__: boolean;
   pendingFocusKey: null | string;
   showNestedPropertyMenu(params: ShowNestedPropertyMenuTestParams): void;
 }
@@ -496,7 +496,7 @@ describe('NestedPropertyRenderer', () => {
   afterEach(() => {
     // Unload the renderer so the REAL `MonkeyAroundComponent` uninstalls its prototype/method patches
     // (and the registered cleanup deletes the widgets) — otherwise the real patches leak across tests.
-    if (testAccess(renderer).loaded__) {
+    if (testAccess(renderer)._loaded) {
       renderer.unload();
     }
     vi.useRealTimers();
