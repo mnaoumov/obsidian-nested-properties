@@ -882,7 +882,7 @@ describe('NestedPropertyRenderer', () => {
 
     it('should set up collapsible UI with collapse button', () => {
       loadRenderer();
-      // Level 0 collapses everything, which is the state this test is about.
+      // Stated explicitly rather than leaning on the default: this test is about the collapsed state.
       mockPluginSettings.initialExpandLevel = 0;
 
       const collapseButton = createMockEl();
@@ -3268,15 +3268,16 @@ describe('NestedPropertyRenderer', () => {
   });
 
   describe('initial expand level', () => {
-    it('should render the nested property expanded at the default level of 1', () => {
+    // The default is 0 so an upgrade changes nothing about how an existing vault renders.
+    it('should render the nested property collapsed at the default level of 0', () => {
       loadRenderer();
-      expect(isRootRenderedCollapsed()).toBe(false);
+      expect(isRootRenderedCollapsed()).toBe(true);
     });
 
-    it('should render the nested property collapsed at level 0', () => {
+    it('should render the nested property expanded at level 1', () => {
       loadRenderer();
-      mockPluginSettings.initialExpandLevel = 0;
-      expect(isRootRenderedCollapsed()).toBe(true);
+      mockPluginSettings.initialExpandLevel = 1;
+      expect(isRootRenderedCollapsed()).toBe(false);
     });
 
     it('should let the note frontmatter override the plugin setting', () => {

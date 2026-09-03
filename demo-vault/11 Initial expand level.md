@@ -12,8 +12,8 @@ generated:
 
 A nested property does not have to arrive collapsed. **Initial expand level** decides how many levels are already open when you open a note:
 
-- `0` — everything collapsed. Every nested property is one row you click to open.
-- `1` — the default. The nested property itself is open, its children are not.
+- `0` — the default: everything collapsed. Every nested property is one row you click to open - and, as below, one you can read without opening.
+- `1` — the nested property itself is open, its children are not.
 - `2` — its children are open too, and so on for higher numbers.
 
 An array index counts as a level of its own, so in `generated.foo.0` the array item sits one level below `generated.foo`.
@@ -39,6 +39,6 @@ nestedProperties:
 
 1. Look at the Properties panel above: `generated` and `generated.foo` are open, and the two array items are collapsed with a readable preview.
 2. Change `initialExpandLevel` to `0` in the Properties panel and reopen the note - everything arrives collapsed, each row still readable.
-3. Remove the `nestedProperties` property entirely and reopen the note - the note falls back to the vault-wide setting in **Settings → Nested Properties → Initial expand level**.
+3. Remove the `nestedProperties` property entirely and reopen the note - the note falls back to the vault-wide setting in **Settings → Nested Properties → Initial expand level**, which is `0` unless you change it.
 
 Expanding or collapsing a row by hand always wins over the level for as long as the note stays open.

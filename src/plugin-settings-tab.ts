@@ -12,7 +12,7 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
         desc: createFragment((f) => {
           f.appendText('How many levels of a nested property are expanded when a note is opened.');
           f.createEl('br');
-          f.appendText('0 collapses everything, 1 expands the nested property but not its children, 2 also expands its children, and so on.');
+          f.appendText('0, the default, collapses everything - a collapsed property is still readable from its preview. 1 expands the nested property but not its children, 2 also expands its children, and so on.');
           f.createEl('br');
           f.appendText('An array index counts as a level of its own.');
           f.createEl('br');

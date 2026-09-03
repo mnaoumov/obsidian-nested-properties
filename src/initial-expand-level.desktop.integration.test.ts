@@ -20,9 +20,11 @@ generated:
 `,
     'expand-level-override.md': `---
 nestedProperties:
-  initialExpandLevel: 0
+  initialExpandLevel: 1
 generated:
   by: human
+  nested:
+    deep: 1
 ---
 `
   });
@@ -36,19 +38,19 @@ interface ExpandLevelMeasurement {
 }
 
 describe('initial expand level', () => {
-  it('expands one level by default and gives the collapsed level below it a readable summary', async () => {
+  it('collapses everything by default, and a collapsed property still reads as its content', async () => {
     const result = await measure('expand-level-default.md');
+
+    expect(result.isRootCollapsed).toBe(true);
+    expect(result.rootSummaryText).toBe('{ by: human, nested: { ... } }');
+  });
+
+  it('lets a note expand a level with its own nestedProperties.initialExpandLevel', async () => {
+    const result = await measure('expand-level-override.md');
 
     expect(result.isRootCollapsed).toBe(false);
     expect(result.isNestedCollapsed).toBe(true);
     expect(result.nestedSummaryText).toBe('{ deep: 1 }');
-  });
-
-  it('lets a note collapse everything with its own nestedProperties.initialExpandLevel', async () => {
-    const result = await measure('expand-level-override.md');
-
-    expect(result.isRootCollapsed).toBe(true);
-    expect(result.rootSummaryText).toBe('{ by: human }');
   });
 });
 
