@@ -65,6 +65,22 @@ A copy of the vault ships with every release. You can access it via any of the f
 - **Rename or delete a nested key across the whole vault**, not just in the note you are looking at. [09 Vault-wide rename and delete](<./demo-vault/09 Vault-wide rename and delete.md>)
 - **Find them** — search nested properties the way you search anything else. [10 Search nested properties](<./demo-vault/10 Search nested properties.md>)
 - **See the full key** of a nested entry when the short name is ambiguous. [08 Full key display](<./demo-vault/08 Full key display.md>)
+- **Read it without opening it** — a collapsed property shows a one-line preview of its content, and you can choose how many levels arrive expanded, vault-wide or per note. [11 Initial expand level](<./demo-vault/11 Initial expand level.md>)
+
+### Initial expand level
+
+A nested property arrives **collapsed** by default, and a collapsed row is readable on its own: it shows a one-line preview of its content rather than an opaque `{ ... }`, with any complex value inside it elided so the row stays one line tall.
+
+If you would rather some of it arrived already open, set **Settings → Nested Properties → Initial expand level** — `1` opens the nested property but not its children, `2` opens the children too, and so on. An array index counts as a level of its own, so in `generated.foo.0` the array item sits one level below `generated.foo`.
+
+A note can override the setting for itself:
+
+```yaml
+---
+nestedProperties:
+  initialExpandLevel: 2
+---
+```
 
 ## Installation
 

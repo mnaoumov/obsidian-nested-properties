@@ -22,6 +22,12 @@ import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { NestedPropertyRendererComponent } from './nested-property-renderer.ts';
 import { PluginSettings } from './plugin-settings.ts';
 
+// The subset of Obsidian's `createDiv` options the renderer passes and these tests read back.
+interface CreateDivOptions {
+  readonly attr?: Record<string, string>;
+  readonly cls?: string[];
+}
+
 interface MockClassList {
   add: MockFunction;
   contains: MockFunction;
@@ -255,8 +261,13 @@ interface FakeWindowDocument {
 type GetTypeInfoFunction = (p: string, v: unknown) => TypeInfo;
 
 interface MockApp {
+  metadataCache: MockMetadataCache;
   metadataTypeManager: MockMetadataTypeManager;
   workspace: MockWorkspace;
+}
+
+interface MockMetadataCache {
+  getCache: MockFunction;
 }
 
 interface MockMetadataTypeManager {
@@ -276,7 +287,7 @@ interface MockWorkspace {
 
 interface RendererTestAccess {
   cleanups__: (() => unknown)[];
-  expandedPaths: Set<string>;
+  expansionOverrides: Map<string, boolean>;
   loaded__: boolean;
   pendingFocusKey: null | string;
   showNestedPropertyMenu(params: ShowNestedPropertyMenuTestParams): void;
@@ -423,6 +434,9 @@ describe('NestedPropertyRenderer', () => {
     }));
 
     mockApp = {
+      metadataCache: {
+        getCache: vi.fn(() => null)
+      },
       metadataTypeManager: {
         getAssignedWidget: vi.fn(() => null),
         getTypeInfo: getTypeInfoOriginal,
@@ -868,6 +882,8 @@ describe('NestedPropertyRenderer', () => {
 
     it('should set up collapsible UI with collapse button', () => {
       loadRenderer();
+      // Stated explicitly rather than leaning on the default: this test is about the collapsed state.
+      mockPluginSettings.initialExpandLevel = 0;
 
       const collapseButton = createMockEl();
       const keyEl = createMockEl({ querySelector: vi.fn(() => null) });
@@ -2451,12 +2467,14 @@ describe('NestedPropertyRenderer', () => {
       clickHeaderToggle(collapsibleEl);
 
       expect(collapsibleEl.classList.remove).toHaveBeenCalledWith('is-collapsed');
-      expect([...testAccess(renderer).expandedPaths]).toContain('test.md:expanded');
+      expect(testAccess(renderer).expansionOverrides.get('test.md:expanded')).toBe(true);
     });
 
-    it('should forget the path of every element collapseAllIn collapses', () => {
+    // Collapsing records an EXPLICIT `false` rather than dropping the path: an absent path falls back to
+    // The initial expand level, which would re-expand whatever the user just collapsed.
+    it('should record an explicit collapse for every element collapseAllIn collapses', () => {
       loadRenderer();
-      testAccess(renderer).expandedPaths.add('test.md:collapsed');
+      testAccess(renderer).expansionOverrides.set('test.md:collapsed', true);
 
       const collapsibleEl = createMockEl({ dataset: { path: 'test.md:collapsed' } });
       // Nothing collapsed, so the toggle collapses.
@@ -2465,7 +2483,7 @@ describe('NestedPropertyRenderer', () => {
       clickHeaderToggle(collapsibleEl);
 
       expect(collapsibleEl.classList.add).toHaveBeenCalledWith('is-collapsed');
-      expect([...testAccess(renderer).expandedPaths]).not.toContain('test.md:collapsed');
+      expect(testAccess(renderer).expansionOverrides.get('test.md:collapsed')).toBe(false);
     });
 
     /**
@@ -2520,7 +2538,7 @@ describe('NestedPropertyRenderer', () => {
       const context = createMockContext();
       renderWidget('list', el, ['a', 'b'], context);
 
-      expect(el.createSpan).toHaveBeenCalledWith(expect.objectContaining({ text: '[ ... ]' }));
+      expect(el.createSpan).toHaveBeenCalledWith(expect.objectContaining({ text: '[ a, b ]' }));
     });
 
     it('should create summary with object text for objects', () => {
@@ -2533,7 +2551,7 @@ describe('NestedPropertyRenderer', () => {
       const context = createMockContext();
       renderWidget('object', el, { a: 1 }, context);
 
-      expect(el.createSpan).toHaveBeenCalledWith(expect.objectContaining({ text: '{ ... }' }));
+      expect(el.createSpan).toHaveBeenCalledWith(expect.objectContaining({ text: '{ a: 1 }' }));
     });
 
     it('should expand on summary click', () => {
@@ -3231,7 +3249,7 @@ describe('NestedPropertyRenderer', () => {
 
       // First render to expand the path
       const rootPath = 'test.md:testKey';
-      testAccess(renderer).expandedPaths.add(rootPath);
+      testAccess(renderer).expansionOverrides.set(rootPath, true);
 
       const propertyEl = createMockEl({ querySelector: vi.fn(() => null) });
       const el = createMockEl();
@@ -3249,13 +3267,99 @@ describe('NestedPropertyRenderer', () => {
     });
   });
 
+  describe('initial expand level', () => {
+    // The default is 0 so an upgrade changes nothing about how an existing vault renders.
+    it('should render the nested property collapsed at the default level of 0', () => {
+      loadRenderer();
+      expect(isRootRenderedCollapsed()).toBe(true);
+    });
+
+    it('should render the nested property expanded at level 1', () => {
+      loadRenderer();
+      mockPluginSettings.initialExpandLevel = 1;
+      expect(isRootRenderedCollapsed()).toBe(false);
+    });
+
+    it('should let the note frontmatter override the plugin setting', () => {
+      loadRenderer();
+      mockPluginSettings.initialExpandLevel = 1;
+      mockApp.metadataCache.getCache.mockReturnValue({ frontmatter: { nestedProperties: { initialExpandLevel: 0 } } });
+      expect(isRootRenderedCollapsed()).toBe(true);
+    });
+
+    it('should let an explicit user collapse override the level', () => {
+      loadRenderer();
+      mockPluginSettings.initialExpandLevel = 1;
+      testAccess(renderer).expansionOverrides.set('test.md:testKey', false);
+      expect(isRootRenderedCollapsed()).toBe(true);
+    });
+
+    it('should collapse a child, which sits one level below the nested property', () => {
+      loadRenderer();
+      mockPluginSettings.initialExpandLevel = 1;
+      expect(isNestedRenderedCollapsed()).toBe(true);
+    });
+
+    it('should expand a child at level 2', () => {
+      loadRenderer();
+      mockPluginSettings.initialExpandLevel = 2;
+      expect(isNestedRenderedCollapsed()).toBe(false);
+    });
+
+    /**
+     * Renders an object holding one nested object and reports whether that CHILD (`test.md:testKey.nested`)
+     * came out collapsed. The child's element is created by `renderEntry`, so its collapsed state arrives as
+     * a class in the `createDiv` options rather than as a `classList.add` call.
+     */
+    function isNestedRenderedCollapsed(): boolean {
+      getTypeInfoOriginal.mockImplementation((_property: string, value: unknown) => {
+        if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+          return {
+            expected: mockApp.metadataTypeManager.registeredTypeWidgets['object'],
+            inferred: mockApp.metadataTypeManager.registeredTypeWidgets['object']
+          };
+        }
+        return { expected: textWidget, inferred: textWidget };
+      });
+
+      const containerEl = createMockEl();
+      const el = createMockEl();
+      el.createDiv.mockReturnValue(containerEl);
+      renderWidget('object', el, { nested: { a: 1 } }, createMockContext());
+      vi.runAllTimers();
+
+      const createDivCalls = containerEl.createDiv.mock.calls as unknown[][];
+      const nestedCall = createDivCalls.find((call) => {
+        const options = call[0] as CreateDivOptions | undefined;
+        return options?.attr?.['data-path'] === 'test.md:testKey.nested';
+      });
+      const classes = (nestedCall?.[0] as CreateDivOptions | undefined)?.cls ?? [];
+      return classes.includes('is-collapsed');
+    }
+
+    /**
+     * Renders a nested property and reports whether its ROOT element came out collapsed. The root element is
+     * Obsidian's own `.metadata-property`, so the renderer marks it by adding a class to it.
+     */
+    function isRootRenderedCollapsed(): boolean {
+      const propertyEl = createMockEl({ querySelector: vi.fn(() => null) });
+      const el = createMockEl();
+      el.closest.mockReturnValue(propertyEl);
+
+      renderWidget('object', el, { a: { b: 1 } }, createMockContext());
+
+      const addCalls = propertyEl.classList.add.mock.calls as unknown[][];
+      return addCalls.some((call) => call[0] === 'is-collapsed');
+    }
+  });
+
   describe('renderEntry expanded nested path', () => {
     it('should not add is-collapsed class when nested path is already expanded', () => {
       loadRenderer();
 
       // Pre-expand the path
       const nestedPath = 'test.md:testKey.nested';
-      testAccess(renderer).expandedPaths.add(nestedPath);
+      testAccess(renderer).expansionOverrides.set(nestedPath, true);
 
       getTypeInfoOriginal.mockImplementation((_property: string, value: unknown) => {
         if (typeof value === 'object' && value !== null && !Array.isArray(value)) {

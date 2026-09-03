@@ -72,8 +72,10 @@
 
 .nested-properties-summary {
   display: none;
+  overflow: hidden;
   color: var(--text-muted);
   font-style: italic;
+  text-overflow: ellipsis;
   cursor: var(--cursor);
   white-space: nowrap;
 }
