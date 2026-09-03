@@ -6,6 +6,7 @@ import {
 
 import {
   convertValue,
+  formatValueSummary,
   isComplexValue,
   isLossyConversion,
   isSimpleArray
@@ -285,5 +286,50 @@ describe('isLossyConversion', () => {
     expect(isLossyConversion({ targetType: 'text', value: 'hello' })).toBe(false);
     expect(isLossyConversion({ targetType: 'number', value: 42 })).toBe(false);
     expect(isLossyConversion({ targetType: 'checkbox', value: true })).toBe(false);
+  });
+});
+
+describe('formatValueSummary', () => {
+  it('should render an object as its own entries', () => {
+    expect(formatValueSummary({ at: '2026-02-09', by: 'human' })).toBe('{ at: 2026-02-09, by: human }');
+  });
+
+  it('should render an array as its own items', () => {
+    expect(formatValueSummary([1, 'two', true])).toBe('[ 1, two, true ]');
+  });
+
+  it('should elide a nested object, keeping the summary one line tall', () => {
+    expect(formatValueSummary({ foo: { bar: 1 } })).toBe('{ foo: { ... } }');
+  });
+
+  it('should elide a nested array, keeping the summary one line tall', () => {
+    expect(formatValueSummary({ foo: [{ bar: 1 }] })).toBe('{ foo: [ ... ] }');
+  });
+
+  it('should render an empty object without spacing', () => {
+    expect(formatValueSummary({})).toBe('{}');
+  });
+
+  it('should render an empty array without spacing', () => {
+    expect(formatValueSummary([])).toBe('[]');
+  });
+
+  it('should render an empty value for null and undefined entries', () => {
+    expect(formatValueSummary({ a: null, b: undefined })).toBe('{ a: , b:  }');
+  });
+
+  it('should render a date entry as a plain date', () => {
+    // A local-time date on purpose: the summary renders it in local time, as every date the user sees is.
+    expect(formatValueSummary({ at: new Date(2026, 1, 9) })).toBe('{ at: 2026-02-09 }');
+  });
+
+  it('should render a scalar as itself', () => {
+    expect(formatValueSummary('hello')).toBe('hello');
+  });
+
+  it('should truncate a long body rather than widen the collapsed row', () => {
+    const summary = formatValueSummary({ long: 'x'.repeat(200) });
+    expect(summary.endsWith('… }')).toBe(true);
+    expect(summary.length).toBeLessThan('{ long: '.length + 200);
   });
 });

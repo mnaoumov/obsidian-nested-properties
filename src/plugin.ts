@@ -1,5 +1,6 @@
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { OpenDemoVaultCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/open-demo-vault-command-handler';
+import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/components/plugin-settings-tab-component';
 import { PluginDataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
 import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin';
 
@@ -7,6 +8,7 @@ import { NestedPropertyRendererComponent } from './nested-property-renderer.ts';
 import { NestedPropertyVaultOpsComponent } from './nested-property-vault-ops-component.ts';
 import { NestedPropertySearchPatchComponent } from './patches/nested-property-search-patch-component.ts';
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
+import { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { PluginSettings } from './plugin-settings.ts';
 
 export class Plugin extends PluginBase {
@@ -25,6 +27,16 @@ export class Plugin extends PluginBase {
     // `isFullKeyDisplayEnabled` in its synchronous `onload` and never re-reads it on the initial load, so
     // Without this wait a stored `true` was read as its default `false` for the whole session.
     await pluginSettingsComponent.loadWithPromises();
+
+    this.addChild(
+      new PluginSettingsTabComponent({
+        plugin: this,
+        pluginSettingsTab: new PluginSettingsTab({
+          plugin: this,
+          pluginSettingsComponent
+        })
+      })
+    );
 
     const nestedPropertyRendererComponent = this.addChild(
       new NestedPropertyRendererComponent({

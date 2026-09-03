@@ -22,6 +22,7 @@ import { getAllDomWindows } from 'obsidian-dev-utils/obsidian/workspace';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
 import { FloatingScrollbarComponent } from './floating-scrollbar.ts';
+import { getInitialExpandLevel } from './nested-properties-note-settings.ts';
 import { MetadataTypeManagerGetTypeInfoPatchComponent } from './patches/metadata-type-manager-get-type-info-patch-component.ts';
 import { MultiTextPropertyWidgetPatchComponent } from './patches/multi-text-property-widget-patch-component.ts';
 import { UnknownWidgetRenderPatchComponent } from './patches/unknown-widget-render-patch-component.ts';
@@ -29,6 +30,7 @@ import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { TypeChangeModal } from './type-change-modal.ts';
 import {
   convertValue,
+  formatValueSummary,
   isComplexValue,
   isLossyConversion,
   isSimpleArray
@@ -39,7 +41,7 @@ const OBJECT_WIDGET_TYPE = 'object';
 const FULL_KEY_DISPLAY_BODY_CLASS = 'nested-properties-full-key-display';
 
 interface CreateSummaryParams {
-  readonly expandedPaths: Set<string>;
+  readonly expansionOverrides: Map<string, boolean>;
   readonly parentEl: HTMLElement;
   readonly path: string;
   readonly propertyEl: HTMLElement;
@@ -47,7 +49,7 @@ interface CreateSummaryParams {
 }
 
 interface InjectHeaderButtonsParams {
-  readonly expandedPaths: Set<string>;
+  readonly expansionOverrides: Map<string, boolean>;
   readonly metadataContainerEl: HTMLElement;
   onToggleFullKeyDisplay(this: void): void;
 }
@@ -77,6 +79,11 @@ interface NestedPropertyRendererComponentGetWidgetParams {
   readonly label: string;
   readonly path: string;
   readonly value: unknown;
+}
+
+interface NestedPropertyRendererComponentIsExpandedParams {
+  readonly path: string;
+  readonly sourcePath: string;
 }
 
 interface NestedPropertyRendererComponentRenderArrayParams {
@@ -163,7 +170,11 @@ export class NestedPropertyRendererComponent extends Component {
   private _mixedListWidget?: PropertyWidget;
   private _objectWidget?: PropertyWidget;
   private readonly app: App;
-  private readonly expandedPaths = new Set<string>();
+
+  // The user's EXPLICIT expand/collapse choices, path -> isExpanded. A path that is absent has no user
+  // Opinion yet and falls back to the initial-expand-level default, so - unlike the plain `Set` this
+  // Replaced - absence no longer means "collapsed" (issue #12).
+  private readonly expansionOverrides = new Map<string, boolean>();
   private floatingScrollbar?: FloatingScrollbarComponent;
   private isFullKeyDisplayEnabled = false;
   private lastMenuCloseTime = 0;
@@ -347,6 +358,26 @@ export class NestedPropertyRendererComponent extends Component {
     return this.getAssignedWidgetForPath(path) ?? this.app.metadataTypeManager.getTypeInfo(label, value).inferred;
   }
 
+  /**
+   * Whether a node renders expanded: the user's explicit choice when they have made one, and otherwise the
+   * initial expand level in force for the note (its own `nestedProperties.initialExpandLevel`, else the
+   * plugin setting).
+   */
+  private isExpanded(params: NestedPropertyRendererComponentIsExpandedParams): boolean {
+    const { path, sourcePath } = params;
+    const expansionOverride = this.expansionOverrides.get(path);
+    if (expansionOverride !== undefined) {
+      return expansionOverride;
+    }
+
+    const initialExpandLevel = getInitialExpandLevel({
+      app: this.app,
+      fallbackLevel: this.pluginSettingsComponent.settings.initialExpandLevel,
+      sourcePath
+    });
+    return getPathDepth(path) < initialExpandLevel;
+  }
+
   private reloadAllProperties(): void {
     for (const leaf of this.app.workspace.getLeavesOfType('markdown')) {
       if (!(leaf.view instanceof MarkdownView)) {
@@ -402,7 +433,7 @@ export class NestedPropertyRendererComponent extends Component {
 
     const propertyEl = el.closest('.metadata-property');
     if (propertyEl instanceof HTMLElement) {
-      const isExpanded = this.expandedPaths.has(rootPath);
+      const isExpanded = this.isExpanded({ path: rootPath, sourcePath: context.sourcePath });
       propertyEl.classList.add('nested-properties-collapsible');
       propertyEl.dataset['path'] = rootPath;
       if (!isExpanded) {
@@ -424,11 +455,7 @@ export class NestedPropertyRendererComponent extends Component {
           $event.preventDefault();
           const isCollapsed = propertyEl.hasClass('is-collapsed');
           propertyEl.toggleClass('is-collapsed', !isCollapsed);
-          if (isCollapsed) {
-            this.expandedPaths.add(rootPath);
-          } else {
-            this.expandedPaths.delete(rootPath);
-          }
+          this.expansionOverrides.set(rootPath, isCollapsed);
           this.floatingScrollbar?.update();
         });
       }
@@ -443,7 +470,7 @@ export class NestedPropertyRendererComponent extends Component {
     }
 
     if (propertyEl instanceof HTMLElement) {
-      createSummary({ expandedPaths: this.expandedPaths, parentEl: el, path: rootPath, propertyEl, value });
+      createSummary({ expansionOverrides: this.expansionOverrides, parentEl: el, path: rootPath, propertyEl, value });
     }
 
     const containerEl = el.createDiv({ cls: 'nested-properties-container' });
@@ -461,7 +488,7 @@ export class NestedPropertyRendererComponent extends Component {
       const metadataContainerEl = containerEl.closest('.metadata-container');
       if (metadataContainerEl instanceof HTMLElement) {
         injectHeaderButtons({
-          expandedPaths: this.expandedPaths,
+          expansionOverrides: this.expansionOverrides,
           metadataContainerEl,
           onToggleFullKeyDisplay: () => {
             this.toggleFullKeyDisplay();
@@ -508,7 +535,7 @@ export class NestedPropertyRendererComponent extends Component {
       || (isComplexValue(value) && !isSimpleArray(value));
 
     if (isComplex) {
-      const isExpanded = this.expandedPaths.has(path);
+      const isExpanded = this.isExpanded({ path, sourcePath: context.sourcePath });
       const propertyEl = containerEl.createDiv({
         attr: { 'data-path': path },
         cls: ['metadata-property', 'nested-properties-collapsible', ...(isExpanded ? [] : ['is-collapsed'])]
@@ -527,11 +554,7 @@ export class NestedPropertyRendererComponent extends Component {
         $event.preventDefault();
         const isCollapsed = propertyEl.hasClass('is-collapsed');
         propertyEl.toggleClass('is-collapsed', !isCollapsed);
-        if (isCollapsed) {
-          this.expandedPaths.add(path);
-        } else {
-          this.expandedPaths.delete(path);
-        }
+        this.expansionOverrides.set(path, isCollapsed);
       });
 
       const complexWidget = this.getWidget({ label, path, value });
@@ -549,7 +572,7 @@ export class NestedPropertyRendererComponent extends Component {
       keyInput.size = Math.max(1, label.length);
 
       const valueEl = propertyEl.createDiv({ cls: 'metadata-property-value' });
-      createSummary({ expandedPaths: this.expandedPaths, parentEl: valueEl, path, propertyEl, value });
+      createSummary({ expansionOverrides: this.expansionOverrides, parentEl: valueEl, path, propertyEl, value });
       const nestedContainer = valueEl.createDiv({ cls: 'nested-properties-container' });
       this.renderNestedValue({ containerEl: nestedContainer, context, onValueChange, path, value });
       return;
@@ -731,33 +754,35 @@ export class NestedPropertyRendererComponent extends Component {
   }
 }
 
-function collapseAllIn(parentNode: ParentNode, expandedPaths: Set<string>): void {
+function collapseAllIn(parentNode: ParentNode, expansionOverrides: Map<string, boolean>): void {
   for (const el of parentNode.querySelectorAll<HTMLElement>(':scope .nested-properties-collapsible')) {
     el.classList.add('is-collapsed');
     const path = el.dataset['path'];
     if (path) {
-      expandedPaths.delete(path);
+      // An EXPLICIT collapse, not a deletion: absence now means "fall back to the initial expand level",
+      // Which would immediately re-expand whatever the user just collapsed.
+      expansionOverrides.set(path, false);
     }
   }
 }
 
 function createSummary(params: CreateSummaryParams): void {
-  const { expandedPaths, parentEl, path, propertyEl, value } = params;
-  const summary = parentEl.createSpan({ cls: 'nested-properties-summary', text: Array.isArray(value) ? '[ ... ]' : '{ ... }' });
+  const { expansionOverrides, parentEl, path, propertyEl, value } = params;
+  const summary = parentEl.createSpan({ cls: 'nested-properties-summary', text: formatValueSummary(value) });
   summary.addEventListener('click', ($event) => {
     $event.stopPropagation();
     $event.preventDefault();
     propertyEl.classList.remove('is-collapsed');
-    expandedPaths.add(path);
+    expansionOverrides.set(path, true);
   });
 }
 
-function expandAllIn(parentNode: ParentNode, expandedPaths: Set<string>): void {
+function expandAllIn(parentNode: ParentNode, expansionOverrides: Map<string, boolean>): void {
   for (const el of parentNode.querySelectorAll<HTMLElement>(':scope .nested-properties-collapsible')) {
     el.classList.remove('is-collapsed');
     const path = el.dataset['path'];
     if (path) {
-      expandedPaths.add(path);
+      expansionOverrides.set(path, true);
     }
   }
 }
@@ -782,8 +807,15 @@ function getItemTypeKey(path: string): string {
   return path.slice(path.indexOf(':') + 1);
 }
 
+// How deep a node sits below the nested property itself: the root is 0, its own entries are 1, and so on.
+// An array index is a segment like any other, so an array item sits one level below its array. Counted on
+// The `sourcePath:`-stripped key, because a source path legitimately contains dots (`folder/note.md`).
+function getPathDepth(path: string): number {
+  return getItemTypeKey(path).split('.').length - 1;
+}
+
 function injectHeaderButtons(params: InjectHeaderButtonsParams): void {
-  const { expandedPaths, metadataContainerEl, onToggleFullKeyDisplay } = params;
+  const { expansionOverrides, metadataContainerEl, onToggleFullKeyDisplay } = params;
   if (metadataContainerEl.querySelector('.nested-properties-header-actions')) {
     return;
   }
@@ -809,9 +841,9 @@ function injectHeaderButtons(params: InjectHeaderButtonsParams): void {
     const allCollapsibles = metadataContainerEl.querySelectorAll('.nested-properties-collapsible');
     const isAllCollapsed = allCollapsibles.length > 0 && [...allCollapsibles].every((el) => el.classList.contains('is-collapsed'));
     if (isAllCollapsed) {
-      expandAllIn(metadataContainerEl, expandedPaths);
+      expandAllIn(metadataContainerEl, expansionOverrides);
     } else {
-      collapseAllIn(metadataContainerEl, expandedPaths);
+      collapseAllIn(metadataContainerEl, expansionOverrides);
     }
     updateToggleButton({ metadataContainerEl, toggleButton });
   });

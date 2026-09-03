@@ -24,6 +24,7 @@ Welcome to the [Nested Properties](https://github.com/mnaoumov/obsidian-nested-p
 ## Display
 
 - [08 Full key display](<./08 Full key display.md>)
+- [11 Initial expand level](<./11 Initial expand level.md>)
 
 ## Vault-wide operations
 
