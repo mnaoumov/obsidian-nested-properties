@@ -27,19 +27,8 @@ vi.mock('obsidian-dev-utils/obsidian/app', async (importOriginal) => ({
   getObsidianDevUtilsState: vi.fn((_app: unknown, _key: string, defaultValue: unknown) => ({ value: defaultValue }))
 }));
 
-// `NestedPropertyRendererComponent` is added via `addChild`, which eager-loads it, so its stub must be
-// Loadable — it returns a real `Component`. The instance that flows through `addChild` is the stub's
-// Return value (`mock.results[0].value`), not the discarded `this` (`mock.instances[0]`).
-interface AppWithPlugins {
-  plugins: PluginRegistryLike;
-}
-
 interface ObsidianComponentModule {
   Component: new () => object;
-}
-
-interface PluginRegistryLike {
-  getPlugin(this: void, id: string): unknown;
 }
 
 interface RendererWithToggle {
@@ -140,9 +129,6 @@ describe('Plugin', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     const appMock = App.createConfigured__();
-    // Since obsidian-dev-utils 89.0.0 the base bridges its command handlers into Notebook Navigator's
-    // Menus, which looks the plugin up on layout-ready -- so `plugins` has to answer on the strict mock.
-    castTo<AppWithPlugins>(appMock).plugins = { getPlugin: vi.fn().mockReturnValue(null) };
     appMock.workspace.onLayoutReady = vi.fn((callback: () => void) => {
       callback();
     });
