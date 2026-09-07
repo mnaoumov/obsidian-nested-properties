@@ -54,7 +54,7 @@ Inspired by this [feature request](https://forum.obsidian.md/t/properties-bases-
 A copy of the vault ships with every release. You can access it via any of the following:
 
 1. Running the **Nested Properties: Open demo vault** command.
-2. Downloading `nested-properties-demo-vault-<version>.zip` (`<version>` is the release version) from the [Releases](https://github.com/mnaoumov/obsidian-nested-properties/releases).
+2. Downloading `nested-properties-demo-vault.zip` from the [Releases](https://github.com/mnaoumov/obsidian-nested-properties/releases). It unzips into a single `nested-properties-demo-vault-<version>` folder.
 3. Browsing its source in [`demo-vault/`](./demo-vault/README.md) in this repository.
 
 ## What it does
