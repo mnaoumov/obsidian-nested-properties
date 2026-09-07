@@ -244,16 +244,11 @@ function buildObjectNote(): string {
  */
 async function dismissMenu(): Promise<void> {
   await evalInObsidian({
-    async callback({ lib: { waitUntil } }) {
+    async callback({ lib: { pressKey, waitUntil } }) {
       const MENU_TIMEOUT_IN_MILLISECONDS = 15_000;
       const SETTLE_DELAY_IN_MILLISECONDS = 600;
 
-      // A permanent exception to the trusted-input convention: `pressKey` is built on
-      // `window.electron`, which does not exist on the phone, so a dispatched event is
-      // The only option here. Obsidian listens for keys on `document`, so this dismisses
-      // As a real key would.
-      document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' }));
-      document.body.click();
+      await pressKey({ key: 'Escape' });
 
       await waitUntil({
         message: 'the menu to close',
@@ -274,10 +269,9 @@ async function dismissMenu(): Promise<void> {
  */
 async function openKeyContextMenu(keyName: string): Promise<void> {
   await evalInObsidian({
-    async callback({ keyName: name, lib: { waitUntil } }) {
+    async callback({ keyName: name, lib: { clickElement, waitUntil } }) {
       const MENU_TIMEOUT_IN_MILLISECONDS = 15_000;
       const SETTLE_DELAY_IN_MILLISECONDS = 900;
-      const HALF = 2;
 
       const keyInput = [...document.querySelectorAll('.metadata-property-key-input')]
         .find((input) => (input.instanceOf(HTMLInputElement) ? input.value : input.textContent) === name);
@@ -287,18 +281,9 @@ async function openKeyContextMenu(keyName: string): Promise<void> {
       }
 
       // Obsidian raises the menu from a `contextmenu` event, which is what a long
-      // Press produces on a touch screen. The coordinates are where it anchors.
-      // Untrusted by necessity: the trusted `clickElement` the desktop twin uses is
-      // Built on `window.electron`, and there is none on the phone.
-      const rect = keyEl.getBoundingClientRect();
-      keyEl.dispatchEvent(
-        new MouseEvent('contextmenu', {
-          bubbles: true,
-          cancelable: true,
-          clientX: rect.left + rect.width / HALF,
-          clientY: rect.top + rect.height / HALF
-        })
-      );
+      // Press produces on a touch screen — and `button: 'right'` is that long press,
+      // Anchored at the element's centre exactly as the coordinates here used to be.
+      await clickElement({ button: 'right', element: keyEl });
 
       await waitUntil({
         message: 'the nested-key menu to open',
@@ -349,6 +334,14 @@ async function openNote(path: string): Promise<void> {
         if (collapsed.length === 0) {
           break;
         }
+        // `click()` rather than a trusted tap, deliberately, for three reasons that
+        // Only apply here. The button is THIS plugin's own and gates on nothing, so
+        // A trusted gesture would exercise no extra path. A tap is hit-tested at the
+        // Element's centre, and rows deep in a collapsed tree are off-screen on a
+        // Phone, where a tap lands on whatever is actually there instead. And this is
+        // Up to six passes over every collapsed row, each a CDP round trip, which
+        // Would push the closure past the transport's timeout. This is setup for the
+        // Shot, not the gesture the shot is about.
         for (const row of collapsed) {
           const collapseButton = row.querySelector('.nested-properties-collapse-btn');
           if (collapseButton instanceof HTMLElement) {
