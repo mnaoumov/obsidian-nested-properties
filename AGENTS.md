@@ -23,6 +23,7 @@ Nested Properties is an Obsidian plugin that lets you view and edit nested front
 | Unit tests        | `npm test`                 |
 | Coverage          | `npm run test:coverage`    |
 | Integration tests | `npm run test:integration` |
+| Branch gate       | `npm run gate`             |
 | Commit (wizard)   | `npm run commit`           |
 
 ## Architecture
