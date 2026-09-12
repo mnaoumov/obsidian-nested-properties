@@ -28,7 +28,14 @@ describe('Nested property vault-wide operations', () => {
   it('renames a nested property across every note that has it', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { waitUntil } }) {
-        const WAIT_TIMEOUT_IN_MILLISECONDS = 20_000;
+        /*
+         * Under the transport's ~30s per-closure cap, not at it.
+         * Five waits share this one budget, so at 20_000 apiece the closure declared 100s.
+         * The eval is killed at the cap first and reported as a bare transport timeout.
+         * That names the harness rather than the wait that overran.
+         * Each step here - a cache parse, a modal opening, a vault-wide rewrite - lands in well under a second.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 5000;
         const FOLDER = 'np-vault-ops-rename';
         const FROM_PATH = 'npVaultOpsRename.owner';
         const TO_PATH = 'npVaultOpsRename.maintainer';
@@ -141,7 +148,14 @@ describe('Nested property vault-wide operations', () => {
   it('deletes a nested property from every note that has it', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { waitUntil } }) {
-        const WAIT_TIMEOUT_IN_MILLISECONDS = 20_000;
+        /*
+         * Under the transport's ~30s per-closure cap, not at it.
+         * Five waits share this one budget, so at 20_000 apiece the closure declared 100s.
+         * The eval is killed at the cap first and reported as a bare transport timeout.
+         * That names the harness rather than the wait that overran.
+         * Each step here - a cache parse, a modal opening, a vault-wide rewrite - lands in well under a second.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 5000;
         const FOLDER = 'np-vault-ops-delete';
         const PATH = 'npVaultOpsDelete.channel';
         const FILE_A = `${FOLDER}/a.md`;
