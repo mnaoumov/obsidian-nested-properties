@@ -1,5 +1,9 @@
-import type { App } from 'obsidian';
+import type {
+  App,
+  WorkspaceLeaf
+} from 'obsidian';
 
+import { requestAnimationFrameAsync } from 'obsidian-dev-utils/async';
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { App as AppCls } from 'obsidian-test-mocks/obsidian';
 import {
@@ -7,7 +11,8 @@ import {
   beforeEach,
   describe,
   expect,
-  it
+  it,
+  vi
 } from 'vitest';
 
 import { FloatingScrollbarComponent } from './floating-scrollbar.ts';
@@ -62,6 +67,17 @@ function createApp(): App {
   return appMock.asOriginalType__();
 }
 
+function createMetadataContainer(): HTMLElement {
+  const existing = activeDocument.body.querySelector<HTMLElement>('.metadata-container');
+  if (existing) {
+    return existing;
+  }
+  const containerEl = activeWindow.createDiv();
+  containerEl.className = 'metadata-container';
+  activeDocument.body.append(containerEl);
+  return containerEl;
+}
+
 function createPropertyEl(metrics?: ElementMetrics): HTMLElement {
   const property = activeWindow.createDiv();
   property.className = 'metadata-property';
@@ -71,7 +87,9 @@ function createPropertyEl(metrics?: ElementMetrics): HTMLElement {
   nested.className = 'nested-properties-container';
   value.append(nested);
   property.append(value);
-  activeDocument.body.append(property);
+  // Inside the Properties editor container, as in Obsidian: the wheel listener is attached there,
+  // And a capture listener only sees events whose target is inside it.
+  createMetadataContainer().append(property);
   applyMetrics(property, metrics);
   return property;
 }
@@ -186,16 +204,30 @@ describe('FloatingScrollbar', () => {
       statusBar.className = 'status-bar';
       Object.defineProperty(statusBar, 'offsetHeight', { configurable: true, value: STATUS_BAR_HEIGHT_PX });
       activeDocument.body.append(statusBar);
+      // A property element is required: update() returns before measuring when there are none.
+      createPropertyEl({ clientWidth: 100, rect: { bottom: 850, left: 0, top: 750, width: 100 }, scrollWidth: 200 });
 
       scrollbar.update();
 
-      // No matching property element, so the track is hidden; the status-bar offset path is exercised.
-      expect(getTrack().classList.contains('is-visible')).toBe(false);
+      expect(getTrack().style.getPropertyValue('--track-bottom')).toBe('30px');
     });
 
     it('should use zero offset when no status bar', () => {
+      createPropertyEl({ clientWidth: 100, rect: { bottom: 850, left: 0, top: 750, width: 100 }, scrollWidth: 200 });
+
       scrollbar.update();
 
+      expect(getTrack().style.getPropertyValue('--track-bottom')).toBe('0px');
+    });
+
+    it('should not measure layout when there are no nested properties', () => {
+      // The status-bar read forces a synchronous layout, and it ran on every scroll of every note.
+      // Most notes have no nested properties at all, so update() must return before reaching it.
+      const querySelectorSpy = vi.spyOn(activeDocument, 'querySelector');
+
+      scrollbar.update();
+
+      expect(querySelectorSpy).not.toHaveBeenCalledWith('.status-bar');
       expect(getTrack().classList.contains('is-visible')).toBe(false);
     });
 
@@ -437,17 +469,69 @@ describe('FloatingScrollbar', () => {
   });
 
   describe('native scrollbar wheel', () => {
+    function createScrollableProperty(): HTMLElement {
+      const propertyEl = createPropertyEl({
+        clientWidth: 100,
+        rect: { bottom: 500, left: 0, right: 100, top: 400 },
+        scrollLeft: 0,
+        scrollWidth: 200
+      });
+      const inner = activeWindow.createSpan();
+      propertyEl.append(inner);
+      return propertyEl;
+    }
+
+    it('should not register a wheel listener on any document', () => {
+      // This is the point of the whole arrangement. A non-passive wheel listener on a document makes
+      // Every wheel event in the app wait on the main thread, which is what Chromium reports as
+      // "[Violation] Handling of 'wheel' input event was delayed".
+      scrollbar.unload();
+      loadedScrollbars.pop();
+      createScrollableProperty();
+      const addEventListenerSpy = vi.spyOn(activeDocument, 'addEventListener');
+
+      createScrollbar(app).update();
+
+      // The scroll registration proves the spy sees the component's document listeners at all.
+      expect(addEventListenerSpy).toHaveBeenCalledWith('scroll', expect.anything(), expect.anything());
+      expect(addEventListenerSpy).not.toHaveBeenCalledWith('wheel', expect.anything(), expect.anything());
+    });
+
     it('should do nothing when target is not HTMLElement', () => {
-      const event = new WheelEvent('wheel', { cancelable: true, deltaY: 10 });
-      // Dispatching on the document with no element target keeps `e.target` as the document.
-      activeDocument.dispatchEvent(event);
+      // Obsidian renders its icons as inline SVG, and an SVGElement is not an HTMLElement.
+      // The event still reaches the container listener, so the guard has to hold.
+      const propertyEl = createScrollableProperty();
+      scrollbar.update();
+      const svgEl = activeWindow.createSvg('svg');
+      propertyEl.append(svgEl);
+
+      const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, clientY: 495, deltaY: 20 });
+      svgEl.dispatchEvent(event);
 
       expect(event.defaultPrevented).toBe(false);
     });
 
+    it('should attach in other windows, not only the active one', () => {
+      // A Properties editor in a background pop-out has to keep working while another window is
+      // Focused. Reconciling against the active document alone would strip its listener.
+      const otherDoc = activeDocument.implementation.createHTMLDocument();
+      const otherContainerEl = otherDoc.win.createDiv();
+      otherContainerEl.className = 'metadata-container';
+      otherDoc.body.append(otherContainerEl);
+      vi.spyOn(app.workspace, 'iterateAllLeaves').mockImplementation((callback: (leaf: WorkspaceLeaf) => unknown) => {
+        callback(castTo<WorkspaceLeaf>({ getContainer: () => ({ win: { document: otherDoc } }) }));
+      });
+      const addEventListenerSpy = vi.spyOn(otherContainerEl, 'addEventListener');
+
+      scrollbar.update();
+
+      expect(addEventListenerSpy).toHaveBeenCalledWith('wheel', expect.anything(), expect.anything());
+    });
+
     it('should do nothing when no matching property element', () => {
       const target = activeWindow.createDiv();
-      activeDocument.body.append(target);
+      createMetadataContainer().append(target);
+      scrollbar.update();
 
       const event = new WheelEvent('wheel', { bubbles: true, cancelable: true });
       target.dispatchEvent(event);
@@ -459,6 +543,7 @@ describe('FloatingScrollbar', () => {
       const propertyEl = createPropertyEl({ clientWidth: 100, scrollWidth: 100 });
       const inner = activeWindow.createSpan();
       propertyEl.append(inner);
+      scrollbar.update();
 
       const event = new WheelEvent('wheel', { bubbles: true, cancelable: true });
       inner.dispatchEvent(event);
@@ -467,35 +552,78 @@ describe('FloatingScrollbar', () => {
     });
 
     it('should do nothing when not near scrollbar', () => {
-      const propertyEl = createPropertyEl({
-        clientWidth: 100,
-        rect: { bottom: 500, left: 0, right: 100, top: 400 },
-        scrollWidth: 200
-      });
-      const inner = activeWindow.createSpan();
-      propertyEl.append(inner);
+      const propertyEl = createScrollableProperty();
+      scrollbar.update();
 
       const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, clientY: 400 });
-      inner.dispatchEvent(event);
+      propertyEl.lastElementChild?.dispatchEvent(event);
 
       expect(event.defaultPrevented).toBe(false);
     });
 
     it('should scroll when near scrollbar', () => {
-      const propertyEl = createPropertyEl({
-        clientWidth: 100,
-        rect: { bottom: 500, left: 0, right: 100, top: 400 },
-        scrollLeft: 0,
-        scrollWidth: 200
-      });
-      const inner = activeWindow.createSpan();
-      propertyEl.append(inner);
+      const propertyEl = createScrollableProperty();
+      scrollbar.update();
 
       const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, clientY: 495, deltaY: 20 });
-      inner.dispatchEvent(event);
+      propertyEl.lastElementChild?.dispatchEvent(event);
 
       expect(propertyEl.scrollLeft).toBe(20);
       expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('should scroll a property that is not the active element', () => {
+      // Its rect sits above the viewport bottom, so update() never makes it the active element.
+      // The listener is on the container, so it works regardless.
+      const propertyEl = createScrollableProperty();
+      scrollbar.update();
+
+      propertyEl.lastElementChild?.dispatchEvent(
+        new WheelEvent('wheel', { bubbles: true, cancelable: true, clientY: 495, deltaY: 20 })
+      );
+
+      expect(propertyEl.scrollLeft).toBe(20);
+    });
+
+    it('should attach only once across repeated updates', () => {
+      const propertyEl = createScrollableProperty();
+
+      scrollbar.update();
+      scrollbar.update();
+      propertyEl.lastElementChild?.dispatchEvent(
+        new WheelEvent('wheel', { bubbles: true, cancelable: true, clientY: 495, deltaY: 20 })
+      );
+
+      // A second listener on the same container would scroll it twice.
+      expect(propertyEl.scrollLeft).toBe(20);
+    });
+
+    it('should detach the listener when the properties editor goes away', () => {
+      const propertyEl = createScrollableProperty();
+      scrollbar.update();
+
+      // The property stays scrollable, so only detachment can stop the scroll from happening.
+      const containerEl = createMetadataContainer();
+      containerEl.remove();
+      scrollbar.update();
+      containerEl.append(propertyEl);
+      const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, clientY: 495, deltaY: 20 });
+      propertyEl.lastElementChild?.dispatchEvent(event);
+
+      expect(propertyEl.scrollLeft).toBe(0);
+      expect(event.defaultPrevented).toBe(false);
+    });
+
+    it('should detach every listener on unload', () => {
+      const propertyEl = createScrollableProperty();
+      scrollbar.update();
+
+      scrollbar.unload();
+      const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, clientY: 495, deltaY: 20 });
+      propertyEl.lastElementChild?.dispatchEvent(event);
+
+      expect(propertyEl.scrollLeft).toBe(0);
+      expect(event.defaultPrevented).toBe(false);
     });
   });
 
@@ -672,18 +800,58 @@ describe('FloatingScrollbar', () => {
   });
 
   describe('scroll and windows handler callbacks', () => {
-    it('should call update on scroll event', () => {
+    it('should call update on scroll event', async () => {
       // A document scroll triggers update(), which makes the overflowing property element active.
-      // Update() then shows the track.
+      // Update() then shows the track, one animation frame later.
       createPropertyEl({
         clientWidth: 100,
         rect: { bottom: 850, left: 0, top: 750, width: 100 },
         scrollWidth: 200
       });
 
+      // The component queues its frame during dispatch, so it has run by the time this resolves.
       activeDocument.dispatchEvent(new Event('scroll'));
+      await requestAnimationFrameAsync();
 
       expect(getTrack().classList.contains('is-visible')).toBe(true);
+    });
+
+    it('should coalesce several scroll events into one update', async () => {
+      // Split panes and nested scroll containers can each fire scroll in the same frame.
+      // Every update() forces layout, so only the frame that gets painted should do the work.
+      const updateSpy = vi.spyOn(scrollbar, 'update');
+
+      activeDocument.dispatchEvent(new Event('scroll'));
+      activeDocument.dispatchEvent(new Event('scroll'));
+      activeDocument.dispatchEvent(new Event('scroll'));
+
+      expect(updateSpy).not.toHaveBeenCalled();
+
+      await requestAnimationFrameAsync();
+
+      expect(updateSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not run a pending update after unload', async () => {
+      const updateSpy = vi.spyOn(scrollbar, 'update');
+
+      activeDocument.dispatchEvent(new Event('scroll'));
+      scrollbar.unload();
+      await requestAnimationFrameAsync();
+
+      expect(updateSpy).not.toHaveBeenCalled();
+    });
+
+    it('should clear a queued frame when update runs directly', async () => {
+      // Update() is called straight from the renderer too. A queued frame that never ran would
+      // Otherwise leave the guard set and silence every later scroll.
+      activeDocument.dispatchEvent(new Event('scroll'));
+      scrollbar.update();
+      const updateSpy = vi.spyOn(scrollbar, 'update');
+
+      await requestAnimationFrameAsync();
+
+      expect(updateSpy).not.toHaveBeenCalled();
     });
 
     it('should call update on windows handler', () => {
