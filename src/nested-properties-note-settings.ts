@@ -17,7 +17,7 @@ interface GetInitialExpandLevelParams {
  * ```
  *
  * The key and its members are camelCase, mirroring the `PluginSettings` field names one-to-one, which is the
- * fleet's convention for a plugin-scoped frontmatter key.
+ * convention the author's other plugins follow for a plugin-scoped frontmatter key.
  */
 interface NestedPropertiesNoteSettings {
   // Typed as `unknown` on purpose: this comes from user-authored YAML, so it is validated rather than trusted.
