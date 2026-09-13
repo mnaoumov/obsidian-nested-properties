@@ -44,7 +44,7 @@
 - test: cover the expanded-path bookkeeping of expand/collapse all
 - fix: await the settings load before the renderer that reads them
 - chore: update libs
-- refactor(test): collapse the shared integration suites per G47
+- refactor(test): collapse the shared integration suites into one cross-platform file each
 - chore: update libs
 - chore(vitest): adopt the shared Obsidian plugin vitest configuration
 - chore: update libs and clear the npm audit

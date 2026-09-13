@@ -15,7 +15,7 @@ interface FrontmatterCache {
 
 // Minimal structural types for Obsidian's (untyped) internal global-search matcher tree, reverse-engineered
 // From the 1.13.3 build. Obsidian exposes no public API for search operators, so these are best-effort
-// Internal types reported upstream in `obsidian-typings` (see this plugin's AGENTS.md, G66). The patch
+// Internal types reported upstream in `obsidian-typings` (see this plugin's AGENTS.md). The patch
 // Feature-detects the shape at runtime and no-ops if it ever changes, so a wrong guess degrades to native
 // Behavior rather than crashing.
 
