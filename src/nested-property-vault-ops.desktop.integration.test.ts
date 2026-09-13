@@ -10,9 +10,9 @@
  * real fuzzy picker DOM, then answer the real prompt/confirm modal DOM. The assertion is the observable
  * effect — the nested key is renamed across every note (via `processFrontMatter`) or removed from them.
  *
- * Desktop-only, per G47: the file name alone picks the project. Android is DEFERRED because no emulator /
- * Appium server is provisioned here, so an android entry could not be verified green (G97's "record the
- * specific reason" escape hatch). The body is platform-agnostic, so enabling Android later is a rename to
+ * Desktop-only: the file name alone picks the project. Android is DEFERRED because no emulator /
+ * Appium server is provisioned here, so an android entry could not be verified green -- that missing
+ * provisioning is the specific reason. The body is platform-agnostic, so enabling Android later is a rename to
  * `*.cross-platform.integration.test.ts`.
  */
 
