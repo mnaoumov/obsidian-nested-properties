@@ -295,7 +295,7 @@ describe('nested property type persistence integration', () => {
 
 describe('nested value preservation integration (issue #7)', () => {
   // Patch the real `text` widget to capture the render context handed to each nested scalar, so the
-  // Test can drive an in-place value edit through the REAL renderer (`renderComplexWidget` clone +
+  // test can drive an in-place value edit through the REAL renderer (`renderComplexWidget` clone +
   // `renderObject`/`renderArray` in-place mutation) without re-rendering — exactly the sequence
   // Obsidian performs for a scalar edit, which is what issue #7 regressed.
   it('preserves a sibling scalar value across a later in-place edit', { retry: 3 }, async () => {

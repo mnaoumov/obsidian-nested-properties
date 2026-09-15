@@ -58,8 +58,8 @@ describe('full key display command', () => {
         const containerEl = view?.contentEl ?? activeDocument.body;
 
         // Expand the root nested property only if it is currently collapsed. The renderer remembers
-        // Expanded paths across the shared Obsidian instance, so a blind toggle could collapse a
-        // Property a previous test already expanded.
+        // expanded paths across the shared Obsidian instance, so a blind toggle could collapse a
+        // property a previous test already expanded.
         const collapsible = containerEl.querySelector(':scope .nested-properties-collapsible');
         if (collapsible instanceof HTMLElement && collapsible.hasClass('is-collapsed')) {
           const collapseButton = collapsible.querySelector('.nested-properties-collapse-btn');
@@ -127,8 +127,8 @@ describe('full key display command', () => {
         const containerEl = view?.contentEl ?? activeDocument.body;
 
         // Expand the top-level object property only if it is currently collapsed. The renderer remembers
-        // Expanded paths across the shared Obsidian instance, so a blind toggle could collapse a
-        // Property a previous test already expanded.
+        // expanded paths across the shared Obsidian instance, so a blind toggle could collapse a
+        // property a previous test already expanded.
         const collapsible = containerEl.querySelector(':scope .metadata-property.nested-properties-collapsible');
         if (collapsible instanceof HTMLElement && collapsible.hasClass('is-collapsed')) {
           const collapseButton = collapsible.querySelector('.nested-properties-collapse-btn');
@@ -203,7 +203,7 @@ describe('full key display command', () => {
 
         function measure(): KeyDisplayMeasurement {
           // The scalar key is rendered natively by Obsidian - not inside `.nested-properties-container`
-          // And not a `.nested-properties-collapsible` - so locate it by value among the top-level inputs.
+          // and not a `.nested-properties-collapsible` - so locate it by value among the top-level inputs.
           const keyInput = [...containerEl.querySelectorAll(':scope .metadata-property-key-input')]
             .find((el) => el.instanceOf(HTMLInputElement) && el.value === SCALAR_KEY && !el.closest('.nested-properties-container'));
           if (!(keyInput instanceof HTMLInputElement)) {
@@ -267,8 +267,8 @@ describe('full key display command', () => {
         const containerEl = view?.contentEl ?? activeDocument.body;
 
         // Expand the root nested property only if it is currently collapsed. The renderer remembers
-        // Expanded paths across the shared Obsidian instance, so a blind toggle could collapse a
-        // Property a previous test already expanded.
+        // expanded paths across the shared Obsidian instance, so a blind toggle could collapse a
+        // property a previous test already expanded.
         const collapsible = containerEl.querySelector(':scope .nested-properties-collapsible');
         if (collapsible instanceof HTMLElement && collapsible.hasClass('is-collapsed')) {
           const collapseButton = collapsible.querySelector('.nested-properties-collapse-btn');

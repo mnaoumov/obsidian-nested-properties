@@ -108,13 +108,13 @@ export async function resetPropertyTypesDemo(app: App): Promise<void> {
 
 // Unset through `metadataTypeManager.unsetType`, the same API the plugin itself writes with
 // (`nested-property-renderer.ts`), rather than editing `.obsidian/types.json` behind Obsidian's back —
-// The manager holds the map in memory and would overwrite a hand-edited file on its next save.
+// the manager holds the map in memory and would overwrite a hand-edited file on its next save.
 // The chosen type is stored under the property's DOTTED path, so the demo's entries are the ones whose
-// Key is or starts with one of these. Anything you typed yourself is left alone.
+// key is or starts with one of these. Anything you typed yourself is left alone.
 async function forgetDemoPropertyTypes(app: App): Promise<void> {
   const DEMO_TYPE_KEYS = ['countAsText', 'enabledAsText', 'dueDate', 'apiConfig', 'releases'];
   // `assignedWidgets` is the map of keys with an EXPLICITLY assigned type — the ones `unsetType`
-  // Clears. Not `properties`, which also lists every property merely seen in the vault.
+  // clears. Not `properties`, which also lists every property merely seen in the vault.
   const typeKeys = Object.keys(app.metadataTypeManager.assignedWidgets ?? {});
 
   for (const typeKey of typeKeys) {

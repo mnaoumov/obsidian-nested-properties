@@ -10,7 +10,7 @@ const ELIDED_OBJECT = '{ ... }';
 const EMPTY_SCALAR = '';
 
 // Long enough to read the shape of a typical nested property at a glance, short enough that the collapsed
-// Row never pushes the Properties panel wider than the note.
+// row never pushes the Properties panel wider than the note.
 const MAX_SUMMARY_BODY_LENGTH = 120;
 
 interface ConvertValueParams {

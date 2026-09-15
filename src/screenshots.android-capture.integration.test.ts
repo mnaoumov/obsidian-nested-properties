@@ -110,8 +110,8 @@ beforeAll(async () => {
   setupDiagnostics = await evalInObsidian({
     async callback({ app, fontSizeInPixels, lib: { waitUntil }, objectNotePath }) {
       // A closure runs inside ONE Appium `execute/sync` call, which WebDriver
-      // Caps around 30s. A longer wait in here dies as an opaque `script
-      // Timeout` rather than a readable failure, so keep every wait under it.
+      // caps around 30s. A longer wait in here dies as an opaque `script
+      // timeout` rather than a readable failure, so keep every wait under it.
       const SETTLE_TIMEOUT_IN_MILLISECONDS = 20_000;
       const SETTLE_DELAY_IN_MILLISECONDS = 1500;
 
@@ -124,7 +124,7 @@ beforeAll(async () => {
       });
 
       // The panel IS the subject, so it has to be in the document rather than
-      // Tucked behind a drawer.
+      // tucked behind a drawer.
       app.vault.setConfig('propertiesInDocument', 'visible');
 
       app.vault.setConfig('baseFontSize', fontSizeInPixels);
@@ -147,8 +147,8 @@ beforeAll(async () => {
 describe('mobile store screenshots', () => {
   it('stages the notes the shots are framed on', () => {
     // Surfaced as an assertion because vitest swallows console output from an
-    // Integration worker, and a silently-wrong layout produces five bad images
-    // Without a single failure.
+    // integration worker, and a silently-wrong layout produces five bad images
+    // without a single failure.
     expect(setupDiagnostics).toMatchObject({ isNoteStaged: true });
   });
 
@@ -282,8 +282,8 @@ async function openKeyContextMenu(keyName: string): Promise<void> {
       }
 
       // Obsidian raises the menu from a `contextmenu` event, which is what a long
-      // Press produces on a touch screen — and `button: 'right'` is that long press,
-      // Anchored at the element's centre exactly as the coordinates here used to be.
+      // press produces on a touch screen — and `button: 'right'` is that long press,
+      // anchored at the element's centre exactly as the coordinates here used to be.
       await clickElement({ button: 'right', element: keyEl });
 
       await waitUntil({
@@ -325,9 +325,9 @@ async function openNote(path: string): Promise<void> {
       });
 
       // The tree renders COLLAPSED, so a shot taken here shows `owner { ... }`
-      // And nothing underneath — barely different from the plugin-off frame it
-      // Is supposed to contrast with. Expanding takes several passes: opening a
-      // Node is what renders its children, and they arrive collapsed in turn.
+      // and nothing underneath — barely different from the plugin-off frame it
+      // is supposed to contrast with. Expanding takes several passes: opening a
+      // node is what renders its children, and they arrive collapsed in turn.
       const EXPAND_PASS_COUNT = 6;
       const EXPAND_PASS_DELAY_IN_MILLISECONDS = 300;
       for (let pass = 0; pass < EXPAND_PASS_COUNT; pass++) {
@@ -336,13 +336,13 @@ async function openNote(path: string): Promise<void> {
           break;
         }
         // `click()` rather than a trusted tap, deliberately, for three reasons that
-        // Only apply here. The button is THIS plugin's own and gates on nothing, so
+        // only apply here. The button is THIS plugin's own and gates on nothing, so
         // A trusted gesture would exercise no extra path. A tap is hit-tested at the
-        // Element's centre, and rows deep in a collapsed tree are off-screen on a
-        // Phone, where a tap lands on whatever is actually there instead. And this is
-        // Up to six passes over every collapsed row, each a CDP round trip, which
-        // Would push the closure past the transport's timeout. This is setup for the
-        // Shot, not the gesture the shot is about.
+        // element's centre, and rows deep in a collapsed tree are off-screen on a
+        // phone, where a tap lands on whatever is actually there instead. And this is
+        // up to six passes over every collapsed row, each a CDP round trip, which
+        // would push the closure past the transport's timeout. This is setup for the
+        // shot, not the gesture the shot is about.
         for (const row of collapsed) {
           const collapseButton = row.querySelector('.nested-properties-collapse-btn');
           if (collapseButton instanceof HTMLElement) {
@@ -416,15 +416,15 @@ async function shoot(index: number, caption: string): Promise<void> {
   const captured = await captureObsidianScreenshot({ vaultPath: vaultPath() });
 
   // The AVD is 900x1600, so the device frame IS the store's size. Asserting it
-  // Here is what keeps that true: run this against any other AVD and it fails
-  // Loudly instead of quietly shipping an off-spec image.
+  // here is what keeps that true: run this against any other AVD and it fails
+  // loudly instead of quietly shipping an off-spec image.
   expect(readPngDimensions(captured)).toStrictEqual({
     heightInPixels: HEIGHT_IN_PIXELS,
     widthInPixels: WIDTH_IN_PIXELS
   });
 
   // Captioned AFTER capture, so the frame stays an untouched device screenshot
-  // And rewording a label needs no re-shoot.
+  // and rewording a label needs no re-shoot.
   const labeled = await labelScreenshot(captured, { text: caption });
 
   mkdirSync(IMAGES_DIRECTORY, { recursive: true });

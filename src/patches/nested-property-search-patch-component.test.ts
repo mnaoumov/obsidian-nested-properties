@@ -14,8 +14,8 @@ import {
 import { NestedPropertySearchPatchComponent } from './nested-property-search-patch-component.ts';
 
 // Obsidian exposes no real mock for its internal global-search matcher tree, so this suite builds minimal
-// Test doubles for it (a search view, the compiled-query constructor, the property matcher, and the per-file
-// Match context). They implement only the members the patch touches; the real App still comes from
+// test doubles for it (a search view, the compiled-query constructor, the property matcher, and the per-file
+// match context). They implement only the members the patch touches; the real App still comes from
 // `obsidian-test-mocks`, with the two workspace methods the component calls stubbed on it.
 
 interface FakeLeaf {
@@ -130,7 +130,7 @@ function setup(options: SearchViewSetupOptions = {}): SearchViewSetup {
   const searchQueryConstructor = 'searchQueryConstructor' in options ? options.searchQueryConstructor : DefaultSearchQuery;
 
   // A fresh class per setup so `startSearch` lives on the prototype (as it does on the real `SearchView`) and
-  // Patches from one test do not leak into the next.
+  // patches from one test do not leak into the next.
   class FakeSearchView {
     public searchQuery = searchQueryConstructor === undefined ? undefined : { constructor: searchQueryConstructor };
 
