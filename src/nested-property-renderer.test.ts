@@ -68,13 +68,13 @@ interface MockDomElement {
 type MockFunction = ReturnType<typeof vi.fn>;
 
 // The only allowed thin stubs are kept here. MockHTMLElementBase / MockHTMLInputElementBase back the
-// Hand-rolled DOM elements (createMockEl) so instanceof HTMLElement / HTMLInputElement resolve.
+// hand-rolled DOM elements (createMockEl) so instanceof HTMLElement / HTMLInputElement resolve.
 // MarkdownViewBase supplies the metadataEditor surface the test-mocks MarkdownView lacks. The Menu /
 // MenuItem capture infrastructure stands in for the test-mocks Menu, which does not implement
-// AddSections, and MenuItem, which exposes no dom — both used by the renderer. These are all Obsidian
+// addSections, and MenuItem, which exposes no dom — both used by the renderer. These are all Obsidian
 // API surfaces, not dev-utils classes. The dev-utils classes/functions (MonkeyAroundComponent,
-// ConvertAsyncToSync, ensureNonNullable, castTo / extractDefaultExportInterop) are NOT mocked — the
-// Renderer drives the REAL implementations.
+// convertAsyncToSync, ensureNonNullable, castTo / extractDefaultExportInterop) are NOT mocked — the
+// renderer drives the REAL implementations.
 const hoisted = vi.hoisted(() => {
   class MockHTMLElementBase {
     public readonly isMockElement = true;
@@ -82,9 +82,9 @@ const hoisted = vi.hoisted(() => {
   class MockHTMLInputElementBase extends MockHTMLElementBase {}
 
   // The test-mocks MarkdownView exposes no metadataEditor; this thin Obsidian-API stub provides the
-  // Serialize / synchronize surface the renderer's reloadAllProperties touches. The renderer reads
+  // serialize / synchronize surface the renderer's reloadAllProperties touches. The renderer reads
   // MarkdownView from obsidian (overridden to this class below), so leaf.view instanceof MarkdownView
-  // Resolves against the same constructor.
+  // resolves against the same constructor.
   class MarkdownViewBase {
     public metadataEditor = {
       serialize: vi.fn(() => ({ key: 'val' })),
@@ -193,10 +193,10 @@ const hoisted = vi.hoisted(() => {
 });
 
 // Stub only Obsidian-API surfaces the test-mocks under-implement for this renderer. setIcon is a no-op
-// In the test-mock for unregistered icons, so it is spied to keep the icon-name assertions observable.
+// in the test-mock for unregistered icons, so it is spied to keep the icon-name assertions observable.
 // Menu / MarkdownView are stubbed per the hoisted comment above, and moment is the validity probe used
-// By the value-conversion path. Everything else (Component, DOM helpers, etc.) comes from the real
-// Test-mocks obsidian.
+// by the value-conversion path. Everything else (Component, DOM helpers, etc.) comes from the real
+// test-mocks obsidian.
 vi.mock('obsidian', async (importOriginal) => ({
   ...await importOriginal<typeof import('obsidian')>(),
   MarkdownView: hoisted.MarkdownViewBase,
@@ -218,9 +218,9 @@ interface UpdatableComponent {
 vi.mock('./floating-scrollbar.ts', async () => {
   const { Component } = await vi.importActual<ObsidianComponentModule>('obsidian');
   // A loadable stub: FloatingScrollbarComponent is passed to addChild, which eager-loads it, so the
-  // Stub must return a real Component. A non-arrow function is required for a new-invoked mock. The
-  // Renderer calls .update() on the stored instance, so attach a no-op update to the real Component
-  // Instance (the test-mocks Component is a strict proxy that throws on unknown access).
+  // stub must return a real Component. A non-arrow function is required for a new-invoked mock. The
+  // renderer calls .update() on the stored instance, so attach a no-op update to the real Component
+  // instance (the test-mocks Component is a strict proxy that throws on unknown access).
   // eslint-disable-next-line prefer-arrow-callback -- A new-invoked mock must return a fresh real Component.
   const FloatingScrollbarComponent = vi.fn(function floatingScrollbarStub() {
     const component = new Component();
@@ -505,8 +505,8 @@ describe('NestedPropertyRenderer', () => {
   });
 
   // Drives the REAL component lifecycle: load() runs onload(), eager-loads the real MonkeyAroundComponent
-  // Plus the stubbed FloatingScrollbarComponent children, and applies the three real method patches to
-  // The mock metadataTypeManager, the multitext widget, and the unknown widget.
+  // plus the stubbed FloatingScrollbarComponent children, and applies the three real method patches to
+  // the mock metadataTypeManager, the multitext widget, and the unknown widget.
   function loadRenderer(): void {
     renderer.load();
   }
@@ -1260,8 +1260,8 @@ describe('NestedPropertyRenderer', () => {
   });
 
   // Issue #7: the widget re-renders only on structural changes (add/remove key), not on in-place scalar
-  // Edits, so the per-entry handlers must mutate one shared, privately-cloned model rather than spread a
-  // Render-time snapshot — otherwise a later structural write reverts every sibling value.
+  // edits, so the per-entry handlers must mutate one shared, privately-cloned model rather than spread a
+  // render-time snapshot — otherwise a later structural write reverts every sibling value.
   describe('nested value preservation (issue #7)', () => {
     it('preserves a sibling object value across a later structural write', () => {
       loadRenderer();
@@ -1522,7 +1522,7 @@ describe('NestedPropertyRenderer', () => {
       loadRenderer();
 
       // A widget whose reservedKeys don't contain the nested label (like `tags`) must now be offered,
-      // So Tags/aliases/cssclasses can be assigned to nested properties.
+      // so Tags/aliases/cssclasses can be assigned to nested properties.
       const reservedWidget: PropertyWidget = {
         icon: 'lucide-reserved',
         name: (): string => 'Reserved',
@@ -2471,7 +2471,7 @@ describe('NestedPropertyRenderer', () => {
     });
 
     // Collapsing records an EXPLICIT `false` rather than dropping the path: an absent path falls back to
-    // The initial expand level, which would re-expand whatever the user just collapsed.
+    // the initial expand level, which would re-expand whatever the user just collapsed.
     it('should record an explicit collapse for every element collapseAllIn collapses', () => {
       loadRenderer();
       testAccess(renderer).expansionOverrides.set('test.md:collapsed', true);
@@ -2923,7 +2923,7 @@ describe('NestedPropertyRenderer', () => {
       loadRenderer();
 
       // Render an object with a simple value entry
-      // The renderEntry for simple values calls renderKeyEl with onValueChange and onDelete
+      // the renderEntry for simple values calls renderKeyEl with onValueChange and onDelete
       const iconEl = createMockEl();
       const keyEl = createMockEl();
       keyEl.createSpan.mockReturnValue(iconEl);
@@ -3083,7 +3083,7 @@ describe('NestedPropertyRenderer', () => {
       iconClickHandler({ stopPropagation: vi.fn() });
 
       // Find the "Text" type in the submenu and click it
-      // This will trigger changeType with lossy conversion (object → text)
+      // this will trigger changeType with lossy conversion (object → text)
       for (const subItem of hoisted.submenuItems) {
         const titleCalls = subItem.setTitle.mock.calls as unknown[][];
         if (titleCalls.some((call) => call[0] === 'Text')) {

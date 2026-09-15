@@ -23,9 +23,9 @@ export class Plugin extends PluginBase {
     );
     this.pluginSettingsComponent = pluginSettingsComponent;
     // Since obsidian-dev-utils 90 a child is loaded as it is added, so the settings' async load tail runs
-    // In parallel with the components added below instead of before them. The renderer reads
+    // in parallel with the components added below instead of before them. The renderer reads
     // `isFullKeyDisplayEnabled` in its synchronous `onload` and never re-reads it on the initial load, so
-    // Without this wait a stored `true` was read as its default `false` for the whole session.
+    // without this wait a stored `true` was read as its default `false` for the whole session.
     await pluginSettingsComponent.loadWithPromises();
 
     this.addChild(

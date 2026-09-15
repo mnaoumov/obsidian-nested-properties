@@ -91,8 +91,8 @@ describe('Native search understands nested properties', () => {
           const searchView = searchViewUnknown as SearchViewLike;
 
           // `startSearch` empties the result list synchronously then repopulates asynchronously, so waiting
-          // On the expected end-state (the match present, or — for the negative control — absent) settles
-          // Quickly and never blocks on the 20s ceiling.
+          // on the expected end-state (the match present, or — for the negative control — absent) settles
+          // quickly and never blocks on the 20s ceiling.
           async function runQuery(query: string, shouldMatch: boolean): Promise<string[]> {
             // `setQuery` compiles the query and starts the search; the first call also bootstraps the patch.
             searchView.setQuery(query);

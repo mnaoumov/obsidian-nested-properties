@@ -646,7 +646,7 @@ describe('FloatingScrollbar', () => {
 
     it('should early return when activeEl is null', () => {
       // The component is loaded (track and thumb exist) but `update()` never ran, so `activeEl` is
-      // Null. `syncThumb` must guard against that and leave the thumb untouched.
+      // null. `syncThumb` must guard against that and leave the thumb untouched.
       const thumb = getThumb();
       thumb.style.removeProperty('--thumb-width');
 

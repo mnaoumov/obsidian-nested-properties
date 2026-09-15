@@ -20,8 +20,8 @@ import { NestedPropertySearchPatchComponent } from './patches/nested-property-se
 import { Plugin } from './plugin.ts';
 
 // The real `PluginBase.onload()` loads dev-utils' own notice/context/debug components, which read a
-// Shared-state bag off the app via `getObsidianDevUtilsState`. The strict App mock has no such bag, so
-// Stub this one utility (return a fresh value wrapper per call) — mirroring dev-utils' own PluginBase test.
+// shared-state bag off the app via `getObsidianDevUtilsState`. The strict App mock has no such bag, so
+// stub this one utility (return a fresh value wrapper per call) — mirroring dev-utils' own PluginBase test.
 vi.mock('obsidian-dev-utils/obsidian/app', async (importOriginal) => ({
   ...await importOriginal<typeof import('obsidian-dev-utils/obsidian/app')>(),
   getObsidianDevUtilsState: vi.fn((_app: unknown, _key: string, defaultValue: unknown) => ({ value: defaultValue }))
@@ -44,7 +44,7 @@ async function loadableComponentStub(): Promise<ReturnType<typeof vi.fn>> {
   const { Component } = await vi.importActual<ObsidianComponentModule>('obsidian');
   // Vitest requires a non-arrow function for a mock invoked with `new`; it must return a fresh real
   // `Component`. Constructing a stub class directly would route `this` through vitest's mock proxy and
-  // Break the test-mocks `Component` constructor's own strict proxy. The stub carries a
+  // break the test-mocks `Component` constructor's own strict proxy. The stub carries a
   // `toggleFullKeyDisplay` spy so the command callback can be asserted to delegate to it.
   // eslint-disable-next-line prefer-arrow-callback -- See above; an arrow cannot be used here.
   return vi.fn(function componentStub() {
@@ -59,7 +59,7 @@ vi.mock('./nested-property-renderer.ts', async () => ({
 }));
 
 // Mirrors `loadableComponentStub` but exposes the two vault-wide command methods as async spies so the
-// Command callbacks can be asserted to delegate to them.
+// command callbacks can be asserted to delegate to them.
 async function loadableVaultOpsStub(): Promise<ReturnType<typeof vi.fn>> {
   const { Component } = await vi.importActual<ObsidianComponentModule>('obsidian');
   // eslint-disable-next-line prefer-arrow-callback -- A non-arrow function so it is constructable via `new`.
@@ -78,7 +78,7 @@ vi.mock('./nested-property-vault-ops-component.ts', async () => ({
 }));
 
 // The native-search patch component has no command surface; it just needs to be a loadable `Component` so
-// The real `addChild` eager-load succeeds.
+// the real `addChild` eager-load succeeds.
 async function loadablePlainComponentStub(): Promise<ReturnType<typeof vi.fn>> {
   const { Component } = await vi.importActual<ObsidianComponentModule>('obsidian');
   // eslint-disable-next-line prefer-arrow-callback -- A non-arrow function so it is constructable via `new`.
@@ -93,7 +93,7 @@ vi.mock('./patches/nested-property-search-patch-component.ts', async () => ({
 
 // `OpenDemoVaultCommandHandler` is registered through the real `commandHandlerComponent`, which calls
 // `buildCommand()` then `onRegistered()` on each handler — so the stub must supply both (a minimal command
-// And a noop) to keep that real registration path working; the constructor spy is what the test asserts on.
+// and a noop) to keep that real registration path working; the constructor spy is what the test asserts on.
 vi.mock('obsidian-dev-utils/obsidian/command-handlers/open-demo-vault-command-handler', () => ({
   // eslint-disable-next-line prefer-arrow-callback -- a non-arrow function so it is constructable via `new`.
   OpenDemoVaultCommandHandler: vi.fn(function openDemoVaultCommandHandlerStub() {
@@ -249,7 +249,7 @@ describe('Plugin', () => {
       await plugin.onload();
 
       // Since obsidian-dev-utils 89.0.0 the handler factory is invoked once per menu surface, each
-      // Getting its own instances — so the handler is constructed more than once by design.
+      // getting its own instances — so the handler is constructed more than once by design.
       expect(MockOpenDemoVaultCommandHandler).toHaveBeenCalled();
       const params = MockOpenDemoVaultCommandHandler.mock.calls[0]?.[0];
       expect(params?.app).toBe(app);

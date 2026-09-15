@@ -172,8 +172,8 @@ export class NestedPropertyRendererComponent extends Component {
   private readonly app: App;
 
   // The user's EXPLICIT expand/collapse choices, path -> isExpanded. A path that is absent has no user
-  // Opinion yet and falls back to the initial-expand-level default, so - unlike the plain `Set` this
-  // Replaced - absence no longer means "collapsed" (issue #12).
+  // opinion yet and falls back to the initial-expand-level default, so - unlike the plain `Set` this
+  // replaced - absence no longer means "collapsed" (issue #12).
   private readonly expansionOverrides = new Map<string, boolean>();
   private floatingScrollbar?: FloatingScrollbarComponent;
   private isFullKeyDisplayEnabled = false;
@@ -280,9 +280,9 @@ export class NestedPropertyRendererComponent extends Component {
   }
 
   // Add a "Property type" submenu that lists every registered widget and persists the chosen type
-  // Under `typeKey`. The `reservedKeys` guard is intentionally omitted so `tags`/`aliases`/`cssclasses`
-  // Can be assigned to nested properties (Obsidian's own reserved-key handling for genuine top-level
-  // Properties is untouched - this menu only ever renders for nested entries).
+  // under `typeKey`. The `reservedKeys` guard is intentionally omitted so `tags`/`aliases`/`cssclasses`
+  // can be assigned to nested properties (Obsidian's own reserved-key handling for genuine top-level
+  // properties is untouched - this menu only ever renders for nested entries).
   private addTypeSubmenu(params: NestedPropertyRendererComponentAddTypeSubmenuParams): void {
     const { checkedType, menu, onValueChange, title, typeKey, value } = params;
     menu.addItem((item) => {
@@ -322,7 +322,7 @@ export class NestedPropertyRendererComponent extends Component {
     }
 
     // Persist to Obsidian's native `types.json`. When the chosen type matches what would be inferred
-    // From the value anyway, unset the key instead so `types.json` stays free of redundant entries.
+    // from the value anyway, unset the key instead so `types.json` stays free of redundant entries.
     const leaf = typeKey.slice(typeKey.lastIndexOf('.') + 1);
     const inferredType = this.app.metadataTypeManager.getTypeInfo(leaf, value).inferred.type;
     if (widget.type === inferredType) {
@@ -353,7 +353,7 @@ export class NestedPropertyRendererComponent extends Component {
   private getWidget(params: NestedPropertyRendererComponentGetWidgetParams): PropertyWidget {
     const { label, path, value } = params;
     // Keep the inference fallback keyed on the leaf `label` (not the dotted key): `.inferred` is
-    // Value-based and flows through the `getTypeInfo` patch, and it avoids a top-level property named
+    // value-based and flows through the `getTypeInfo` patch, and it avoids a top-level property named
     // E.g. `released` bleeding its assigned type onto every nested `*.released`.
     return this.getAssignedWidgetForPath(path) ?? this.app.metadataTypeManager.getTypeInfo(label, value).inferred;
   }
@@ -423,9 +423,9 @@ export class NestedPropertyRendererComponent extends Component {
     }
 
     // Own a private, deeply-cloned mutable model. Obsidian re-renders this widget only on structural
-    // Changes (add/remove key), NOT on in-place scalar edits, so the per-entry handlers below mutate
-    // This shared model in place; a later structural write then spreads current values rather than a
-    // Stale render-time snapshot (issue #7). `structuredClone` (not JSON) preserves `Date`/`null`.
+    // changes (add/remove key), NOT on in-place scalar edits, so the per-entry handlers below mutate
+    // this shared model in place; a later structural write then spreads current values rather than a
+    // stale render-time snapshot (issue #7). `structuredClone` (not JSON) preserves `Date`/`null`.
     // eslint-disable-next-line n/no-unsupported-features/node-builtins -- structuredClone is a Web/Electron API available in Obsidian's renderer; the rule wrongly flags it against the Node engines range.
     value = structuredClone(value);
 
@@ -461,8 +461,8 @@ export class NestedPropertyRendererComponent extends Component {
       }
 
       // Size the native key input to its content so the full-key-display toggle (`width: auto`) can
-      // Expand it. Obsidian's default input width overrides `size` while the toggle is off, so this is
-      // Inert until the body class is present — mirroring the nested inputs in `renderKeyEl`.
+      // expand it. Obsidian's default input width overrides `size` while the toggle is off, so this is
+      // inert until the body class is present — mirroring the nested inputs in `renderKeyEl`.
       const keyInputEl = keyEl?.querySelector(':scope .metadata-property-key-input');
       if (keyInputEl instanceof HTMLInputElement) {
         keyInputEl.size = Math.max(1, keyInputEl.value.length);
@@ -664,7 +664,7 @@ export class NestedPropertyRendererComponent extends Component {
       return;
     }
     // Read the live value at menu-open time. In-place scalar edits do not re-render this widget, so the
-    // Render-time captured value would be stale for the Cut/Copy payload and the type submenu (issue #7).
+    // render-time captured value would be stale for the Cut/Copy payload and the type submenu (issue #7).
     const value = getValue();
     const menu = new Menu();
     menu.onHide(() => {
@@ -760,7 +760,7 @@ function collapseAllIn(parentNode: ParentNode, expansionOverrides: Map<string, b
     const path = el.dataset['path'];
     if (path) {
       // An EXPLICIT collapse, not a deletion: absence now means "fall back to the initial expand level",
-      // Which would immediately re-expand whatever the user just collapsed.
+      // which would immediately re-expand whatever the user just collapsed.
       expansionOverrides.set(path, false);
     }
   }
@@ -789,8 +789,8 @@ function expandAllIn(parentNode: ParentNode, expansionOverrides: Map<string, boo
 
 // The collapsed per-field key: array indices are removed so a field's type applies to every item
 // (e.g. `versions.0.released` and `versions.1.released` share `versions.released`). Returns null when
-// The LAST segment is itself an index (the array-item node) - collapsing it would collide with the
-// Parent array's own key and make an item render with the array's type.
+// the LAST segment is itself an index (the array-item node) - collapsing it would collide with the
+// parent array's own key and make an item render with the array's type.
 function getFieldTypeKey(path: string): null | string {
   const itemKey = getItemTypeKey(path);
   const lastSegment = itemKey.slice(itemKey.lastIndexOf('.') + 1);
@@ -809,7 +809,7 @@ function getItemTypeKey(path: string): string {
 
 // How deep a node sits below the nested property itself: the root is 0, its own entries are 1, and so on.
 // An array index is a segment like any other, so an array item sits one level below its array. Counted on
-// The `sourcePath:`-stripped key, because a source path legitimately contains dots (`folder/note.md`).
+// the `sourcePath:`-stripped key, because a source path legitimately contains dots (`folder/note.md`).
 function getPathDepth(path: string): number {
   return getItemTypeKey(path).split('.').length - 1;
 }
@@ -935,9 +935,9 @@ function renderAddPropertyButton(params: RenderAddPropertyButtonParams): void {
 
 function sizeTopLevelKeyInputs(metadataContainerEl: HTMLElement): void {
   // Size the native key input of every top-level property to its content so the full-key-display
-  // Toggle (`width: auto`) can expand it. Obsidian renders plain scalar properties itself, so unlike
-  // The object/list keys and nested keys the plugin never set their `size` - without this they stay
-  // Truncated even when full key display is on. The `size` is inert while the toggle is off, because
+  // toggle (`width: auto`) can expand it. Obsidian renders plain scalar properties itself, so unlike
+  // the object/list keys and nested keys the plugin never set their `size` - without this they stay
+  // truncated even when full key display is on. The `size` is inert while the toggle is off, because
   // Obsidian's default input width overrides it until the body class switches to `width: auto`.
   for (const input of metadataContainerEl.querySelectorAll(':scope .metadata-property-key-input')) {
     if (input.instanceOf(HTMLInputElement) && !input.closest('.nested-properties-container')) {

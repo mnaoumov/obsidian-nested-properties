@@ -14,10 +14,10 @@ interface FrontmatterCache {
 }
 
 // Minimal structural types for Obsidian's (untyped) internal global-search matcher tree, reverse-engineered
-// From the 1.13.3 build. Obsidian exposes no public API for search operators, so these are best-effort
-// Internal types reported upstream in `obsidian-typings` (see this plugin's AGENTS.md). The patch
-// Feature-detects the shape at runtime and no-ops if it ever changes, so a wrong guess degrades to native
-// Behavior rather than crashing.
+// from the 1.13.3 build. Obsidian exposes no public API for search operators, so these are best-effort
+// internal types reported upstream in `obsidian-typings` (see this plugin's AGENTS.md). The patch
+// feature-detects the shape at runtime and no-ops if it ever changes, so a wrong guess degrades to native
+// behavior rather than crashing.
 
 /**
  * Parameters for constructing a {@link NestedPropertySearchPatchComponent}.
@@ -96,7 +96,7 @@ interface SubMatcherResult {
 }
 
 // A bare property query whose compiled `matcher` is guaranteed to be a `PropertyMatcher`, used to reach the
-// Shared property-matcher prototype so it can be patched once for every search.
+// shared property-matcher prototype so it can be patched once for every search.
 const PROBE_QUERY = '["a"]';
 
 /**
@@ -205,8 +205,8 @@ function addValueMatches(target: PropertyMatch[], valueMatcher: SubMatcher, cont
 
 function isPropertyMatcher(candidate: PropertyMatcher): boolean {
   // Structurally feature-detect the property matcher: a `match` method plus the `key`/`value` sub-matchers it
-  // Reads. If Obsidian ever restructures search internals this guard fails and the patch is skipped, leaving
-  // Native behavior untouched rather than crashing.
+  // reads. If Obsidian ever restructures search internals this guard fails and the patch is skipped, leaving
+  // native behavior untouched rather than crashing.
   return typeof candidate.match === 'function' && 'key' in candidate && 'value' in candidate;
 }
 

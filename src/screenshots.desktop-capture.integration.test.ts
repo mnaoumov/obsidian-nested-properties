@@ -101,14 +101,14 @@ beforeAll(async () => {
       });
 
       // The properties panel is the subject; the file explorer and an empty
-      // Right dock would otherwise take a third of a 1200x800 frame.
+      // right dock would otherwise take a third of a 1200x800 frame.
       app.workspace.leftSplit.collapse();
       const rightSplit: unknown = app.workspace.rightSplit;
       (rightSplit as ResizableSideDock).setSize(0);
       app.workspace.rightSplit.collapse();
 
       // The panel IS the subject, so it has to be in the document rather than
-      // Tucked into a side pane.
+      // tucked into a side pane.
       app.vault.setConfig('propertiesInDocument', 'visible');
 
       // Each note opens with its own `# H1`, so the inline title doubles it.
@@ -126,8 +126,8 @@ beforeAll(async () => {
 describe('desktop store screenshots', () => {
   it('1 - the same note with the plugin off', async () => {
     // A before-shot is only safe BECAUSE of the caption. A listing carousel
-    // Shows screenshots one at a time, so an unlabelled one reads as a picture
-    // Of what the plugin does, not of what it fixes.
+    // shows screenshots one at a time, so an unlabelled one reads as a picture
+    // of what the plugin does, not of what it fixes.
     await setPluginEnabled(false);
     await openNote(OBJECT_NOTE_PATH);
     await shoot(1, 'Without the plugin: nested values have nowhere to go');
@@ -146,9 +146,9 @@ describe('desktop store screenshots', () => {
 
   it('4 - the context menu on a nested key', async () => {
     // NOT the full-key-display toggle, which was the first pick: that feature is
-    // About long keys being truncated, and against short keys it changes nothing
-    // On screen — the frame came out identical to shot 2 but for a highlighted
-    // Toolbar icon, which is not a capability a reader can see.
+    // about long keys being truncated, and against short keys it changes nothing
+    // on screen — the frame came out identical to shot 2 but for a highlighted
+    // toolbar icon, which is not a capability a reader can see.
     await openNote(OBJECT_NOTE_PATH);
     await openKeyContextMenu('geo');
     await shoot(4, 'Cut, copy, paste or remove any node');
@@ -250,9 +250,9 @@ async function openKeyContextMenu(keyName: string): Promise<void> {
       }
 
       // Obsidian raises the menu from a `contextmenu` event, and the coordinates
-      // Are where it anchors the menu — without them it lands in the top-left
-      // Corner, over the properties it is supposed to sit beside. A TRUSTED right
-      // Click carries real coordinates and is the gesture a user performs.
+      // are where it anchors the menu — without them it lands in the top-left
+      // corner, over the properties it is supposed to sit beside. A TRUSTED right
+      // click carries real coordinates and is the gesture a user performs.
       await clickElement({ button: 'right', element: keyEl });
 
       await waitUntil({
@@ -281,8 +281,8 @@ async function openNote(path: string): Promise<void> {
       const RESIZE_SETTLE_DELAY_IN_MILLISECONDS = 2000;
 
       // Let the previous shot's capture settle. `captureObsidianScreenshot`
-      // Overrides the device metrics and clears them again, and the re-layout
-      // That lands afterwards disturbs anything opened too soon after it.
+      // overrides the device metrics and clears them again, and the re-layout
+      // that lands afterwards disturbs anything opened too soon after it.
       await sleep(RESIZE_SETTLE_DELAY_IN_MILLISECONDS);
 
       const file = app.vault.getFileByPath(notePath);
@@ -300,10 +300,10 @@ async function openNote(path: string): Promise<void> {
       });
 
       // The tree renders COLLAPSED, so a shot taken here shows `owner { ... }`
-      // And nothing underneath — which is barely different from the
-      // Plugin-off frame it is supposed to contrast with. Expanding takes
-      // Several passes: opening a node is what renders its children, and they
-      // Arrive collapsed in their turn.
+      // and nothing underneath — which is barely different from the
+      // plugin-off frame it is supposed to contrast with. Expanding takes
+      // several passes: opening a node is what renders its children, and they
+      // arrive collapsed in their turn.
       const EXPAND_PASS_COUNT = 6;
       const EXPAND_PASS_DELAY_IN_MILLISECONDS = 300;
       for (let pass = 0; pass < EXPAND_PASS_COUNT; pass++) {
@@ -338,7 +338,7 @@ async function openVaultRenamePicker(): Promise<void> {
       const SETTLE_DELAY_IN_MILLISECONDS = 900;
 
       // Deliberately NOT awaited: the flow resolves only once the picker is
-      // Answered, so awaiting here would hang the whole closure.
+      // answered, so awaiting here would hang the whole closure.
       app.commands.executeCommandById(`${pluginId}:rename-nested-property-across-vault`);
 
       await waitUntil({

@@ -144,7 +144,7 @@ export class NestedPropertyVaultOpsComponent extends Component {
         continue;
       }
       // Decide on a deep clone first (the mutating write cannot report back through Obsidian's
-      // Synchronous frontmatter callback in a way the type checker can observe).
+      // synchronous frontmatter callback in a way the type checker can observe).
       // eslint-disable-next-line n/no-unsupported-features/node-builtins -- structuredClone is a Web/Electron API available in Obsidian's renderer; the rule wrongly flags it against the Node engines range.
       if (!didRenameNestedProperty({ fromPath, frontmatter: structuredClone(frontmatter), toPath })) {
         continue;
