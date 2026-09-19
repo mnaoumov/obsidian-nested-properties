@@ -276,6 +276,14 @@ async function openKeyContextMenu(keyName: string): Promise<void> {
 async function openNote(path: string): Promise<void> {
   await evalInObsidian({
     async callback({ app, lib: { waitUntil }, path: notePath }) {
+      /*
+       * Under the transport's ~30s per-closure cap, not at it.
+       * Read and deliberately left as it is. The 25_000 this closure declares is one 20_000 ceiling plus
+       * 5_000 of capture settles, and a settle is elapsed time rather than a ceiling, so the render keeps
+       * its whole budget inside the cap.
+       * Tightening the ceiling to clear the band would buy nothing here and could not be verified:
+       * running a capture suite rewrites its committed screenshots.
+       */
       const RENDER_TIMEOUT_IN_MILLISECONDS = 20_000;
       const SETTLE_DELAY_IN_MILLISECONDS = 1200;
       const RESIZE_SETTLE_DELAY_IN_MILLISECONDS = 2000;
