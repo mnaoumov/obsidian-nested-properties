@@ -1,11 +1,13 @@
 import type { App as AppOriginal } from 'obsidian';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
+import type { MockInstance } from 'vitest';
 
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { confirm } from 'obsidian-dev-utils/obsidian/modals/confirm';
 import { prompt } from 'obsidian-dev-utils/obsidian/modals/prompt';
 import { selectItem } from 'obsidian-dev-utils/obsidian/modals/select-item';
+import { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   beforeEach,
@@ -25,6 +27,8 @@ const mockSelectItem = vi.mocked(selectItem);
 const mockPrompt = vi.mocked(prompt);
 const mockConfirm = vi.mocked(confirm);
 
+type LockForPathSpy = MockInstance<ResourceLockComponent['lockForPath']>;
+
 interface NestedPropertyPathCount {
   readonly count: number;
   readonly path: string;
@@ -32,6 +36,7 @@ interface NestedPropertyPathCount {
 
 interface TestComponent {
   readonly component: NestedPropertyVaultOpsComponent;
+  readonly lockForPath: LockForPathSpy;
   readonly showNotice: ReturnType<typeof vi.fn>;
 }
 
@@ -64,11 +69,19 @@ function frontmatterOf(app: AppOriginal, path: string): GenericObject {
   return (app.metadataCache.getFileCache(file)?.frontmatter ?? {}) as GenericObject;
 }
 
+function lockedPaths(lockForPath: LockForPathSpy): string[] {
+  return lockForPath.mock.calls.map(([{ pathOrFile }]) => (typeof pathOrFile === 'string' ? pathOrFile : pathOrFile.path));
+}
+
 function makeComponent(app: AppOriginal): TestComponent {
   const showNotice = vi.fn();
   const pluginNoticeComponent = castTo<PluginNoticeComponent>({ showNotice });
-  const component = new NestedPropertyVaultOpsComponent({ app, pluginNoticeComponent });
-  return { component, showNotice };
+  // The real lock component, spied rather than replaced, so the assertions below observe the locking that
+  // `obsidian-dev-utils`' `process()` primitive actually performs on each written note.
+  const resourceLockComponent = new ResourceLockComponent(app, 'nested-properties');
+  const lockForPath = vi.spyOn(resourceLockComponent, 'lockForPath');
+  const component = new NestedPropertyVaultOpsComponent({ app, pluginNoticeComponent, resourceLockComponent });
+  return { component, lockForPath, showNotice };
 }
 
 describe('NestedPropertyVaultOpsComponent', () => {
@@ -184,6 +197,19 @@ describe('NestedPropertyVaultOpsComponent', () => {
       );
     });
 
+    it('writes each renamed note under the shared resource lock, and locks nothing else', async () => {
+      const app = App.createConfigured__({
+        files: { 'a.md': NESTED_A, 'b.md': NESTED_B, 'plain.md': NO_FRONTMATTER }
+      }).asOriginalType__();
+      const { component, lockForPath } = makeComponent(app);
+      mockSelectItem.mockResolvedValue({ count: 2, path: 'top.level1.level2' });
+      mockPrompt.mockResolvedValue('top.level1.renamed');
+
+      await component.renameNestedPropertyAcrossVault();
+
+      expect(lockedPaths(lockForPath)).toEqual(['a.md', 'b.md']);
+    });
+
     it('reports zero notes when the target parent chain is not an object', async () => {
       const app = App.createConfigured__({ files: { 'a.md': NESTED_A } }).asOriginalType__();
       const { component, showNotice } = makeComponent(app);
@@ -247,6 +273,19 @@ describe('NestedPropertyVaultOpsComponent', () => {
       expect(frontmatterOf(app, 'a.md')).toEqual({ top: { level1: {}, other: 1 } });
       expect(frontmatterOf(app, 'b.md')).toEqual({ top: { level1: {} } });
       expect(showNotice).toHaveBeenCalledWith('Deleted the nested property "top.level1.level2" from 2 notes.');
+    });
+
+    it('writes each deleted-from note under the shared resource lock, and locks nothing else', async () => {
+      const app = App.createConfigured__({
+        files: { 'a.md': NESTED_A, 'b.md': NESTED_B, 'plain.md': NO_FRONTMATTER }
+      }).asOriginalType__();
+      const { component, lockForPath } = makeComponent(app);
+      mockSelectItem.mockResolvedValue({ count: 1, path: 'top.other' });
+      mockConfirm.mockResolvedValue(true);
+
+      await component.deleteNestedPropertyAcrossVault();
+
+      expect(lockedPaths(lockForPath)).toEqual(['a.md']);
     });
   });
 });

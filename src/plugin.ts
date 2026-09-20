@@ -54,7 +54,8 @@ export class Plugin extends PluginBase {
     const nestedPropertyVaultOpsComponent = this.addChild(
       new NestedPropertyVaultOpsComponent({
         app: this.app,
-        pluginNoticeComponent: this.pluginNoticeComponent
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        resourceLockComponent: this.resourceLockComponent
       })
     );
     this.addCommand({

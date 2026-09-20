@@ -1,8 +1,13 @@
-import type { App } from 'obsidian';
+import type {
+  App,
+  TFile
+} from 'obsidian';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
+import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
 import { Component } from 'obsidian';
+import { processFrontmatter } from 'obsidian-dev-utils/obsidian/file-manager';
 import { confirm } from 'obsidian-dev-utils/obsidian/modals/confirm';
 import { prompt } from 'obsidian-dev-utils/obsidian/modals/prompt';
 import { selectItem } from 'obsidian-dev-utils/obsidian/modals/select-item';
@@ -12,6 +17,27 @@ import {
   didDeleteNestedProperty,
   didRenameNestedProperty
 } from './nested-property-paths.ts';
+
+/**
+ * A note that carries frontmatter, as yielded by the single vault traversal every vault-wide operation
+ * runs on.
+ */
+interface NestedPropertyNote {
+  /**
+   * The note itself.
+   */
+  readonly file: TFile;
+
+  /**
+   * The note's frontmatter, as the metadata cache has it.
+   */
+  readonly frontmatter: GenericObject;
+
+  /**
+   * The sorted, de-duplicated nested property paths the frontmatter contains.
+   */
+  readonly paths: string[];
+}
 
 interface NestedPropertyPathCount {
   readonly count: number;
@@ -30,6 +56,7 @@ interface NestedPropertyVaultOpsComponentApplyRenameParams {
 interface NestedPropertyVaultOpsComponentConstructorParams {
   readonly app: App;
   readonly pluginNoticeComponent: PluginNoticeComponent;
+  readonly resourceLockComponent: null | ResourceLockComponent;
 }
 
 /**
@@ -41,11 +68,13 @@ interface NestedPropertyVaultOpsComponentConstructorParams {
 export class NestedPropertyVaultOpsComponent extends Component {
   private readonly app: App;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
+  private readonly resourceLockComponent: null | ResourceLockComponent;
 
   public constructor(params: NestedPropertyVaultOpsComponentConstructorParams) {
     super();
     this.app = params.app;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
+    this.resourceLockComponent = params.resourceLockComponent;
   }
 
   public async deleteNestedPropertyAcrossVault(): Promise<void> {
@@ -118,13 +147,12 @@ export class NestedPropertyVaultOpsComponent extends Component {
   private async applyDelete(params: NestedPropertyVaultOpsComponentApplyDeleteParams): Promise<number> {
     const { path } = params;
     let count = 0;
-    for (const file of this.app.vault.getMarkdownFiles()) {
-      const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter as GenericObject | undefined;
-      if (!frontmatter || !collectNestedPropertyPaths(frontmatter).includes(path)) {
+    for (const note of this.iterateNotesWithNestedProperties()) {
+      if (!note.paths.includes(path)) {
         continue;
       }
-      await this.app.fileManager.processFrontMatter(file, (fileFrontmatter) => {
-        didDeleteNestedProperty({ frontmatter: fileFrontmatter as GenericObject, path });
+      await this.writeFrontmatter(note.file, (fileFrontmatter) => {
+        didDeleteNestedProperty({ frontmatter: fileFrontmatter, path });
       });
       count++;
     }
@@ -134,23 +162,18 @@ export class NestedPropertyVaultOpsComponent extends Component {
   private async applyRename(params: NestedPropertyVaultOpsComponentApplyRenameParams): Promise<number> {
     const { fromPath, toPath } = params;
     let count = 0;
-    for (const file of this.app.vault.getMarkdownFiles()) {
-      const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter as GenericObject | undefined;
-      if (!frontmatter) {
-        continue;
-      }
-      const existingPaths = collectNestedPropertyPaths(frontmatter);
-      if (!existingPaths.includes(fromPath) || existingPaths.includes(toPath)) {
+    for (const note of this.iterateNotesWithNestedProperties()) {
+      if (!note.paths.includes(fromPath) || note.paths.includes(toPath)) {
         continue;
       }
       // Decide on a deep clone first (the mutating write cannot report back through Obsidian's
       // synchronous frontmatter callback in a way the type checker can observe).
       // eslint-disable-next-line n/no-unsupported-features/node-builtins -- structuredClone is a Web/Electron API available in Obsidian's renderer; the rule wrongly flags it against the Node engines range.
-      if (!didRenameNestedProperty({ fromPath, frontmatter: structuredClone(frontmatter), toPath })) {
+      if (!didRenameNestedProperty({ fromPath, frontmatter: structuredClone(note.frontmatter), toPath })) {
         continue;
       }
-      await this.app.fileManager.processFrontMatter(file, (fileFrontmatter) => {
-        didRenameNestedProperty({ fromPath, frontmatter: fileFrontmatter as GenericObject, toPath });
+      await this.writeFrontmatter(note.file, (fileFrontmatter) => {
+        didRenameNestedProperty({ fromPath, frontmatter: fileFrontmatter, toPath });
       });
       count++;
     }
@@ -159,18 +182,58 @@ export class NestedPropertyVaultOpsComponent extends Component {
 
   private collectPathsWithCounts(): NestedPropertyPathCount[] {
     const counts = new Map<string, number>();
-    for (const file of this.app.vault.getMarkdownFiles()) {
-      const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter as GenericObject | undefined;
-      if (!frontmatter) {
-        continue;
-      }
-      for (const path of collectNestedPropertyPaths(frontmatter)) {
+    for (const note of this.iterateNotesWithNestedProperties()) {
+      for (const path of note.paths) {
         counts.set(path, (counts.get(path) ?? 0) + 1);
       }
     }
     return [...counts]
       .map(([path, count]) => ({ count, path }))
       .sort((a, b) => a.path.localeCompare(b.path));
+  }
+
+  /**
+   * The single vault traversal behind every vault-wide operation here: the markdown files, narrowed to the
+   * ones the metadata cache has frontmatter for, each paired with its nested property paths.
+   *
+   * There is no "notes carrying this property key" index in the metadata cache, so a full scan is the
+   * correct shape; what the three operations share — and used to each spell out for themselves — is only
+   * the iterate-and-filter shell around {@link collectNestedPropertyPaths}.
+   *
+   * It is a generator rather than a materialized list so the cache read of each note still happens right
+   * before that note is written, not once up front for the whole vault.
+   *
+   * @yields Each note that has frontmatter, with its nested property paths.
+   */
+  private *iterateNotesWithNestedProperties(): Generator<NestedPropertyNote, void> {
+    for (const file of this.app.vault.getMarkdownFiles()) {
+      const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter as GenericObject | undefined;
+      if (!frontmatter) {
+        continue;
+      }
+      yield { file, frontmatter, paths: collectNestedPropertyPaths(frontmatter) };
+    }
+  }
+
+  /**
+   * Writes a note's frontmatter through `obsidian-dev-utils`' {@link processFrontmatter} rather than the
+   * raw `FileManager.processFrontMatter`, so these vault-wide writes inherit the shared `process()`
+   * primitive's resource locking, abort handling and timeout notices.
+   *
+   * @param file - The note to write.
+   * @param frontmatterFunction - Mutates the frontmatter in place.
+   * @returns A {@link Promise} that resolves once the note has been written.
+   */
+  private async writeFrontmatter(file: TFile, frontmatterFunction: (frontmatter: GenericObject) => void): Promise<void> {
+    await processFrontmatter({
+      app: this.app,
+      frontmatterFunction: (fileFrontmatter) => {
+        frontmatterFunction(fileFrontmatter);
+      },
+      pathOrFile: file,
+      pluginNoticeComponent: this.pluginNoticeComponent,
+      resourceLockComponent: this.resourceLockComponent
+    });
   }
 }
 
