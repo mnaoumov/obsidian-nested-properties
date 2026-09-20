@@ -40,7 +40,7 @@ interface PropertyMatch {
  */
 interface PropertyMatcher {
   key: SubMatcher;
-  match(context: SearchMatchContext): null | PropertyMatchResult | undefined;
+  match: (context: SearchMatchContext) => null | PropertyMatchResult | undefined;
   value: null | SubMatcher;
 }
 
@@ -56,8 +56,8 @@ interface PropertyMatchResult {
  */
 interface SearchMatchContext {
   cache?: FrontmatterCache | undefined;
-  clone(): SearchMatchContext;
-  cloneForPropertyContent(value: unknown): SearchMatchContext;
+  clone: () => SearchMatchContext;
+  cloneForPropertyContent: (value: unknown) => SearchMatchContext;
   keys: string[];
   strings: Record<string, unknown>;
 }
@@ -78,14 +78,14 @@ interface SearchQueryInstance {
  */
 interface SearchView {
   searchQuery?: SearchQueryInstance | undefined;
-  startSearch(): void;
+  startSearch: () => void;
 }
 
 /**
  * A single property-name / property-value sub-matcher.
  */
 interface SubMatcher {
-  match(context: SearchMatchContext): null | SubMatcherResult;
+  match: (context: SearchMatchContext) => null | SubMatcherResult;
 }
 
 /**

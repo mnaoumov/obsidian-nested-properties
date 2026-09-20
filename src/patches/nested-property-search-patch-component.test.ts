@@ -23,7 +23,7 @@ interface FakeLeaf {
 }
 
 interface FakeSubMatcher {
-  match(context: FakeContext): MatcherContent | null;
+  match: (context: FakeContext) => MatcherContent | null;
 }
 
 interface FrontmatterCache {
@@ -47,7 +47,7 @@ interface PropertyMatcherInit {
 }
 
 interface PropertyMatcherPrototype {
-  match(this: PropertyMatcherState, context: FakeContext): unknown;
+  match: (this: PropertyMatcherState, context: FakeContext) => unknown;
 }
 
 interface PropertyMatcherState {
@@ -58,7 +58,7 @@ interface SearchViewSetup {
   app: AppOriginal;
   component: NestedPropertySearchPatchComponent;
   prototype: PropertyMatcherPrototype;
-  startSearch(): void;
+  startSearch: () => void;
 }
 
 interface SearchViewSetupOptions {

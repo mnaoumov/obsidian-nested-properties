@@ -24,7 +24,7 @@ interface ObsidianDevUtilsStateHolder {
 }
 
 interface ScrollbarInternals {
-  syncThumb(): void;
+  syncThumb: () => void;
 }
 
 const VIEWPORT_HEIGHT_PX = 800;
