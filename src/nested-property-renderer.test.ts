@@ -212,7 +212,7 @@ interface ObsidianComponentModule {
 }
 
 interface UpdatableComponent {
-  update(): void;
+  update: () => void;
 }
 
 vi.mock('./floating-scrollbar.ts', async () => {
@@ -242,7 +242,7 @@ interface FakeContainer {
 }
 
 interface FakeLeaf {
-  getContainer(): FakeContainer;
+  getContainer: () => FakeContainer;
 }
 
 interface FakeWindow {
@@ -290,15 +290,15 @@ interface RendererTestAccess {
   cleanups__: (() => unknown)[];
   expansionOverrides: Map<string, boolean>;
   pendingFocusKey: null | string;
-  showNestedPropertyMenu(params: ShowNestedPropertyMenuTestParams): void;
+  showNestedPropertyMenu: (params: ShowNestedPropertyMenuTestParams) => void;
 }
 
 interface ShowNestedPropertyMenuTestParams {
   readonly $event: unknown;
-  getValue(): unknown;
+  readonly getValue: () => unknown;
   readonly label: string;
-  onDelete(): void;
-  onValueChange(value: unknown): void;
+  readonly onDelete: () => void;
+  readonly onValueChange: (value: unknown) => void;
   readonly path: string;
 }
 
@@ -370,7 +370,7 @@ let mockPluginSettings: PluginSettings;
 let mockPluginSettingsComponent: PluginSettingsComponent;
 
 interface RenderWidgetResult {
-  focus(): void;
+  readonly focus: () => void;
   readonly type: string;
 }
 

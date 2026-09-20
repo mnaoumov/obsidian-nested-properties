@@ -38,7 +38,7 @@ interface SearchResultDom {
 
 interface SearchViewLike {
   dom: SearchResultDom;
-  setQuery(query: string): void;
+  setQuery: (query: string) => void;
 }
 describe('Native search understands nested properties', () => {
   it('returns the note whose nested property matches and not the one that does not', async () => {

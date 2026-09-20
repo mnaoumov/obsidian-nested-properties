@@ -51,20 +51,20 @@ interface CreateSummaryParams {
 interface InjectHeaderButtonsParams {
   readonly expansionOverrides: Map<string, boolean>;
   readonly metadataContainerEl: HTMLElement;
-  onToggleFullKeyDisplay(this: void): void;
+  readonly onToggleFullKeyDisplay: (this: void) => void;
 }
 
 interface NestedPropertyRendererComponentAddTypeSubmenuParams {
   readonly checkedType: string;
   readonly menu: Menu;
-  onValueChange(this: void, newValue: unknown): void;
+  readonly onValueChange: (this: void, newValue: unknown) => void;
   readonly title: string;
   readonly typeKey: string;
   readonly value: unknown;
 }
 
 interface NestedPropertyRendererComponentChangeTypeParams {
-  onValueChange(this: void, newValue: unknown): void;
+  readonly onValueChange: (this: void, newValue: unknown) => void;
   readonly typeKey: string;
   readonly value: unknown;
   readonly widget: PropertyWidget;
@@ -90,7 +90,7 @@ interface NestedPropertyRendererComponentRenderArrayParams {
   readonly array: unknown[];
   readonly containerEl: HTMLElement;
   readonly context: PropertyRenderContext;
-  onArrayChange(this: void, newValue: unknown): void;
+  readonly onArrayChange: (this: void, newValue: unknown) => void;
   readonly parentPath: string;
 }
 
@@ -104,19 +104,19 @@ interface NestedPropertyRendererComponentRenderComplexWidgetParams {
 interface NestedPropertyRendererComponentRenderEntryParams {
   readonly containerEl: HTMLElement;
   readonly context: PropertyRenderContext;
-  getValue(this: void): unknown;
+  readonly getValue: (this: void) => unknown;
   readonly label: string;
-  onDelete(this: void): void;
-  onValueChange(this: void, newValue: unknown): void;
+  readonly onDelete: (this: void) => void;
+  readonly onValueChange: (this: void, newValue: unknown) => void;
   readonly parentPath: string;
   readonly value: unknown;
 }
 
 interface NestedPropertyRendererComponentRenderKeyElParams {
-  getValue(this: void): unknown;
+  readonly getValue: (this: void) => unknown;
   readonly label: string;
-  onDelete(this: void): void;
-  onValueChange(this: void, newValue: unknown): void;
+  readonly onDelete: (this: void) => void;
+  readonly onValueChange: (this: void, newValue: unknown) => void;
   readonly parentEl: HTMLElement;
   readonly path: string;
   readonly value: unknown;
@@ -125,7 +125,7 @@ interface NestedPropertyRendererComponentRenderKeyElParams {
 interface NestedPropertyRendererComponentRenderNestedValueParams {
   readonly containerEl: HTMLElement;
   readonly context: PropertyRenderContext;
-  onValueChange(this: void, newValue: unknown): void;
+  readonly onValueChange: (this: void, newValue: unknown) => void;
   readonly path: string;
   readonly value: unknown;
 }
@@ -134,30 +134,30 @@ interface NestedPropertyRendererComponentRenderObjectParams {
   readonly $object: GenericObject;
   readonly containerEl: HTMLElement;
   readonly context: PropertyRenderContext;
-  onValueChange(this: void, newValue: unknown): void;
+  readonly onValueChange: (this: void, newValue: unknown) => void;
   readonly parentPath: string;
 }
 
 interface NestedPropertyRendererComponentShowNestedPropertyMenuParams {
   readonly $event: MouseEvent;
-  getValue(this: void): unknown;
+  readonly getValue: (this: void) => unknown;
   readonly label: string;
-  onDelete(this: void): void;
-  onValueChange(this: void, newValue: unknown): void;
+  readonly onDelete: (this: void) => void;
+  readonly onValueChange: (this: void, newValue: unknown) => void;
   readonly path: string;
 }
 
 interface RenderAddItemButtonParams {
   readonly array: unknown[];
   readonly containerEl: HTMLElement;
-  onValueChange(this: void, newValue: unknown): void;
+  readonly onValueChange: (this: void, newValue: unknown) => void;
 }
 
 interface RenderAddPropertyButtonParams {
   readonly $object: GenericObject;
   readonly containerEl: HTMLElement;
-  onValueChange(this: void, newValue: unknown): void;
-  setPendingFocusKey(this: void, key: string): void;
+  readonly onValueChange: (this: void, newValue: unknown) => void;
+  readonly setPendingFocusKey: (this: void, key: string) => void;
 }
 
 interface UpdateToggleButtonParams {
