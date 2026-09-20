@@ -46,12 +46,16 @@ describe('Native search understands nested properties', () => {
       async callback({ app, lib: { waitUntil } }) {
         /*
          * Under the transport's ~30s per-closure cap, not at it.
-         * Two waits share this one budget, so at 20_000 apiece the closure declared 40s.
+         * SIX waits share this one budget, not the two that are visible here: `runQuery` declares the
+         * ceiling once per CALL SITE, and it has five. So at 12_000 apiece the closure declared 72s.
          * The eval is killed at the cap first and reported as a bare transport timeout.
          * That names the harness rather than the wait that overran.
-         * What is waited on here lands in well under a second, so the smaller ceiling costs nothing.
+         * Each step here - a cache parse, then a search settling - lands in well under a second, so the
+         * smaller ceiling costs nothing.
+         * Adding a `runQuery` call adds a whole ceiling to what this closure declares: re-divide the
+         * ~24s budget by the new count rather than by the `waitUntil` calls the body shows.
          */
-        const WAIT_TIMEOUT_IN_MILLISECONDS = 12_000;
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 4000;
         const FOLDER = 'np-search';
         const MATCH_PATH = `${FOLDER}/match.md`;
         const OTHER_PATH = `${FOLDER}/other.md`;
@@ -92,7 +96,7 @@ describe('Native search understands nested properties', () => {
 
           // `startSearch` empties the result list synchronously then repopulates asynchronously, so waiting
           // on the expected end-state (the match present, or — for the negative control — absent) settles
-          // quickly and never blocks on the 20s ceiling.
+          // quickly and never blocks on the ceiling.
           async function runQuery(query: string, shouldMatch: boolean): Promise<string[]> {
             // `setQuery` compiles the query and starts the search; the first call also bootstraps the patch.
             searchView.setQuery(query);
