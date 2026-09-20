@@ -8,7 +8,8 @@
  *
  * The flow driven here is exactly the one a user drives: run the command, pick the nested path from the
  * real fuzzy picker DOM, then answer the real prompt/confirm modal DOM. The assertion is the observable
- * effect — the nested key is renamed across every note (via `processFrontMatter`) or removed from them.
+ * effect — the nested key is renamed across every note (via `obsidian-dev-utils`' `processFrontmatter`,
+ * which wraps the write in the shared `process()` primitive) or removed from them.
  *
  * Desktop-only: the file name alone picks the project. Android is DEFERRED because no emulator /
  * Appium server is provisioned here, so an android entry could not be verified green -- that missing
