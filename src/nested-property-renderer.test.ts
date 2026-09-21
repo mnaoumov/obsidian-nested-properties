@@ -1708,7 +1708,7 @@ describe('NestedPropertyRenderer', () => {
     it('should fall through when assigned widget not found in registry', () => {
       loadRenderer();
 
-      // GetAssignedWidget returns a type that is not registered, so getWidget falls back to inference.
+      // getAssignedWidget returns a type that is not registered, so getWidget falls back to inference.
       mockApp.metadataTypeManager.getAssignedWidget.mockReturnValue('nonexistent');
 
       const el = createMockEl();
@@ -2412,7 +2412,7 @@ describe('NestedPropertyRenderer', () => {
       const handler = findEventHandler(toggleButton, 'click');
       handler({ preventDefault: vi.fn(), stopPropagation: vi.fn() });
 
-      // ClassList.remove should have been called with 'is-collapsed'
+      // classList.remove should have been called with 'is-collapsed'
       expect(collapsibleEl.classList.remove).toHaveBeenCalledWith('is-collapsed');
     });
 
@@ -3258,7 +3258,7 @@ describe('NestedPropertyRenderer', () => {
       const context = createMockContext();
       renderWidget('list', el, ['a'], context);
 
-      // ClassList.add should have been called with 'nested-properties-collapsible' but NOT 'is-collapsed'
+      // classList.add should have been called with 'nested-properties-collapsible' but NOT 'is-collapsed'
       const addCalls = propertyEl.classList.add.mock.calls as unknown[][];
       const collapsibleCall = addCalls.find((call) => call[0] === 'nested-properties-collapsible');
       const collapsedCall = addCalls.find((call) => call[0] === 'is-collapsed');
@@ -3400,7 +3400,7 @@ describe('NestedPropertyRenderer', () => {
       renderWidget('object', el, { myProperty: 'val' }, context);
       vi.runAllTimers();
 
-      // TextWidget (assigned) should have been used for rendering, not the inferred multitext.
+      // textWidget (assigned) should have been used for rendering, not the inferred multitext.
       expect(textWidget.render).toHaveBeenCalled();
       expect(multitextWidget.render).not.toHaveBeenCalled();
     });
