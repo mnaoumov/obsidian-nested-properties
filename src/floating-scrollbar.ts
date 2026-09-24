@@ -10,7 +10,7 @@ const MIN_THUMB_WIDTH_PX = 30;
 const SCROLLBAR_HIT_ZONE_PX = 16;
 
 // Obsidian's Properties editor root. It is the smallest stable element that contains every property,
-// And unlike a property row it does not come and go as rows collapse, overflow or are edited.
+// and unlike a property row it does not come and go as rows collapse, overflow or are edited.
 const PROPERTIES_CONTAINER_SELECTOR = '.metadata-container';
 
 // The cursor handler is offered every pointer move its target set sees, and a move that lands
@@ -112,7 +112,7 @@ export class FloatingScrollbarComponent extends Component {
     }
 
     // Any queued frame is redundant now, and clearing it keeps the guard from sticking if the
-    // Window that scheduled it never runs the callback.
+    // window that scheduled it never runs the callback.
     this.cancelPendingUpdate();
     this.syncListenerTargets(this.collectListenerTargets());
 
@@ -166,7 +166,7 @@ export class FloatingScrollbarComponent extends Component {
 
   private collectListenerTargets(): ReadonlySet<HTMLElement> {
     // Every window, not just the active one: a Properties editor in a background pop-out has to keep
-    // Working, and reconciling against only the active document would strip its listeners.
+    // working, and reconciling against only the active document would strip its listeners.
     // The active document is included outright, so this holds even before the workspace reports it.
     const documents = new Set<Document>([activeDocument]);
     for (const win of getAllDomWindows(this.app)) {
@@ -239,12 +239,17 @@ export class FloatingScrollbarComponent extends Component {
 
   private scheduleUpdate(): void {
     // Split panes and nested scroll containers can each fire scroll in the same frame, and every
-    // Update() forces layout. Only the frame that gets painted needs the work.
-    if (this.pendingUpdate) {
-      return;
-    }
-    // Owned by the window the scroll happened in, which is on screen and so will run the frame.
+    // update() forces layout. Only the frame that gets painted needs the work.
     const ownerWindow = activeWindow;
+    if (this.pendingUpdate) {
+      if (this.pendingUpdate.ownerWindow === ownerWindow) {
+        return;
+      }
+      // The slot is shared by every window, and the frame in it was queued by another one. That
+      // window may be minimized or occluded, where Chromium throttles its animation frames, so the
+      // slot could stay taken and swallow every later scroll. Re-queue on the active window instead.
+      this.cancelPendingUpdate();
+    }
     this.pendingUpdate = {
       animationFrameId: ownerWindow.requestAnimationFrame(() => {
         this.pendingUpdate = null;

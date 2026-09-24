@@ -88,7 +88,7 @@ function createPropertyEl(metrics?: ElementMetrics): HTMLElement {
   value.append(nested);
   property.append(value);
   // Inside the Properties editor container, as in Obsidian: the wheel listener is attached there,
-  // And a capture listener only sees events whose target is inside it.
+  // and a capture listener only sees events whose target is inside it.
   createMetadataContainer().append(property);
   applyMetrics(property, metrics);
   return property;
@@ -483,7 +483,7 @@ describe('FloatingScrollbar', () => {
 
     it('should not register a wheel listener on any document', () => {
       // This is the point of the whole arrangement. A non-passive wheel listener on a document makes
-      // Every wheel event in the app wait on the main thread, which is what Chromium reports as
+      // every wheel event in the app wait on the main thread, which is what Chromium reports as
       // "[Violation] Handling of 'wheel' input event was delayed".
       scrollbar.unload();
       loadedScrollbars.pop();
@@ -494,7 +494,8 @@ describe('FloatingScrollbar', () => {
 
       // The scroll registration proves the spy sees the component's document listeners at all.
       expect(addEventListenerSpy).toHaveBeenCalledWith('scroll', expect.anything(), expect.anything());
-      expect(addEventListenerSpy).not.toHaveBeenCalledWith('wheel', expect.anything(), expect.anything());
+      // Matched on the event name alone, so a registration without an options argument still counts.
+      expect(addEventListenerSpy.mock.calls.filter(([type]) => type === 'wheel')).toEqual([]);
     });
 
     it('should do nothing when target is not HTMLElement', () => {
@@ -513,7 +514,7 @@ describe('FloatingScrollbar', () => {
 
     it('should attach in other windows, not only the active one', () => {
       // A Properties editor in a background pop-out has to keep working while another window is
-      // Focused. Reconciling against the active document alone would strip its listener.
+      // focused. Reconciling against the active document alone would strip its listener.
       const otherDoc = activeDocument.implementation.createHTMLDocument();
       const otherContainerEl = otherDoc.win.createDiv();
       otherContainerEl.className = 'metadata-container';
@@ -911,7 +912,7 @@ describe('FloatingScrollbar', () => {
 
     it('should clear a queued frame when update runs directly', async () => {
       // Update() is called straight from the renderer too. A queued frame that never ran would
-      // Otherwise leave the guard set and silence every later scroll.
+      // otherwise leave the guard set and silence every later scroll.
       activeDocument.dispatchEvent(new Event('scroll'));
       scrollbar.update();
       const updateSpy = vi.spyOn(scrollbar, 'update');
@@ -919,6 +920,49 @@ describe('FloatingScrollbar', () => {
       await requestAnimationFrameAsync();
 
       expect(updateSpy).not.toHaveBeenCalled();
+    });
+
+    it('should re-queue a frame queued by another window', async () => {
+      // The slot is shared by every window. A frame queued by a window that is then minimized may
+      // never run, so a scroll while another window is active must not be swallowed by it.
+      const mainWindow = activeWindow;
+      const cancelAnimationFrameSpy = vi.spyOn(mainWindow, 'cancelAnimationFrame');
+      activeDocument.dispatchEvent(new Event('scroll'));
+
+      let otherWindowCallback: FrameRequestCallback | null = null;
+      const otherWindow = castTo<Window>({
+        cancelAnimationFrame: vi.fn(),
+        requestAnimationFrame: vi.fn((callback: FrameRequestCallback) => {
+          otherWindowCallback = callback;
+          return 1;
+        })
+      });
+      vi.stubGlobal('activeWindow', otherWindow);
+      try {
+        activeDocument.dispatchEvent(new Event('scroll'));
+      } finally {
+        vi.unstubAllGlobals();
+      }
+
+      expect(cancelAnimationFrameSpy).toHaveBeenCalledTimes(1);
+      expect(otherWindow.requestAnimationFrame).toHaveBeenCalledTimes(1);
+
+      // The main window's frame was cancelled, so only the other window's frame runs update().
+      const updateSpy = vi.spyOn(scrollbar, 'update');
+      await requestAnimationFrameAsync();
+      expect(updateSpy).not.toHaveBeenCalled();
+
+      castTo<FrameRequestCallback>(otherWindowCallback)(0);
+      expect(updateSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should keep a frame queued by the same window', () => {
+      const requestAnimationFrameSpy = vi.spyOn(activeWindow, 'requestAnimationFrame');
+
+      activeDocument.dispatchEvent(new Event('scroll'));
+      activeDocument.dispatchEvent(new Event('scroll'));
+
+      expect(requestAnimationFrameSpy).toHaveBeenCalledTimes(1);
     });
 
     it('should call update on windows handler', () => {
