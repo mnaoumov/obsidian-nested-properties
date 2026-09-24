@@ -628,20 +628,71 @@ describe('FloatingScrollbar', () => {
   });
 
   describe('native scrollbar cursor', () => {
-    it('should do nothing when target is not HTMLElement', () => {
-      const event = new MouseEvent('mousemove', { cancelable: true });
-      activeDocument.dispatchEvent(event);
+    function createScrollableProperty(): HTMLElement {
+      const propertyEl = createPropertyEl({
+        clientWidth: 100,
+        rect: { bottom: 500, left: 0, right: 100, top: 400 },
+        scrollWidth: 200
+      });
+      const inner = activeWindow.createSpan();
+      propertyEl.append(inner);
+      return propertyEl;
+    }
 
-      // No error thrown, no class toggled.
-      expect(getTrack().classList.contains('is-visible')).toBe(false);
+    it('should not register a mousemove listener on any document', () => {
+      // The other half of the argument that moved the wheel listener. This handler walks a `:has()`
+      // selector on every pointer move it is offered, and forces layout on any move that lands
+      // inside an overflowing property, so on a document it charges that to the whole app.
+      scrollbar.unload();
+      loadedScrollbars.pop();
+      createScrollableProperty();
+      const addEventListenerSpy = vi.spyOn(activeDocument, 'addEventListener');
+
+      createScrollbar(app).update();
+
+      // The scroll registration proves the spy sees the component's document listeners at all.
+      expect(addEventListenerSpy).toHaveBeenCalledWith('scroll', expect.anything(), expect.anything());
+      // Matched on the event name alone: a document registration carries no options argument, so a
+      // three-argument matcher would pass against one that is there.
+      expect(addEventListenerSpy.mock.calls.filter(([type]) => type === 'mousemove')).toEqual([]);
+    });
+
+    it('should attach in other windows, not only the active one', () => {
+      // The cursor listener rides the same reconciled target set as the wheel one, so a Properties
+      // editor in a background pop-out keeps its resize cursor.
+      const otherDoc = activeDocument.implementation.createHTMLDocument();
+      const otherContainerEl = otherDoc.win.createDiv();
+      otherContainerEl.className = 'metadata-container';
+      otherDoc.body.append(otherContainerEl);
+      vi.spyOn(app.workspace, 'iterateAllLeaves').mockImplementation((callback: (leaf: WorkspaceLeaf) => unknown) => {
+        callback(castTo<WorkspaceLeaf>({ getContainer: () => ({ win: { document: otherDoc } }) }));
+      });
+      const addEventListenerSpy = vi.spyOn(otherContainerEl, 'addEventListener');
+
+      scrollbar.update();
+
+      expect(addEventListenerSpy).toHaveBeenCalledWith('mousemove', expect.anything(), expect.anything());
+    });
+
+    it('should do nothing when target is not HTMLElement', () => {
+      // Obsidian renders its icons as inline SVG, and an SVGElement is not an HTMLElement.
+      // The event still reaches the container listener, so the guard has to hold.
+      const propertyEl = createScrollableProperty();
+      scrollbar.update();
+      const svgEl = activeWindow.createSvg('svg');
+      propertyEl.append(svgEl);
+
+      svgEl.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientY: 495 }));
+
+      expect(propertyEl.classList.contains('nested-properties-ew-resize')).toBe(false);
     });
 
     it('should do nothing when no matching property element', () => {
       const target = activeWindow.createDiv();
-      activeDocument.body.append(target);
+      createMetadataContainer().append(target);
+      scrollbar.update();
 
-      const event = new MouseEvent('mousemove', { bubbles: true });
-      target.dispatchEvent(event);
+      target.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
 
       expect(target.classList.contains('nested-properties-ew-resize')).toBe(false);
     });
@@ -650,39 +701,55 @@ describe('FloatingScrollbar', () => {
       const propertyEl = createPropertyEl({ clientWidth: 100, scrollWidth: 100 });
       const inner = activeWindow.createSpan();
       propertyEl.append(inner);
+      scrollbar.update();
 
-      const event = new MouseEvent('mousemove', { bubbles: true });
-      inner.dispatchEvent(event);
+      inner.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
 
       expect(propertyEl.classList.contains('nested-properties-ew-resize')).toBe(false);
     });
 
     it('should toggle ew-resize class based on proximity', () => {
-      const propertyEl = createPropertyEl({
-        clientWidth: 100,
-        rect: { bottom: 500 },
-        scrollWidth: 200
-      });
-      const inner = activeWindow.createSpan();
-      propertyEl.append(inner);
+      const propertyEl = createScrollableProperty();
+      scrollbar.update();
 
-      const event = new MouseEvent('mousemove', { bubbles: true, clientY: 495 });
-      inner.dispatchEvent(event);
+      propertyEl.lastElementChild?.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientY: 495 }));
 
       expect(propertyEl.classList.contains('nested-properties-ew-resize')).toBe(true);
     });
 
     it('should toggle off when not near scrollbar', () => {
-      const propertyEl = createPropertyEl({
-        clientWidth: 100,
-        rect: { bottom: 500 },
-        scrollWidth: 200
-      });
-      const inner = activeWindow.createSpan();
-      propertyEl.append(inner);
+      const propertyEl = createScrollableProperty();
+      scrollbar.update();
 
-      const event = new MouseEvent('mousemove', { bubbles: true, clientY: 400 });
-      inner.dispatchEvent(event);
+      propertyEl.lastElementChild?.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientY: 400 }));
+
+      expect(propertyEl.classList.contains('nested-properties-ew-resize')).toBe(false);
+    });
+
+    it('should leave the class set when the pointer leaves the properties editor', () => {
+      // Scoping the listener does not change when the class clears, which is why it needs no
+      // `mouseleave` teardown. The document listener did not clear it on the way out either: it
+      // returns at `closest()`, and only the property under the pointer is ever toggled. Every
+      // event that can clear the class is therefore targeted inside that property, and so reaches
+      // the container listener as well. This assertion holds identically on both arrangements.
+      const propertyEl = createScrollableProperty();
+      scrollbar.update();
+      propertyEl.lastElementChild?.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientY: 495 }));
+      expect(propertyEl.classList.contains('nested-properties-ew-resize')).toBe(true);
+
+      const outsideEl = activeWindow.createDiv();
+      activeDocument.body.append(outsideEl);
+      outsideEl.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientY: 100 }));
+
+      expect(propertyEl.classList.contains('nested-properties-ew-resize')).toBe(true);
+    });
+
+    it('should detach every listener on unload', () => {
+      const propertyEl = createScrollableProperty();
+      scrollbar.update();
+
+      scrollbar.unload();
+      propertyEl.lastElementChild?.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientY: 495 }));
 
       expect(propertyEl.classList.contains('nested-properties-ew-resize')).toBe(false);
     });
