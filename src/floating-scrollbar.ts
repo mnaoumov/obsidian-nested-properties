@@ -13,6 +13,12 @@ const SCROLLBAR_HIT_ZONE_PX = 16;
 // And unlike a property row it does not come and go as rows collapse, overflow or are edited.
 const PROPERTIES_CONTAINER_SELECTOR = '.metadata-container';
 
+// The cursor handler is offered every pointer move its target set sees, and a move that lands
+// inside an overflowing property forces layout. Scoping it keeps both the selector walk and that
+// read off every pointer move in the rest of the app. Bubble phase and passive, as the document
+// listener it replaces effectively was: it never calls `preventDefault()`.
+const CURSOR_LISTENER_OPTIONS: AddEventListenerOptions = { capture: false, passive: true };
+
 // A wheel listener that calls `preventDefault()` cannot be passive.
 // Chromium makes every wheel event in the app wait for a non-passive wheel listener on a document.
 // Scoping these to the Properties editor keeps that cost off the rest of the app.
@@ -27,10 +33,10 @@ interface PendingUpdate {
 
 export class FloatingScrollbarComponent extends Component {
   private activeEl: HTMLElement | null = null;
+  private readonly listenerTargetEls = new Set<HTMLElement>();
   private pendingUpdate: null | PendingUpdate = null;
   private thumb: HTMLDivElement | null = null;
   private track: HTMLDivElement | null = null;
-  private readonly wheelTargetEls = new Set<HTMLElement>();
 
   public constructor(private readonly app: App) {
     super();
@@ -82,12 +88,6 @@ export class FloatingScrollbarComponent extends Component {
       options: true,
       type: 'scroll'
     });
-    allWindowsEventComponent.registerAllDocumentsDomEvent({
-      callback: ($event) => {
-        this.handleNativeScrollbarCursor($event);
-      },
-      type: 'mousemove'
-    });
     allWindowsEventComponent.registerAllWindowsHandler(() => {
       this.update();
     });
@@ -96,7 +96,7 @@ export class FloatingScrollbarComponent extends Component {
   public override onunload(): void {
     super.onunload();
     this.cancelPendingUpdate();
-    this.syncWheelTargets(new Set());
+    this.syncListenerTargets(new Set());
     if (this.activeEl) {
       this.activeEl.removeEventListener('scroll', this.syncThumb);
       this.activeEl = null;
@@ -114,7 +114,7 @@ export class FloatingScrollbarComponent extends Component {
     // Any queued frame is redundant now, and clearing it keeps the guard from sticking if the
     // Window that scheduled it never runs the callback.
     this.cancelPendingUpdate();
-    this.syncWheelTargets(this.collectWheelTargets());
+    this.syncListenerTargets(this.collectListenerTargets());
 
     // Selector matching costs far less than the layout the reads below force, so query first.
     // Most notes have no nested properties, and this returns before touching layout at all.
@@ -164,7 +164,7 @@ export class FloatingScrollbarComponent extends Component {
     this.pendingUpdate = null;
   }
 
-  private collectWheelTargets(): ReadonlySet<HTMLElement> {
+  private collectListenerTargets(): ReadonlySet<HTMLElement> {
     // Every window, not just the active one: a Properties editor in a background pop-out has to keep
     // Working, and reconciling against only the active document would strip its listeners.
     // The active document is included outright, so this holds even before the workspace reports it.
@@ -181,7 +181,7 @@ export class FloatingScrollbarComponent extends Component {
     return containerEls;
   }
 
-  private handleNativeScrollbarCursor($event: MouseEvent): void {
+  private readonly handleNativeScrollbarCursor = ($event: MouseEvent): void => {
     const target = $event.target;
     if (!(target instanceof HTMLElement)) {
       return;
@@ -190,8 +190,10 @@ export class FloatingScrollbarComponent extends Component {
     if (!propertyEl || propertyEl.scrollWidth <= propertyEl.clientWidth) {
       return;
     }
+    // Only the property the pointer is actually over is touched, so a stale class on a property the
+    // pointer has already left is left alone - exactly as the document-scoped listener left it.
     propertyEl.classList.toggle('nested-properties-ew-resize', isNearScrollbar(propertyEl, $event));
-  }
+  };
 
   private readonly handleNativeScrollbarWheel = ($event: WheelEvent): void => {
     const propertyEl = findScrollbarTarget($event);
@@ -261,6 +263,25 @@ export class FloatingScrollbarComponent extends Component {
     this.activeEl?.addEventListener('scroll', this.syncThumb);
   }
 
+  private syncListenerTargets(wanted: ReadonlySet<HTMLElement>): void {
+    for (const el of this.listenerTargetEls) {
+      if (wanted.has(el)) {
+        continue;
+      }
+      el.removeEventListener('wheel', this.handleNativeScrollbarWheel, WHEEL_LISTENER_OPTIONS);
+      el.removeEventListener('mousemove', this.handleNativeScrollbarCursor, CURSOR_LISTENER_OPTIONS);
+      this.listenerTargetEls.delete(el);
+    }
+    for (const el of wanted) {
+      if (this.listenerTargetEls.has(el)) {
+        continue;
+      }
+      el.addEventListener('wheel', this.handleNativeScrollbarWheel, WHEEL_LISTENER_OPTIONS);
+      el.addEventListener('mousemove', this.handleNativeScrollbarCursor, CURSOR_LISTENER_OPTIONS);
+      this.listenerTargetEls.add(el);
+    }
+  }
+
   private readonly syncThumb = (): void => {
     if (!this.track || !this.thumb || !this.activeEl) {
       return;
@@ -275,23 +296,6 @@ export class FloatingScrollbarComponent extends Component {
     this.thumb.style.setProperty('--thumb-width', `${String(thumbWidth)}px`);
     this.thumb.style.setProperty('--thumb-left', `${String(thumbLeft)}px`);
   };
-
-  private syncWheelTargets(wanted: ReadonlySet<HTMLElement>): void {
-    for (const el of this.wheelTargetEls) {
-      if (wanted.has(el)) {
-        continue;
-      }
-      el.removeEventListener('wheel', this.handleNativeScrollbarWheel, WHEEL_LISTENER_OPTIONS);
-      this.wheelTargetEls.delete(el);
-    }
-    for (const el of wanted) {
-      if (this.wheelTargetEls.has(el)) {
-        continue;
-      }
-      el.addEventListener('wheel', this.handleNativeScrollbarWheel, WHEEL_LISTENER_OPTIONS);
-      this.wheelTargetEls.add(el);
-    }
-  }
 }
 
 function findScrollbarTarget($event: MouseEvent): HTMLElement | null {
