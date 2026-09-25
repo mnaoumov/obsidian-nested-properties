@@ -47,8 +47,5 @@ export function getInitialExpandLevel(params: GetInitialExpandLevelParams): numb
  * is not an override at all and falls through to the next source.
  */
 function normalizeExpandLevel(value: unknown): null | number {
-  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
-    return null;
-  }
-  return value;
+  return typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0 ? null : value;
 }

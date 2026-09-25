@@ -130,10 +130,9 @@ export function didRenameNestedProperty(params: DidRenameNestedPropertyParams): 
   const { fromPath, frontmatter, toPath } = params;
   const fromSegments = splitPath(fromPath);
   const toSegments = splitPath(toPath);
-  if (fromSegments.length === 0 || toSegments.length === 0) {
-    return false;
-  }
-  if (fromPath === toPath || isAncestorOrSame(fromPath, toPath) || isAncestorOrSame(toPath, fromPath)) {
+  const isEitherPathEmpty = fromSegments.length === 0 || toSegments.length === 0;
+  const isSameOrNested = fromPath === toPath || isAncestorOrSame(fromPath, toPath) || isAncestorOrSame(toPath, fromPath);
+  if (isEitherPathEmpty || isSameOrNested) {
     return false;
   }
 
@@ -217,8 +216,5 @@ function resolveParent(frontmatter: GenericObject, segments: string[]): GenericO
 }
 
 function splitPath(path: string): string[] {
-  if (path === '') {
-    return [];
-  }
-  return path.split('.');
+  return path === '' ? [] : path.split('.');
 }

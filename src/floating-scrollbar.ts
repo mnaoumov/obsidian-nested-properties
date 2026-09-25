@@ -309,13 +309,8 @@ function findScrollbarTarget($event: MouseEvent): HTMLElement | null {
     return null;
   }
   const propertyEl = target.closest<HTMLElement>(ROOT_PROPERTY_SELECTOR);
-  if (!propertyEl || propertyEl.scrollWidth <= propertyEl.clientWidth) {
-    return null;
-  }
-  if (!isNearScrollbar(propertyEl, $event)) {
-    return null;
-  }
-  return propertyEl;
+  const isOverflowing = propertyEl !== null && propertyEl.scrollWidth > propertyEl.clientWidth;
+  return isOverflowing && isNearScrollbar(propertyEl, $event) ? propertyEl : null;
 }
 
 function isNearScrollbar(el: HTMLElement, $event: MouseEvent): boolean {

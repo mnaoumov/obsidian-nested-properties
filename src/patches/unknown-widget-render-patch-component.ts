@@ -50,10 +50,7 @@ export class UnknownWidgetRenderPatchComponent extends MonkeyAroundComponent {
         if (Array.isArray(value)) {
           return this.mixedListWidget.render(el, value, context);
         }
-        if (isComplexValue(value)) {
-          return this.objectWidget.render(el, value, context);
-        }
-        return fallback();
+        return isComplexValue(value) ? this.objectWidget.render(el, value, context) : fallback();
       }
     });
   }

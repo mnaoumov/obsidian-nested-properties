@@ -111,10 +111,7 @@ export function isSimpleArray(value: unknown): boolean {
 }
 
 function convertToDate(value: unknown): null | string {
-  if (typeof value === 'string' && value && momentFunction(value).isValid()) {
-    return value;
-  }
-  return null;
+  return typeof value === 'string' && value && momentFunction(value).isValid() ? value : null;
 }
 
 function convertToMixedList(value: unknown): unknown[] {
@@ -124,10 +121,7 @@ function convertToMixedList(value: unknown): unknown[] {
   if (value !== null && typeof value === 'object') {
     return [value];
   }
-  if (value === null || value === undefined) {
-    return [];
-  }
-  return [value];
+  return value === null || value === undefined ? [] : [value];
 }
 
 function convertToNumber(value: unknown): number {
@@ -135,10 +129,7 @@ function convertToNumber(value: unknown): number {
 }
 
 function convertToObject(value: unknown): GenericObject {
-  if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-    return value as GenericObject;
-  }
-  return {};
+  return value !== null && typeof value === 'object' && !Array.isArray(value) ? (value as GenericObject) : {};
 }
 
 function convertToSimpleList(value: unknown): unknown[] {
@@ -149,10 +140,7 @@ function convertToSimpleList(value: unknown): unknown[] {
     return [];
   }
   const $string = convertToString(value);
-  if ($string) {
-    return [$string];
-  }
-  return [];
+  return $string ? [$string] : [];
 }
 
 function convertToString(value: unknown): string {
@@ -165,11 +153,7 @@ function formatSummaryItem(value: unknown): string {
     return ELIDED_ARRAY;
   }
 
-  if (isComplexValue(value) && !(value instanceof Date)) {
-    return ELIDED_OBJECT;
-  }
-
-  return formatSummaryScalar(value);
+  return isComplexValue(value) && !(value instanceof Date) ? ELIDED_OBJECT : formatSummaryScalar(value);
 }
 
 function formatSummaryScalar(value: unknown): string {
@@ -177,11 +161,7 @@ function formatSummaryScalar(value: unknown): string {
     return EMPTY_SCALAR;
   }
 
-  if (value instanceof Date) {
-    return momentFunction(value).format('YYYY-MM-DD');
-  }
-
-  return convertToString(value);
+  return value instanceof Date ? momentFunction(value).format('YYYY-MM-DD') : convertToString(value);
 }
 
 function joinSummaryEntries(params: JoinSummaryEntriesParams): string {
