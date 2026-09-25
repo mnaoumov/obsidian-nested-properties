@@ -8,6 +8,7 @@ import type { App } from 'obsidian';
 import { noopAsync } from 'obsidian-dev-utils/function';
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
+import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 import {
   afterEach,
   beforeEach,
@@ -893,10 +894,7 @@ describe('NestedPropertyRenderer', () => {
           if (selector === ':scope .metadata-property-key .metadata-property-icon') {
             return existingIcon;
           }
-          if (selector === ':scope .metadata-property-key') {
-            return keyEl;
-          }
-          return null;
+          return selector === ':scope .metadata-property-key' ? keyEl : null;
         })
       });
 
@@ -924,10 +922,7 @@ describe('NestedPropertyRenderer', () => {
           if (selector === ':scope .metadata-property-key .metadata-property-icon') {
             return createMockEl();
           }
-          if (selector === ':scope .metadata-property-key') {
-            return keyEl;
-          }
-          return null;
+          return selector === ':scope .metadata-property-key' ? keyEl : null;
         })
       });
 
@@ -950,10 +945,7 @@ describe('NestedPropertyRenderer', () => {
           if (selector === ':scope .metadata-property-key .metadata-property-icon') {
             return createMockEl();
           }
-          if (selector === ':scope .metadata-property-key') {
-            return keyEl;
-          }
-          return null;
+          return selector === ':scope .metadata-property-key' ? keyEl : null;
         })
       });
 
@@ -984,10 +976,7 @@ describe('NestedPropertyRenderer', () => {
           if (selector === ':scope .metadata-property-key .metadata-property-icon') {
             return createMockEl();
           }
-          if (selector === ':scope .metadata-property-key') {
-            return keyEl;
-          }
-          return null;
+          return selector === ':scope .metadata-property-key' ? keyEl : null;
         })
       });
 
@@ -1018,10 +1007,7 @@ describe('NestedPropertyRenderer', () => {
       const existingIcon = createMockEl();
       const propertyEl = createMockEl({
         querySelector: vi.fn((selector: string) => {
-          if (selector === ':scope .metadata-property-key .metadata-property-icon') {
-            return existingIcon;
-          }
-          return null;
+          return selector === ':scope .metadata-property-key .metadata-property-icon' ? existingIcon : null;
         })
       });
 
@@ -1040,10 +1026,7 @@ describe('NestedPropertyRenderer', () => {
       const existingIcon = createMockEl();
       const propertyEl = createMockEl({
         querySelector: vi.fn((selector: string) => {
-          if (selector === ':scope .metadata-property-key .metadata-property-icon') {
-            return existingIcon;
-          }
-          return null;
+          return selector === ':scope .metadata-property-key .metadata-property-icon' ? existingIcon : null;
         })
       });
 
@@ -1072,13 +1055,7 @@ describe('NestedPropertyRenderer', () => {
 
       const propertyEl = createMockEl({
         querySelector: vi.fn((selector: string) => {
-          if (selector === ':scope .metadata-property-key .metadata-property-icon') {
-            return createMockEl();
-          }
-          if (selector === ':scope .metadata-property-key') {
-            return null;
-          }
-          return null;
+          return selector === ':scope .metadata-property-key .metadata-property-icon' ? createMockEl() : null;
         })
       });
 
@@ -1098,10 +1075,7 @@ describe('NestedPropertyRenderer', () => {
           if (selector === ':scope .metadata-property-key .metadata-property-icon') {
             return null;
           }
-          if (selector === ':scope .metadata-property-key') {
-            return keyEl;
-          }
-          return null;
+          return selector === ':scope .metadata-property-key' ? keyEl : null;
         })
       });
 
@@ -1190,12 +1164,10 @@ describe('NestedPropertyRenderer', () => {
 
       // Extract the onChange callback passed to the simple widget render
       const renderCalls = vi.mocked(textWidget.render).mock.calls as unknown[][];
-      const firstCall = renderCalls[0];
-      if (firstCall) {
-        const renderContext = firstCall[2] as PropertyRenderContext;
-        renderContext.onChange('newValue');
-        expect(onChange).toHaveBeenCalledWith(['newValue', 'b']);
-      }
+      const firstCall = ensureNonNullable(renderCalls[0]);
+      const renderContext = firstCall[2] as PropertyRenderContext;
+      renderContext.onChange('newValue');
+      expect(onChange).toHaveBeenCalledWith(['newValue', 'b']);
     });
 
     it('should call onArrayChange when array item is deleted via menu', () => {
@@ -1219,12 +1191,10 @@ describe('NestedPropertyRenderer', () => {
       contextHandler({ stopPropagation: vi.fn() });
 
       // Click the "Remove" item (last menu item)
-      const removeItem = hoisted.menuItems.at(-1);
-      if (removeItem) {
-        const clickFunction = removeItem._onClickFunction;
-        clickFunction?.();
-        expect(onChange).toHaveBeenCalled();
-      }
+      const removeItem = ensureNonNullable(hoisted.menuItems.at(-1));
+      const clickFunction = removeItem._onClickFunction;
+      clickFunction?.();
+      expect(onChange).toHaveBeenCalled();
     });
   });
 
@@ -1367,12 +1337,10 @@ describe('NestedPropertyRenderer', () => {
       hoisted.menuItems.length = 0;
       triggerContextMenu();
 
-      const cutItem = hoisted.menuItems.at(1);
-      if (cutItem) {
-        const clickFunction = cutItem._onClickFunction;
-        await clickFunction?.();
-        expect(navigator.clipboard.writeText).toHaveBeenCalled();
-      }
+      const cutItem = ensureNonNullable(hoisted.menuItems.at(1));
+      const clickFunction = cutItem._onClickFunction;
+      await clickFunction?.();
+      expect(navigator.clipboard.writeText).toHaveBeenCalled();
     });
 
     it('should handle copy action', async () => {
@@ -1381,12 +1349,10 @@ describe('NestedPropertyRenderer', () => {
       hoisted.menuItems.length = 0;
       triggerContextMenu();
 
-      const copyItem = hoisted.menuItems.at(2);
-      if (copyItem) {
-        const clickFunction = copyItem._onClickFunction;
-        await clickFunction?.();
-        expect(navigator.clipboard.writeText).toHaveBeenCalled();
-      }
+      const copyItem = ensureNonNullable(hoisted.menuItems.at(2));
+      const clickFunction = copyItem._onClickFunction;
+      await clickFunction?.();
+      expect(navigator.clipboard.writeText).toHaveBeenCalled();
     });
 
     it('should handle paste action with valid JSON object', async () => {
@@ -1396,11 +1362,9 @@ describe('NestedPropertyRenderer', () => {
       hoisted.menuItems.length = 0;
       triggerContextMenu();
 
-      const pasteItem = hoisted.menuItems.at(3);
-      if (pasteItem) {
-        const clickFunction = pasteItem._onClickFunction;
-        await clickFunction?.();
-      }
+      const pasteItem = ensureNonNullable(hoisted.menuItems.at(3));
+      const clickFunction = pasteItem._onClickFunction;
+      await clickFunction?.();
     });
 
     it('should handle paste action with invalid JSON', async () => {
@@ -1428,11 +1392,9 @@ describe('NestedPropertyRenderer', () => {
       hoisted.menuItems.length = 0;
       triggerContextMenu();
 
-      const pasteItem = hoisted.menuItems.at(3);
-      if (pasteItem) {
-        const clickFunction = pasteItem._onClickFunction;
-        await clickFunction?.();
-      }
+      const pasteItem = ensureNonNullable(hoisted.menuItems.at(3));
+      const clickFunction = pasteItem._onClickFunction;
+      await clickFunction?.();
     });
 
     it('should handle paste action with null JSON', async () => {
@@ -1442,11 +1404,9 @@ describe('NestedPropertyRenderer', () => {
       hoisted.menuItems.length = 0;
       triggerContextMenu();
 
-      const pasteItem = hoisted.menuItems.at(3);
-      if (pasteItem) {
-        const clickFunction = pasteItem._onClickFunction;
-        await clickFunction?.();
-      }
+      const pasteItem = ensureNonNullable(hoisted.menuItems.at(3));
+      const clickFunction = pasteItem._onClickFunction;
+      await clickFunction?.();
     });
 
     it('should handle paste action with empty object', async () => {
@@ -1456,11 +1416,9 @@ describe('NestedPropertyRenderer', () => {
       hoisted.menuItems.length = 0;
       triggerContextMenu();
 
-      const pasteItem = hoisted.menuItems.at(3);
-      if (pasteItem) {
-        const clickFunction = pasteItem._onClickFunction;
-        await clickFunction?.();
-      }
+      const pasteItem = ensureNonNullable(hoisted.menuItems.at(3));
+      const clickFunction = pasteItem._onClickFunction;
+      await clickFunction?.();
     });
 
     it('should handle remove action', () => {
@@ -1469,11 +1427,9 @@ describe('NestedPropertyRenderer', () => {
       hoisted.menuItems.length = 0;
       triggerContextMenu();
 
-      const removeItem = hoisted.menuItems.at(4);
-      if (removeItem) {
-        const clickFunction = removeItem._onClickFunction;
-        clickFunction?.();
-      }
+      const removeItem = ensureNonNullable(hoisted.menuItems.at(4));
+      const clickFunction = removeItem._onClickFunction;
+      clickFunction?.();
     });
 
     it('should debounce menu when opened too quickly', () => {
@@ -1566,13 +1522,9 @@ describe('NestedPropertyRenderer', () => {
       hoisted.submenuItems.length = 0;
       triggerContextMenu();
 
-      if (hoisted.submenuItems.length > 0) {
-        const subItem = hoisted.submenuItems.at(0);
-        if (subItem) {
-          const clickFunction = subItem._onClickFunction;
-          await clickFunction?.();
-        }
-      }
+      const subItem = ensureNonNullable(hoisted.submenuItems.at(0));
+      const clickFunction = subItem._onClickFunction;
+      await clickFunction?.();
     });
 
     it('should blur active element when changing type', async () => {
@@ -1591,13 +1543,9 @@ describe('NestedPropertyRenderer', () => {
       hoisted.submenuItems.length = 0;
       triggerContextMenu();
 
-      if (hoisted.submenuItems.length > 0) {
-        const subItem = hoisted.submenuItems.at(0);
-        if (subItem) {
-          const clickFunction = subItem._onClickFunction;
-          await clickFunction?.();
-        }
-      }
+      const subItem = ensureNonNullable(hoisted.submenuItems.at(0));
+      const clickFunction = subItem._onClickFunction;
+      await clickFunction?.();
 
       expect(blurMock).toHaveBeenCalled();
     });
@@ -1615,13 +1563,9 @@ describe('NestedPropertyRenderer', () => {
       hoisted.submenuItems.length = 0;
       triggerContextMenu();
 
-      if (hoisted.submenuItems.length > 0) {
-        const subItem = hoisted.submenuItems.at(0);
-        if (subItem) {
-          const clickFunction = subItem._onClickFunction;
-          await clickFunction?.();
-        }
-      }
+      const subItem = ensureNonNullable(hoisted.submenuItems.at(0));
+      const clickFunction = subItem._onClickFunction;
+      await clickFunction?.();
     });
 
     it('should show modal and cancel for lossy conversion', async () => {
@@ -1734,10 +1678,7 @@ describe('NestedPropertyRenderer', () => {
       const addButton = createMockEl();
       const containerEl = createMockEl();
       containerEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
-        if (options && (options['cls'] as string) === 'nested-properties-add-item') {
-          return addButton;
-        }
-        return createMockEl();
+        return options && (options['cls'] as string) === 'nested-properties-add-item' ? addButton : createMockEl();
       });
 
       const el = createMockEl();
@@ -1764,10 +1705,7 @@ describe('NestedPropertyRenderer', () => {
       addButton.createEl.mockReturnValue(input);
       const containerEl = createMockEl();
       containerEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
-        if (options && (options['cls'] as string) === 'nested-properties-add-property') {
-          return addButton;
-        }
-        return createMockEl();
+        return options && (options['cls'] as string) === 'nested-properties-add-property' ? addButton : createMockEl();
       });
 
       const el = createMockEl();
@@ -1794,10 +1732,7 @@ describe('NestedPropertyRenderer', () => {
       addButton.createEl.mockReturnValue(input);
       const containerEl = createMockEl();
       containerEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
-        if (options && (options['cls'] as string) === 'nested-properties-add-property') {
-          return addButton;
-        }
-        return createMockEl();
+        return options && (options['cls'] as string) === 'nested-properties-add-property' ? addButton : createMockEl();
       });
 
       const el = createMockEl();
@@ -1824,10 +1759,7 @@ describe('NestedPropertyRenderer', () => {
       addButton.createEl.mockReturnValue(input);
       const containerEl = createMockEl();
       containerEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
-        if (options && (options['cls'] as string) === 'nested-properties-add-property') {
-          return addButton;
-        }
-        return createMockEl();
+        return options && (options['cls'] as string) === 'nested-properties-add-property' ? addButton : createMockEl();
       });
 
       const el = createMockEl();
@@ -1856,10 +1788,7 @@ describe('NestedPropertyRenderer', () => {
       addButton.createEl.mockReturnValue(input);
       const containerEl = createMockEl();
       containerEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
-        if (options && (options['cls'] as string) === 'nested-properties-add-property') {
-          return addButton;
-        }
-        return createMockEl();
+        return options && (options['cls'] as string) === 'nested-properties-add-property' ? addButton : createMockEl();
       });
 
       const el = createMockEl();
@@ -1887,10 +1816,7 @@ describe('NestedPropertyRenderer', () => {
       addButton.createEl.mockReturnValue(input);
       const containerEl = createMockEl();
       containerEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
-        if (options && (options['cls'] as string) === 'nested-properties-add-property') {
-          return addButton;
-        }
-        return createMockEl();
+        return options && (options['cls'] as string) === 'nested-properties-add-property' ? addButton : createMockEl();
       });
 
       const el = createMockEl();
@@ -1918,10 +1844,7 @@ describe('NestedPropertyRenderer', () => {
       addButton.createEl.mockReturnValue(input);
       const containerEl = createMockEl();
       containerEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
-        if (options && (options['cls'] as string) === 'nested-properties-add-property') {
-          return addButton;
-        }
-        return createMockEl();
+        return options && (options['cls'] as string) === 'nested-properties-add-property' ? addButton : createMockEl();
       });
 
       const el = createMockEl();
@@ -1949,10 +1872,7 @@ describe('NestedPropertyRenderer', () => {
       addButton.createEl.mockReturnValue(input);
       const containerEl = createMockEl();
       containerEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
-        if (options && (options['cls'] as string) === 'nested-properties-add-property') {
-          return addButton;
-        }
-        return createMockEl();
+        return options && (options['cls'] as string) === 'nested-properties-add-property' ? addButton : createMockEl();
       });
 
       const el = createMockEl();
@@ -1984,10 +1904,7 @@ describe('NestedPropertyRenderer', () => {
       addButton.createEl.mockReturnValue(input);
       const containerEl = createMockEl();
       containerEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
-        if (options && (options['cls'] as string) === 'nested-properties-add-property') {
-          return addButton;
-        }
-        return createMockEl();
+        return options && (options['cls'] as string) === 'nested-properties-add-property' ? addButton : createMockEl();
       });
 
       const el = createMockEl();
@@ -2016,10 +1933,7 @@ describe('NestedPropertyRenderer', () => {
       addButton.createEl.mockReturnValue(input);
       const containerEl = createMockEl();
       containerEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
-        if (options && (options['cls'] as string) === 'nested-properties-add-property') {
-          return addButton;
-        }
-        return createMockEl();
+        return options && (options['cls'] as string) === 'nested-properties-add-property' ? addButton : createMockEl();
       });
 
       const el = createMockEl();
@@ -2048,10 +1962,7 @@ describe('NestedPropertyRenderer', () => {
         closest: vi.fn(() =>
           createMockEl({
             querySelector: vi.fn((selector: string) => {
-              if (selector === '.nested-properties-header-actions') {
-                return createMockEl();
-              }
-              return null;
+              return selector === '.nested-properties-header-actions' ? createMockEl() : null;
             })
           })
         )
@@ -2070,15 +1981,7 @@ describe('NestedPropertyRenderer', () => {
       const containerEl = createMockEl({
         closest: vi.fn(() =>
           createMockEl({
-            querySelector: vi.fn((selector: string) => {
-              if (selector === '.nested-properties-header-actions') {
-                return null;
-              }
-              if (selector === '.nested-properties-collapsible') {
-                return null;
-              }
-              return null;
-            })
+            querySelector: vi.fn(() => null)
           })
         )
       });
@@ -2100,13 +2003,7 @@ describe('NestedPropertyRenderer', () => {
               if (selector === '.nested-properties-header-actions') {
                 return null;
               }
-              if (selector === '.nested-properties-collapsible') {
-                return createMockEl();
-              }
-              if (selector === '.metadata-properties-heading') {
-                return null;
-              }
-              return null;
+              return selector === '.nested-properties-collapsible' ? createMockEl() : null;
             })
           })
         )
@@ -2139,10 +2036,7 @@ describe('NestedPropertyRenderer', () => {
           if (selector === '.nested-properties-collapsible') {
             return collapsibleEl;
           }
-          if (selector === '.metadata-properties-heading') {
-            return headingEl;
-          }
-          return null;
+          return selector === '.metadata-properties-heading' ? headingEl : null;
         }),
         querySelectorAll: vi.fn(() => [collapsibleEl])
       });
@@ -2185,12 +2079,9 @@ describe('NestedPropertyRenderer', () => {
           if (selector === '.nested-properties-collapsible') {
             return collapsibleEl;
           }
-          if (selector === '.metadata-properties-heading') {
-            return headingEl;
-          }
-          return null;
+          return selector === '.metadata-properties-heading' ? headingEl : null;
         }),
-        querySelectorAll: vi.fn((selector: string) => (selector === ':scope .metadata-property-key-input' ? [topLevelKeyInput] : [collapsibleEl]))
+        querySelectorAll: vi.fn((selector: string) => [selector === ':scope .metadata-property-key-input' ? topLevelKeyInput : collapsibleEl])
       });
 
       const containerEl = createMockEl({ closest: vi.fn(() => metaContainer) });
@@ -2229,12 +2120,9 @@ describe('NestedPropertyRenderer', () => {
           if (selector === '.nested-properties-collapsible') {
             return collapsibleEl;
           }
-          if (selector === '.metadata-properties-heading') {
-            return headingEl;
-          }
-          return null;
+          return selector === '.metadata-properties-heading' ? headingEl : null;
         }),
-        querySelectorAll: vi.fn((selector: string) => (selector === ':scope .metadata-property-key-input' ? [nestedKeyInput] : [collapsibleEl]))
+        querySelectorAll: vi.fn((selector: string) => [selector === ':scope .metadata-property-key-input' ? nestedKeyInput : collapsibleEl])
       });
 
       const containerEl = createMockEl({ closest: vi.fn(() => metaContainer) });
@@ -2269,10 +2157,7 @@ describe('NestedPropertyRenderer', () => {
           if (selector === '.nested-properties-collapsible') {
             return collapsibleEl;
           }
-          if (selector === '.metadata-properties-heading') {
-            return headingEl;
-          }
-          return null;
+          return selector === '.metadata-properties-heading' ? headingEl : null;
         }),
         querySelectorAll: vi.fn(() => [collapsibleEl])
       });
@@ -2312,10 +2197,7 @@ describe('NestedPropertyRenderer', () => {
           if (selector === '.nested-properties-collapsible') {
             return collapsibleEl;
           }
-          if (selector === '.metadata-properties-heading') {
-            return headingEl;
-          }
-          return null;
+          return selector === '.metadata-properties-heading' ? headingEl : null;
         }),
         querySelectorAll: vi.fn(() => [collapsibleEl])
       });
@@ -2349,10 +2231,7 @@ describe('NestedPropertyRenderer', () => {
           if (selector === '.nested-properties-collapsible') {
             return createMockEl();
           }
-          if (selector === '.metadata-properties-heading') {
-            return headingEl;
-          }
-          return null;
+          return selector === '.metadata-properties-heading' ? headingEl : null;
         }),
         querySelectorAll: vi.fn(() => [])
       });
@@ -2392,10 +2271,7 @@ describe('NestedPropertyRenderer', () => {
           if (selector === '.nested-properties-collapsible') {
             return createMockEl();
           }
-          if (selector === '.metadata-properties-heading') {
-            return headingEl;
-          }
-          return null;
+          return selector === '.metadata-properties-heading' ? headingEl : null;
         }),
         querySelectorAll: vi.fn(() => [collapsibleEl])
       });
@@ -2437,10 +2313,7 @@ describe('NestedPropertyRenderer', () => {
           if (selector === '.nested-properties-collapsible') {
             return createMockEl();
           }
-          if (selector === '.metadata-properties-heading') {
-            return headingEl;
-          }
-          return null;
+          return selector === '.metadata-properties-heading' ? headingEl : null;
         }),
         querySelectorAll: vi.fn(() => [collapsibleEl])
       });
@@ -2507,10 +2380,7 @@ describe('NestedPropertyRenderer', () => {
           if (selector === '.nested-properties-collapsible') {
             return createMockEl();
           }
-          if (selector === '.metadata-properties-heading') {
-            return headingEl;
-          }
-          return null;
+          return selector === '.metadata-properties-heading' ? headingEl : null;
         }),
         querySelectorAll: vi.fn(() => [collapsibleEl])
       });
@@ -2594,10 +2464,7 @@ describe('NestedPropertyRenderer', () => {
           if (selector === '.nested-properties-collapsible') {
             return collapsibleEl;
           }
-          if (selector === '.metadata-properties-heading') {
-            return headingEl;
-          }
-          return null;
+          return selector === '.metadata-properties-heading' ? headingEl : null;
         }),
         querySelectorAll: vi.fn(() => [collapsibleEl])
       });
@@ -2633,10 +2500,7 @@ describe('NestedPropertyRenderer', () => {
           if (selector === '.nested-properties-collapsible') {
             return collapsibleEl;
           }
-          if (selector === '.metadata-properties-heading') {
-            return headingEl;
-          }
-          return null;
+          return selector === '.metadata-properties-heading' ? headingEl : null;
         }),
         querySelectorAll: vi.fn(() => [collapsibleEl])
       });
@@ -2869,10 +2733,7 @@ describe('NestedPropertyRenderer', () => {
         if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-key') {
           return keyEl;
         }
-        if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-value') {
-          return valueEl;
-        }
-        return createMockEl();
+        return options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-value' ? valueEl : createMockEl();
       });
 
       const containerEl = createMockEl();
@@ -2930,13 +2791,7 @@ describe('NestedPropertyRenderer', () => {
 
       const propertyEl = createMockEl();
       propertyEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
-        if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-key') {
-          return keyEl;
-        }
-        if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-value') {
-          return createMockEl();
-        }
-        return createMockEl();
+        return options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-key' ? keyEl : createMockEl();
       });
 
       const containerEl = createMockEl();
@@ -2978,10 +2833,7 @@ describe('NestedPropertyRenderer', () => {
         if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-key') {
           return keyEl;
         }
-        if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-value') {
-          return valueEl;
-        }
-        return createMockEl();
+        return options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-value' ? valueEl : createMockEl();
       });
 
       const containerEl = createMockEl();
@@ -3038,10 +2890,7 @@ describe('NestedPropertyRenderer', () => {
         if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-key') {
           return keyEl;
         }
-        if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-value') {
-          return valueEl;
-        }
-        return createMockEl();
+        return options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-value' ? valueEl : createMockEl();
       });
 
       const containerEl = createMockEl();
@@ -3119,10 +2968,7 @@ describe('NestedPropertyRenderer', () => {
         if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-key') {
           return keyEl;
         }
-        if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-value') {
-          return valueEl;
-        }
-        return createMockEl();
+        return options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-value' ? valueEl : createMockEl();
       });
 
       const containerEl = createMockEl();
@@ -3191,10 +3037,7 @@ describe('NestedPropertyRenderer', () => {
         if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-key') {
           return keyEl;
         }
-        if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-value') {
-          return valueEl;
-        }
-        return createMockEl();
+        return options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-value' ? valueEl : createMockEl();
       });
 
       const containerEl = createMockEl();
@@ -3433,13 +3276,7 @@ describe('NestedPropertyRenderer', () => {
 
     const propertyEl = createMockEl();
     propertyEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
-      if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-key') {
-        return keyEl;
-      }
-      if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-value') {
-        return createMockEl();
-      }
-      return createMockEl();
+      return options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-key' ? keyEl : createMockEl();
     });
 
     const containerEl = createMockEl();
@@ -3478,13 +3315,7 @@ describe('NestedPropertyRenderer', () => {
 
     const simplePropertyEl = createMockEl();
     simplePropertyEl.createDiv.mockImplementation((options?: Record<string, unknown>) => {
-      if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-key') {
-        return keyEl;
-      }
-      if (options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-value') {
-        return createMockEl();
-      }
-      return createMockEl();
+      return options && typeof options['cls'] === 'string' && options['cls'] === 'metadata-property-key' ? keyEl : createMockEl();
     });
 
     const containerEl = createMockEl();

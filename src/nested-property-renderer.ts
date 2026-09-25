@@ -794,10 +794,7 @@ function expandAllIn(parentNode: ParentNode, expansionOverrides: Map<string, boo
 function getFieldTypeKey(path: string): null | string {
   const itemKey = getItemTypeKey(path);
   const lastSegment = itemKey.slice(itemKey.lastIndexOf('.') + 1);
-  if (/^\d+$/.test(lastSegment)) {
-    return null;
-  }
-  return itemKey.split('.').filter((segment) => !/^\d+$/.test(segment)).join('.');
+  return /^\d+$/.test(lastSegment) ? null : itemKey.split('.').filter((segment) => !/^\d+$/.test(segment)).join('.');
 }
 
 // The persisted type key for an exact node: the plugin's dotted `path` with the leading
@@ -816,11 +813,7 @@ function getPathDepth(path: string): number {
 
 function injectHeaderButtons(params: InjectHeaderButtonsParams): void {
   const { expansionOverrides, metadataContainerEl, onToggleFullKeyDisplay } = params;
-  if (metadataContainerEl.querySelector('.nested-properties-header-actions')) {
-    return;
-  }
-
-  if (!metadataContainerEl.querySelector('.nested-properties-collapsible')) {
+  if (metadataContainerEl.querySelector('.nested-properties-header-actions') || !metadataContainerEl.querySelector('.nested-properties-collapsible')) {
     return;
   }
 
@@ -920,10 +913,12 @@ function renderAddPropertyButton(params: RenderAddPropertyButtonParams): void {
         addKey(ke.key === 'Tab');
         return;
       }
-      if (ke.key === 'Escape') {
-        ke.preventDefault();
-        restoreButton();
+      if (ke.key !== 'Escape') {
+        return;
       }
+
+      ke.preventDefault();
+      restoreButton();
     });
     input.addEventListener('blur', () => {
       if (input.isConnected) {
