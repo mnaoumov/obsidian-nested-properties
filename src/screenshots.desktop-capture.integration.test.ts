@@ -394,19 +394,6 @@ async function setPluginEnabled(isEnabled: boolean): Promise<void> {
  * @param caption - The caption drawn across the bottom of the frame.
  */
 async function shoot(index: number, caption: string): Promise<void> {
-  // The editor keeps focus after a note opens, and its caret blinks, so the blink
-  // phase at capture time decided a frame's bytes: two captures of an unchanged
-  // build differed in the caret column. `captureObsidianScreenshot` does not blur
-  // the focused element itself.
-  await evalInObsidian({
-    callback() {
-      if (activeDocument.activeElement instanceof HTMLElement) {
-        activeDocument.activeElement.blur();
-      }
-    },
-    vaultPath: vaultPath()
-  });
-
   const bytes = await captureObsidianScreenshot({
     heightInPixels: HEIGHT_IN_PIXELS,
     vaultPath: vaultPath(),
