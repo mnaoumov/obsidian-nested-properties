@@ -1,5 +1,40 @@
 # CHANGELOG
 
+## 1.6.1
+
+- test(screenshots): merge the Node-side dark theme for the desktop capture
+- test(screenshots): merge the drop of the local caret hiding
+- fix(screenshots): merge the caret-free desktop captures
+- chore(deps): merge the obsidian-integration-testing 17 float
+- fix(floating-scrollbar): merge the cross-window pending-frame fix
+- chore(deps): merge the obsidian-test-mocks ^7.0.0 raise
+- perf(floating-scrollbar): stop the cursor handler running on every pointer move
+- perf(floating-scrollbar): stop blocking every wheel event in the app
+- fix(test): merge the headless demo-vault toolkit install
+- fix(deps): restore the lockfile's missing resolved and integrity fields
+- test(floating-scrollbar): cover the native-scrollbar wheel path in a real Obsidian
+- style(comments): stop rewriting symbol names that open a comment
+- chore(screenshots): delete the orphan frame the capture suite never wrote
+- build(markdownlint): forbid hard-wrapped markdown paragraphs
+- test: size the search closure's wait ceiling to its six call sites
+- refactor: route the vault-wide property writes through processFrontmatter
+- fix(deps): float devalue to 5.9.4, clearing GHSA-9rgm-9g3h-6x36
+- test: record the capture suite's open-note budget as deliberately under the cap
+- chore(deps): drop the dead markdown-it override
+- chore(deps): drop the dead js-yaml override
+- style(comments): stop capitalizing the middle of a wrapped comment
+- docs: replace the private rule-id citations with what they assert
+- docs: name the library and the sibling plugins so a reader can resolve them
+- docs: replace the private tracker references with what they pointed at
+- chore(deps): move to obsidian-dev-utils 103
+- test: bring the in-closure wait ceilings under the transport's per-eval cap
+- chore: adopt the npm run gate branch gate
+- test: bring the in-closure wait ceiling under the transport's per-eval cap
+- refactor(android): drive the Android suites with trusted input
+- docs: name the unversioned demo-vault asset and the folder it unzips into
+- chore: make the LICENSE copyright line checkable by the linter and guard it against the year roll-over
+- test(test-mocks): drop the hand-rolled app.plugins stub, and sweep the dependencies
+
 ## 1.6.0
 
 - test: read the mock Component's renamed _loaded flag
