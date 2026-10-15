@@ -26,6 +26,11 @@ import {
   it
 } from 'vitest';
 
+interface FileResultDom {
+  el: HTMLElement;
+  renderContentMatches: () => void;
+}
+
 // Minimal structural view of the internal global-search view the closure drives (its real type is not in
 // `obsidian-typings`). `as` casts are compile-time only, so no runtime import is needed inside the closure.
 interface ResultFile {
@@ -147,5 +152,99 @@ describe('Native search understands nested properties', () => {
     expect(result.composedMatches).toEqual(['np-search/match.md']);
     // A nested value query that matches nothing returns nothing (no over-matching).
     expect(result.nonMatching).toEqual([]);
+  });
+
+  // Issue #14: the result line drawn under a matched note read `Taxonomy.Common Name: undefined`, because the
+  // native row looks the dotted key up as a flat top-level key.
+  it('shows the nested value on the result line of a nested-property match', async () => {
+    const result = await evalInObsidian({
+      async callback({ app, lib: { waitUntil } }) {
+        // Under the transport's ~30s per-closure cap: one cache wait plus four `readMatchLines` waits.
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 4000;
+        const FOLDER = 'np-search-lines';
+        const NOTE_PATH = `${FOLDER}/medlar.md`;
+
+        async function cleanup(): Promise<void> {
+          for (const path of [NOTE_PATH, FOLDER]) {
+            const existing = app.vault.getAbstractFileByPath(path);
+            if (existing) {
+              await app.fileManager.trashFile(existing);
+            }
+          }
+        }
+
+        await cleanup();
+        await app.vault.createFolder(FOLDER);
+        const noteFile = await app.vault.create(
+          NOTE_PATH,
+          '---\nTaxonomy:\n  Common Name: Medlar\n  Names:\n    - Medlar\n    - Pear\n  Rank:\n    family: Rose\nstatus: ripe\n---\n'
+        );
+
+        try {
+          await waitUntil({
+            message: 'seeded frontmatter did not reach the metadata cache',
+            predicate: () => Boolean(app.metadataCache.getFileCache(noteFile)?.frontmatter?.['Taxonomy']),
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+          });
+
+          const existingSearchLeaf = app.workspace.getLeavesOfType('search')[0];
+          const searchLeaf = existingSearchLeaf ?? app.workspace.getLeftLeaf(false);
+          if (!searchLeaf) {
+            throw new Error('could not obtain a search leaf');
+          }
+          if (!existingSearchLeaf) {
+            await searchLeaf.setViewState({ type: 'search' });
+          }
+          await app.workspace.revealLeaf(searchLeaf);
+          const searchViewUnknown: unknown = searchLeaf.view;
+          const searchView = searchViewUnknown as SearchViewLike;
+
+          // Rows are drawn lazily, as the result scrolls into view; drawing them here is the native call
+          // the view itself makes, so the lines read back are the ones a user sees.
+          async function readMatchLines(query: string): Promise<string[]> {
+            searchView.setQuery(query);
+            let lines: string[] = [];
+            await waitUntil({
+              message: `match lines for "${query}" did not appear`,
+              predicate: () => {
+                const fileResultUnknown = [...searchView.dom.resultDomLookup]
+                  .find(([file]) => file.path === NOTE_PATH)?.[1];
+                if (!fileResultUnknown) {
+                  return false;
+                }
+                const fileResult = fileResultUnknown as FileResultDom;
+                fileResult.renderContentMatches();
+                lines = [...fileResult.el.querySelectorAll('.search-result-file-match')].map((el) => el.textContent.trim());
+                return lines.length > 0;
+              },
+              timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+            });
+            return lines;
+          }
+
+          const scalarLines = await readMatchLines('[taxonomy.Common Name: Medlar]');
+          const listLines = await readMatchLines('[Taxonomy.Names: Pear]');
+          const objectLines = await readMatchLines('[Taxonomy.Rank]');
+          const topLevelLines = await readMatchLines('[status: ripe]');
+
+          searchView.setQuery('');
+
+          return { listLines, objectLines, scalarLines, topLevelLines };
+        } finally {
+          await cleanup();
+        }
+      },
+      vaultPath: getTemporaryVault().path
+    });
+
+    // A nested scalar shows its value, and the key is found whatever case the query typed it in.
+    expect(result.scalarLines).toEqual(['Taxonomy.Common Name: Medlar']);
+    // A nested list shows its members.
+    expect(result.listLines).toEqual(['Taxonomy.Names: Medlar Pear']);
+    // A nested object shows its one-line summary rather than `[object Object]`. A key query matches by
+    // substring, natively too, so the path below it is matched as well.
+    expect(result.objectLines).toEqual(['Taxonomy.Rank: { family: Rose }', 'Taxonomy.Rank.family: Rose']);
+    // A top-level property is drawn by the native row exactly as before.
+    expect(result.topLevelLines).toEqual(['status: ripe']);
   });
 });

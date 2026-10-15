@@ -18,8 +18,28 @@ import { NestedPropertySearchPatchComponent } from './nested-property-search-pat
 // match context). They implement only the members the patch touches; the real App still comes from
 // `obsidian-test-mocks`, with the two workspace methods the component calls stubbed on it.
 
+interface FakeFileResultInstance {
+  renderContentMatches: () => void;
+  vChildren: FakeRowList;
+}
+
 interface FakeLeaf {
   view: object;
+}
+
+interface FakeRow {
+  cache: FrontmatterCache;
+  render: () => void;
+  renderCount: number;
+  text: string;
+}
+
+interface FakeRowList {
+  children: FakeRow[];
+}
+
+interface FakeSearchResultDomInstance {
+  addResult: (createRows: () => FakeRow[]) => FakeFileResultInstance;
 }
 
 interface FakeSubMatcher {
@@ -54,6 +74,18 @@ interface PropertyMatcherState {
   nativeResult?: unknown;
 }
 
+interface ResultClasses {
+  FakeContentMatchDom: new () => FakeRow;
+  FakePropertyMatchDom: new (frontmatter: GenericObject | undefined, matches: RowMatch[]) => FakeRow;
+  FakeSearchResultDom: new () => FakeSearchResultDomInstance;
+}
+
+interface RowMatch {
+  key: string;
+  pos?: unknown;
+  subkey?: number[];
+}
+
 interface SearchViewSetup {
   app: AppOriginal;
   component: NestedPropertySearchPatchComponent;
@@ -62,8 +94,13 @@ interface SearchViewSetup {
 }
 
 interface SearchViewSetupOptions {
+  readonly dom?: unknown;
   readonly hasSearchLeaf?: boolean;
   readonly searchQueryConstructor?: unknown;
+}
+
+interface UnknownRowList {
+  children: unknown[];
 }
 
 class FakeContext {
@@ -104,6 +141,67 @@ function createPropertyMatcherPrototype(): PropertyMatcherPrototype {
   };
 }
 
+// Fresh classes per test, so a prototype patch from one test does not leak into the next. They mirror the
+// native search result: the result list creates a per-file result, which builds one row per matched property
+// in `renderContentMatches`, and a property row draws `key: value` from `cache.frontmatter[key]`.
+function createResultClasses(): ResultClasses {
+  class FakePropertyMatchDom implements FakeRow {
+    public cache: FrontmatterCache;
+    public readonly matches: RowMatch[];
+    public renderCount = 0;
+    public text = '';
+
+    public constructor(frontmatter: GenericObject | undefined, matches: RowMatch[]) {
+      this.cache = { frontmatter };
+      this.matches = matches;
+    }
+
+    public render(): void {
+      this.renderCount++;
+      const key = this.matches[0]?.key ?? '';
+      const value: unknown = this.cache.frontmatter?.[key];
+      this.text = `${key}: ${Array.isArray(value) ? value.map(String).join(' ') : String(value)}`;
+    }
+  }
+
+  class FakeContentMatchDom implements FakeRow {
+    public cache: FrontmatterCache = { frontmatter: {} };
+    public content = 'note body';
+    public matches: RowMatch[] = [{ key: 'missing.path' }];
+    public renderCount = 0;
+    public text = '';
+
+    public render(): void {
+      this.renderCount++;
+      this.text = this.content;
+    }
+  }
+
+  class FakeFileResult implements FakeFileResultInstance {
+    public vChildren: FakeRowList = { children: [] };
+    private readonly createRows: () => FakeRow[];
+
+    public constructor(createRows: () => FakeRow[]) {
+      this.createRows = createRows;
+    }
+
+    public renderContentMatches(): void {
+      this.vChildren.children = this.createRows();
+      for (const row of this.vChildren.children) {
+        row.render();
+      }
+    }
+  }
+
+  class FakeSearchResultDom implements FakeSearchResultDomInstance {
+    public addResult(createRows: () => FakeRow[]): FakeFileResultInstance {
+      return new FakeFileResult(createRows);
+    }
+  }
+
+  return { FakeContentMatchDom, FakePropertyMatchDom, FakeSearchResultDom };
+}
+
 // A property-name matcher that matches a fixed set of dotted paths.
 function keyMatcher(...paths: string[]): FakeSubMatcher {
   return {
@@ -132,6 +230,7 @@ function setup(options: SearchViewSetupOptions = {}): SearchViewSetup {
   // A fresh class per setup so `startSearch` lives on the prototype (as it does on the real `SearchView`) and
   // patches from one test do not leak into the next.
   class FakeSearchView {
+    public dom = options.dom;
     public searchQuery = searchQueryConstructor === undefined ? undefined : { constructor: searchQueryConstructor };
 
     public startSearch(): void {
@@ -359,6 +458,166 @@ describe('NestedPropertySearchPatchComponent', () => {
       });
       const result = patchedMatch(prototype).call(matcher, new FakeContext({ cache: {} }));
       expect(result).toBe(native);
+    });
+  });
+
+  describe('rendered property match', () => {
+    const frontmatter: GenericObject = {
+      'book': {
+        author: 'Ursula K. Le Guin',
+        genres: ['fantasy', 'sci-fi'],
+        meta: {
+          shelf: 'A1'
+        },
+        shelves: [{ room: 'study' }, 'attic']
+      },
+      'dotted.key': 'flat',
+      'Taxonomy': {
+        'Common Name': 'Medlar'
+      },
+      'top': 'scalar'
+    };
+
+    function renderRows(classes: ResultClasses, dom: FakeSearchResultDomInstance, rowFrontmatter: GenericObject | undefined, ...keys: string[]): FakeRow[] {
+      const fileResult = dom.addResult(() => keys.map((key) => new classes.FakePropertyMatchDom(rowFrontmatter, [{ key }])));
+      fileResult.renderContentMatches();
+      return fileResult.vChildren.children;
+    }
+
+    function renderText(key: string): string {
+      return renderTextAgainst(key, frontmatter);
+    }
+
+    function renderTextAgainst(key: string, rowFrontmatter: GenericObject | undefined): string {
+      const classes = createResultClasses();
+      const dom = new classes.FakeSearchResultDom();
+      const { startSearch } = setup({ dom });
+      startSearch();
+      const [row] = renderRows(classes, dom, rowFrontmatter, key);
+      return row?.text ?? '';
+    }
+
+    it('shows the value of a nested scalar instead of undefined', () => {
+      expect(renderText('Taxonomy.Common Name')).toBe('Taxonomy.Common Name: Medlar');
+    });
+
+    it('shows the members of a nested list', () => {
+      expect(renderText('book.genres')).toBe('book.genres: fantasy sci-fi');
+    });
+
+    it('shows a nested object as its one-line summary', () => {
+      expect(renderText('book.meta')).toBe('book.meta: { shelf: A1 }');
+    });
+
+    it('shows an object member of a nested list as its one-line summary', () => {
+      expect(renderText('book.shelves')).toBe('book.shelves: { room: study } attic');
+    });
+
+    it('leaves a top-level key to the native row', () => {
+      expect(renderText('top')).toBe('top: scalar');
+    });
+
+    it('leaves a top-level key whose name contains a dot to the native row', () => {
+      expect(renderText('dotted.key')).toBe('dotted.key: flat');
+    });
+
+    it('leaves a key that resolves to no nested path to the native row', () => {
+      expect(renderText('book.missing')).toBe('book.missing: undefined');
+    });
+
+    it('leaves a row with no frontmatter to the native row', () => {
+      expect(renderTextAgainst('book.author', undefined)).toBe('book.author: undefined');
+    });
+
+    it('restores the row cache after drawing it', () => {
+      const classes = createResultClasses();
+      const dom = new classes.FakeSearchResultDom();
+      const { startSearch } = setup({ dom });
+      startSearch();
+      const [row] = renderRows(classes, dom, frontmatter, 'book.author');
+      expect(row?.cache.frontmatter).toBe(frontmatter);
+    });
+
+    it('redraws the rows that were drawn before the row class was patched, and only those', () => {
+      const classes = createResultClasses();
+      const dom = new classes.FakeSearchResultDom();
+      const { startSearch } = setup({ dom });
+      startSearch();
+      const firstRows = renderRows(classes, dom, frontmatter, 'book.author', 'top');
+      const laterRows = renderRows(classes, dom, frontmatter, 'book.author');
+      expect(firstRows.map((row) => row.renderCount)).toEqual([2, 2]);
+      expect(firstRows.map((row) => row.text)).toEqual(['book.author: Ursula K. Le Guin', 'top: scalar']);
+      expect(laterRows.map((row) => row.renderCount)).toEqual([1]);
+    });
+
+    it('does not take a content-match row for a property row', () => {
+      const classes = createResultClasses();
+      const dom = new classes.FakeSearchResultDom();
+      const { startSearch } = setup({ dom });
+      startSearch();
+      const contentRow = new classes.FakeContentMatchDom();
+      const fileResult = dom.addResult(() => [contentRow]);
+      fileResult.renderContentMatches();
+      const [propertyRow] = renderRows(classes, dom, frontmatter, 'book.author');
+      expect(contentRow.renderCount).toBe(1);
+      expect(propertyRow?.text).toBe('book.author: Ursula K. Le Guin');
+    });
+
+    it('skips a row that is not an object', () => {
+      class PrimitiveRowFileResult {
+        public vChildren: UnknownRowList = { children: [] };
+
+        public renderContentMatches(): void {
+          this.vChildren.children = ['text row'];
+        }
+      }
+      class PrimitiveRowResultDom {
+        public addResult(): PrimitiveRowFileResult {
+          return new PrimitiveRowFileResult();
+        }
+      }
+      const dom = new PrimitiveRowResultDom();
+      const { startSearch } = setup({ dom });
+      startSearch();
+      const fileResult = dom.addResult();
+      fileResult.renderContentMatches();
+      expect(fileResult.vChildren.children).toEqual(['text row']);
+    });
+
+    it('patches the result list only once across searches', () => {
+      const classes = createResultClasses();
+      const dom = new classes.FakeSearchResultDom();
+      const { startSearch } = setup({ dom });
+      startSearch();
+      const afterFirst = dom.addResult;
+      startSearch();
+      expect(dom.addResult).toBe(afterFirst);
+    });
+
+    it('does not patch the result list when the search view has none', () => {
+      const { startSearch } = setup({ dom: undefined });
+      expect(() => {
+        startSearch();
+      }).not.toThrow();
+    });
+
+    it('does not patch the result list when it has no addResult', () => {
+      const dom = { addResult: 'not a function' };
+      const { startSearch } = setup({ dom });
+      startSearch();
+      expect(dom.addResult).toBe('not a function');
+    });
+
+    it('does not patch a file result of an unknown shape', () => {
+      class ForeignResultDom {
+        public addResult(): unknown {
+          return null;
+        }
+      }
+      const dom = new ForeignResultDom();
+      const { startSearch } = setup({ dom });
+      startSearch();
+      expect(dom.addResult()).toBeNull();
     });
   });
 });
