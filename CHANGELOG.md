@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 1.6.2
+
+- test(floating-scrollbar): merge the wheel-listener race fix
+- fix(search): merge the nested value on nested-property match lines
+
 ## 1.6.1
 
 - test(screenshots): merge the Node-side dark theme for the desktop capture
