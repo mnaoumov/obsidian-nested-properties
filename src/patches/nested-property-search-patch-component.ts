@@ -5,6 +5,25 @@ import { castTo } from 'obsidian-dev-utils/object-utils';
 import { MonkeyAroundComponent } from 'obsidian-dev-utils/obsidian/components/monkey-around-component';
 
 import { collectNestedPropertyEntries } from '../nested-property-paths.ts';
+import {
+  formatValueSummary,
+  isComplexValue
+} from '../value-utils.ts';
+
+/**
+ * A search result's per-file entry. `renderContentMatches` builds its match rows into `vChildren`.
+ */
+interface FileResultDom {
+  renderContentMatches: () => void;
+  vChildren: FileResultDomChildren;
+}
+
+/**
+ * The child list of a {@link FileResultDom}: one row per content match or per matched property.
+ */
+interface FileResultDomChildren {
+  readonly children: unknown[];
+}
 
 /**
  * The metadata-cache slice a match context carries for a note.
@@ -33,6 +52,16 @@ interface PropertyMatch {
   key: string;
   pos?: unknown;
   subkey?: number[];
+}
+
+/**
+ * The search-result row that shows one matched property as `key: value`. Its `render` reads the value as
+ * `cache.frontmatter[matches[0].key]`, which is undefined for a dotted nested path.
+ */
+interface PropertyMatchDom {
+  cache: FrontmatterCache;
+  readonly matches: PropertyMatch[];
+  render: () => void;
 }
 
 /**
@@ -74,9 +103,17 @@ interface SearchQueryInstance {
 }
 
 /**
+ * The result list of a search view. `addResult` creates the {@link FileResultDom} for one note.
+ */
+interface SearchResultDom {
+  addResult: (...arguments_: unknown[]) => unknown;
+}
+
+/**
  * The global-search view. `startSearch` compiles `searchComponent.getValue()` into `searchQuery`.
  */
 interface SearchView {
+  dom?: SearchResultDom | undefined;
   searchQuery?: SearchQueryInstance | undefined;
   startSearch: () => void;
 }
@@ -113,12 +150,21 @@ const PROBE_QUERY = '["a"]';
  *
  * The internal `SearchQuery` constructor is only reachable from a compiled query instance, so this bootstraps
  * off the search view's first `startSearch`: it compiles a throwaway probe query to obtain the shared
- * property-matcher prototype, then installs the nested-aware `match` patch on it. Both patches are owned by
- * this component and removed on unload.
+ * property-matcher prototype, then installs the nested-aware `match` patch on it.
+ *
+ * Matching is only half of it: the result row that shows a matched property reads its value as
+ * `frontmatter[key]`, which for a dotted nested path is `undefined` (issue #14). That row's class is
+ * module-private too, so it is reached the same way, one instance at a time: the search view's result list
+ * (`view.dom`) creates the per-file results, a per-file result builds the property rows, and the first property
+ * row found has its `render` patched and is drawn again. Every patch is owned by this component and removed on
+ * unload.
  */
 export class NestedPropertySearchPatchComponent extends MonkeyAroundComponent {
   private readonly app: App;
+  private isFileResultPatched = false;
+  private isPropertyMatchDomPatched = false;
   private isPropertyMatcherPatched = false;
+  private isSearchResultDomPatched = false;
 
   public constructor(params: NestedPropertySearchPatchComponentConstructorParams) {
     super();
@@ -129,6 +175,50 @@ export class NestedPropertySearchPatchComponent extends MonkeyAroundComponent {
     this.app.workspace.onLayoutReady(() => {
       this.installBootstrapPatch();
     });
+  }
+
+  private ensureFileResultPatched(fileResult: unknown): void {
+    if (this.isFileResultPatched || !isFileResultDom(fileResult)) {
+      return;
+    }
+    this.isFileResultPatched = true;
+    this.registerMethodPatch({
+      $object: castTo<FileResultDom>(Object.getPrototypeOf(fileResult)),
+      methodName: 'renderContentMatches',
+      patchHandler: ({
+        fallback,
+        originalThis
+      }) => {
+        fallback();
+        this.ensurePropertyMatchDomPatched(originalThis);
+      }
+    });
+  }
+
+  private ensurePropertyMatchDomPatched(fileResult: FileResultDom): void {
+    if (this.isPropertyMatchDomPatched) {
+      return;
+    }
+    const propertyMatchDoms = fileResult.vChildren.children.filter(isPropertyMatchDom);
+    const [firstPropertyMatchDom] = propertyMatchDoms;
+    if (!firstPropertyMatchDom) {
+      return;
+    }
+    this.isPropertyMatchDomPatched = true;
+    this.registerMethodPatch({
+      $object: castTo<PropertyMatchDom>(Object.getPrototypeOf(firstPropertyMatchDom)),
+      methodName: 'render',
+      patchHandler: ({
+        fallback,
+        originalThis
+      }) => {
+        renderPropertyMatch(fallback, originalThis);
+      }
+    });
+    // These rows were drawn by the unpatched `render` a moment ago; every later row is drawn patched.
+    for (const propertyMatchDom of propertyMatchDoms) {
+      propertyMatchDom.render();
+    }
   }
 
   private ensurePropertyMatcherPatched(view: SearchView): void {
@@ -163,6 +253,22 @@ export class NestedPropertySearchPatchComponent extends MonkeyAroundComponent {
     });
   }
 
+  private ensureSearchResultDomPatched(view: SearchView): void {
+    if (this.isSearchResultDomPatched || !view.dom || typeof view.dom.addResult !== 'function') {
+      return;
+    }
+    this.isSearchResultDomPatched = true;
+    this.registerMethodPatch({
+      $object: castTo<SearchResultDom>(Object.getPrototypeOf(view.dom)),
+      methodName: 'addResult',
+      patchHandler: ({ fallback }) => {
+        const fileResult = fallback();
+        this.ensureFileResultPatched(fileResult);
+        return fileResult;
+      }
+    });
+  }
+
   private installBootstrapPatch(): void {
     const searchLeaf = this.app.workspace.getLeavesOfType('search')[0];
     if (!searchLeaf) {
@@ -178,6 +284,7 @@ export class NestedPropertySearchPatchComponent extends MonkeyAroundComponent {
       }) => {
         fallback();
         this.ensurePropertyMatcherPatched(originalThis);
+        this.ensureSearchResultDomPatched(originalThis);
       }
     });
   }
@@ -201,6 +308,23 @@ function addValueMatches(target: PropertyMatch[], valueMatcher: SubMatcher, cont
   for (const pos of valueMatch?.content ?? []) {
     target.push({ key: path, pos });
   }
+}
+
+function isFileResultDom(candidate: unknown): candidate is FileResultDom {
+  if (candidate === null || typeof candidate !== 'object') {
+    return false;
+  }
+  const fileResult = castTo<Partial<FileResultDom>>(candidate);
+  return typeof fileResult.renderContentMatches === 'function' && Array.isArray(fileResult.vChildren?.children);
+}
+
+function isPropertyMatchDom(candidate: unknown): candidate is PropertyMatchDom {
+  if (candidate === null || typeof candidate !== 'object') {
+    return false;
+  }
+  // A content-match row carries `cache` and `matches` too, but also the `content` it excerpts.
+  const row = castTo<Partial<PropertyMatchDom>>(candidate);
+  return typeof row.render === 'function' && 'cache' in row && Array.isArray(row.matches) && !('content' in row);
 }
 
 function isPropertyMatcher(candidate: PropertyMatcher): boolean {
@@ -244,4 +368,37 @@ function matchNestedProperties(
     return nativeResult;
   }
   return { properties: nativeResult ? [...nativeResult.properties, ...nestedMatches] : nestedMatches };
+}
+
+function renderPropertyMatch(fallback: () => void, row: PropertyMatchDom): void {
+  const key = row.matches[0]?.key;
+  const frontmatter = row.cache.frontmatter;
+  // A top-level key, including one whose name merely contains a dot, is the native row's own business.
+  if (key === undefined || !frontmatter || Object.hasOwn(frontmatter, key)) {
+    fallback();
+    return;
+  }
+  const entry = collectNestedPropertyEntries(frontmatter).find(({ path }) => path === key);
+  if (!entry) {
+    fallback();
+    return;
+  }
+
+  // The native `render` reads `cache.frontmatter[key]` and nothing else, so it is handed a cache in which the
+  // dotted key holds the nested value. That keeps its own drawing, list layout and match highlighting.
+  const cache = row.cache;
+  row.cache = { ...cache, frontmatter: { [key]: toDisplayValue(entry.value) } };
+  try {
+    fallback();
+  } finally {
+    row.cache = cache;
+  }
+}
+
+function toDisplayValue(value: unknown): unknown {
+  // The native row draws a value with `String()`, which would show an object as `[object Object]`.
+  if (Array.isArray(value)) {
+    return value.map((item) => (isComplexValue(item) ? formatValueSummary(item) : item));
+  }
+  return isComplexValue(value) ? formatValueSummary(value) : value;
 }

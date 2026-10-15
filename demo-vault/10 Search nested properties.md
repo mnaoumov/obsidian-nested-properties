@@ -36,4 +36,5 @@ await require('/demoSetup.ts').seedSearchDemoNotes(app);
 1. Click **Seed search demo notes** above (or add your own notes with nested `book` frontmatter).
 2. Open Obsidian's search (the magnifier in the left sidebar, or `Ctrl`/`Cmd` + `Shift` + `F`).
 3. Type `[book.genres: fantasy]` - both this note and the two fantasy books above match, because `fantasy` is one of their `book.genres`; `Dune` (sci-fi only) does not.
-4. Click a result to open it.
+4. Expand a result: the line under it shows the nested value it matched, such as `book.genres: fantasy sci-fi`, with the matching member highlighted.
+5. Click a result to open it.
