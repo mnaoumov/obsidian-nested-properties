@@ -146,11 +146,17 @@ async function wheelAtRootProperty(position: WheelPosition): Promise<WheelMeasur
       try {
         // Waiting on the overflow rather than merely on the element is what makes this deterministic:
         // the property is only a wheel target once it has been laid out wider than its own scroll box.
+        // The header actions are the second half of that wait. The wheel listener is attached to the
+        // Properties editor by the floating scrollbar's `update()`, which the renderer runs from a
+        // zero-delay timer after a render, in the same callback that injects the header actions. So
+        // their presence proves the listener is in place. Obsidian 1.14.4 resolves `openFile` with that
+        // timer still queued, and a wheel turn dispatched then reached no listener at all.
         await waitUntil({
-          message: 'the deeply_nested property to render wider than its scroll box',
+          message: 'the deeply_nested property to render wider than its scroll box, with its listeners attached',
           predicate: () => {
             const el = containerEl.querySelector(rootSelector);
-            return el instanceof HTMLElement && !el.hasClass('is-collapsed') && el.scrollWidth > el.clientWidth;
+            return el instanceof HTMLElement && !el.hasClass('is-collapsed') && el.scrollWidth > el.clientWidth
+              && el.closest('.metadata-container')?.querySelector('.nested-properties-header-actions') !== null;
           }
         });
 
