@@ -1,4 +1,4 @@
-import type { GenericObject } from 'obsidian-dev-utils/type-guards';
+import type { GenericObject } from '@mnaoumov/typescript-lib/type-guards';
 
 import {
   describe,

@@ -1,16 +1,16 @@
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
+import type { GenericObject } from '@mnaoumov/typescript-lib/type-guards';
 import type {
   App,
   TFile
 } from 'obsidian';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
-import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
+import { processFrontmatter } from '@mnaoumov/obsidian-lib/file-manager';
+import { confirm } from '@mnaoumov/obsidian-lib/modals/confirm';
+import { prompt } from '@mnaoumov/obsidian-lib/modals/prompt';
+import { selectItem } from '@mnaoumov/obsidian-lib/modals/select-item';
 import { Component } from 'obsidian';
-import { processFrontmatter } from 'obsidian-dev-utils/obsidian/file-manager';
-import { confirm } from 'obsidian-dev-utils/obsidian/modals/confirm';
-import { prompt } from 'obsidian-dev-utils/obsidian/modals/prompt';
-import { selectItem } from 'obsidian-dev-utils/obsidian/modals/select-item';
 
 import {
   collectNestedPropertyPaths,
@@ -216,7 +216,7 @@ export class NestedPropertyVaultOpsComponent extends Component {
   }
 
   /**
-   * Writes a note's frontmatter through `obsidian-dev-utils`' {@link processFrontmatter} rather than the
+   * Writes a note's frontmatter through `@mnaoumov/obsidian-lib`'s {@link processFrontmatter} rather than the
    * raw `FileManager.processFrontMatter`, so these vault-wide writes inherit the shared `process()`
    * primitive's resource locking, abort handling and timeout notices.
    *

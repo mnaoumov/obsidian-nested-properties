@@ -1,6 +1,6 @@
-import type { GenericObject } from 'obsidian-dev-utils/type-guards';
+import type { GenericObject } from '@mnaoumov/typescript-lib/type-guards';
 
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 
 /**
  * A nested property path (depth of two or more segments) paired with the value found there.

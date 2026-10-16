@@ -3,8 +3,8 @@ import type {
   PluginManifest
 } from 'obsidian';
 
-import { castTo } from 'obsidian-dev-utils/object-utils';
-import { OpenDemoVaultCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/open-demo-vault-command-handler';
+import { OpenDemoVaultCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/open-demo-vault-command-handler';
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   beforeEach,
@@ -22,8 +22,8 @@ import { Plugin } from './plugin.ts';
 // The real `PluginBase.onload()` loads dev-utils' own notice/context/debug components, which read a
 // shared-state bag off the app via `getObsidianDevUtilsState`. The strict App mock has no such bag, so
 // stub this one utility (return a fresh value wrapper per call) — mirroring dev-utils' own PluginBase test.
-vi.mock('obsidian-dev-utils/obsidian/app', async (importOriginal) => ({
-  ...await importOriginal<typeof import('obsidian-dev-utils/obsidian/app')>(),
+vi.mock('@mnaoumov/obsidian-lib/app', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@mnaoumov/obsidian-lib/app')>(),
   getObsidianDevUtilsState: vi.fn((_app: unknown, _key: string, defaultValue: unknown) => ({ value: defaultValue }))
 }));
 
@@ -94,7 +94,7 @@ vi.mock('./patches/nested-property-search-patch-component.ts', async () => ({
 // `OpenDemoVaultCommandHandler` is registered through the real `commandHandlerComponent`, which calls
 // `buildCommand()` then `onRegistered()` on each handler — so the stub must supply both (a minimal command
 // and a noop) to keep that real registration path working; the constructor spy is what the test asserts on.
-vi.mock('obsidian-dev-utils/obsidian/command-handlers/open-demo-vault-command-handler', () => ({
+vi.mock('@mnaoumov/obsidian-lib/command-handlers/open-demo-vault-command-handler', () => ({
   // eslint-disable-next-line prefer-arrow-callback -- a non-arrow function so it is constructable via `new`.
   OpenDemoVaultCommandHandler: vi.fn(function openDemoVaultCommandHandlerStub() {
     return {

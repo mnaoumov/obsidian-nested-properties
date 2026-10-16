@@ -1,7 +1,7 @@
-import type { GenericObject } from 'obsidian-dev-utils/type-guards';
+import type { GenericObject } from '@mnaoumov/typescript-lib/type-guards';
 
+import { extractDefaultExportInterop } from '@mnaoumov/typescript-lib/object-utils';
 import { moment } from 'obsidian';
-import { extractDefaultExportInterop } from 'obsidian-dev-utils/object-utils';
 
 const momentFunction = extractDefaultExportInterop(moment);
 
