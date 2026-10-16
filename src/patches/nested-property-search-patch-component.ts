@@ -1,7 +1,23 @@
+import type {
+  ExtractConstructor,
+  ObsidianSearchQuery,
+  ResultDom,
+  ResultDomItem,
+  ResultDomItemPropertyChild,
+  ResultProperty,
+  SearchMatchContext,
+  SearchMatcher,
+  SearchMatchResult,
+  SearchPropertyMatcher,
+  SearchView
+} from '@obsidian-typings/obsidian-public-latest';
 import type { App } from 'obsidian';
 import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
-import { castTo } from 'obsidian-dev-utils/object-utils';
+import {
+  castTo,
+  getPrototypeOf
+} from 'obsidian-dev-utils/object-utils';
 import { MonkeyAroundComponent } from 'obsidian-dev-utils/obsidian/components/monkey-around-component';
 
 import { collectNestedPropertyEntries } from '../nested-property-paths.ts';
@@ -10,126 +26,15 @@ import {
   isComplexValue
 } from '../value-utils.ts';
 
-/**
- * A search result's per-file entry. `renderContentMatches` builds its match rows into `vChildren`.
- */
-interface FileResultDom {
-  renderContentMatches: () => void;
-  vChildren: FileResultDomChildren;
-}
-
-/**
- * The child list of a {@link FileResultDom}: one row per content match or per matched property.
- */
-interface FileResultDomChildren {
-  readonly children: unknown[];
-}
-
-/**
- * The metadata-cache slice a match context carries for a note.
- */
-interface FrontmatterCache {
-  frontmatter?: GenericObject | undefined;
-}
-
-// Minimal structural types for Obsidian's (untyped) internal global-search matcher tree, reverse-engineered
-// from the 1.13.3 build. Obsidian exposes no public API for search operators, so these are best-effort
-// internal types reported upstream in `obsidian-typings` (see this plugin's AGENTS.md). The patch
-// feature-detects the shape at runtime and no-ops if it ever changes, so a wrong guess degrades to native
-// behavior rather than crashing.
+// Obsidian exposes no public API for search operators, so the global-search internals come from
+// `obsidian-typings`. The patch still feature-detects every shape at runtime and no-ops if one ever changes,
+// so a moved internal degrades to native behavior rather than crashing.
 
 /**
  * Parameters for constructing a {@link NestedPropertySearchPatchComponent}.
  */
 interface NestedPropertySearchPatchComponentConstructorParams {
   readonly app: App;
-}
-
-/**
- * A single property match contributed to a {@link PropertyMatchResult}.
- */
-interface PropertyMatch {
-  key: string;
-  pos?: unknown;
-  subkey?: number[];
-}
-
-/**
- * The search-result row that shows one matched property as `key: value`. Its `render` reads the value as
- * `cache.frontmatter[matches[0].key]`, which is undefined for a dotted nested path.
- */
-interface PropertyMatchDom {
-  cache: FrontmatterCache;
-  readonly matches: PropertyMatch[];
-  render: () => void;
-}
-
-/**
- * The `[key: value]` property matcher node whose `match` this component patches to be nested-aware.
- */
-interface PropertyMatcher {
-  key: SubMatcher;
-  match: (context: SearchMatchContext) => null | PropertyMatchResult | undefined;
-  value: null | SubMatcher;
-}
-
-/**
- * The result of the property matcher: one entry per matched property occurrence.
- */
-interface PropertyMatchResult {
-  readonly properties: PropertyMatch[];
-}
-
-/**
- * The per-file context a matcher node evaluates against.
- */
-interface SearchMatchContext {
-  cache?: FrontmatterCache | undefined;
-  clone: () => SearchMatchContext;
-  cloneForPropertyContent: (value: unknown) => SearchMatchContext;
-  keys: string[];
-  strings: Record<string, unknown>;
-}
-
-type SearchQueryConstructor = new (app: App, query: string, isMatchingCase: boolean) => SearchQueryInstance;
-
-/**
- * A compiled search query. Its `matcher` is the root of the matcher tree; for a bare property query it is
- * the {@link PropertyMatcher} itself.
- */
-interface SearchQueryInstance {
-  constructor: SearchQueryConstructor;
-  matcher?: PropertyMatcher | undefined;
-}
-
-/**
- * The result list of a search view. `addResult` creates the {@link FileResultDom} for one note.
- */
-interface SearchResultDom {
-  addResult: (...arguments_: unknown[]) => unknown;
-}
-
-/**
- * The global-search view. `startSearch` compiles `searchComponent.getValue()` into `searchQuery`.
- */
-interface SearchView {
-  dom?: SearchResultDom | undefined;
-  searchQuery?: SearchQueryInstance | undefined;
-  startSearch: () => void;
-}
-
-/**
- * A single property-name / property-value sub-matcher.
- */
-interface SubMatcher {
-  match: (context: SearchMatchContext) => null | SubMatcherResult;
-}
-
-/**
- * The result of a value sub-matcher: the list of match positions in `content`.
- */
-interface SubMatcherResult {
-  readonly content?: undefined | unknown[];
 }
 
 // A bare property query whose compiled `matcher` is guaranteed to be a `PropertyMatcher`, used to reach the
@@ -178,12 +83,12 @@ export class NestedPropertySearchPatchComponent extends MonkeyAroundComponent {
   }
 
   private ensureFileResultPatched(fileResult: unknown): void {
-    if (this.isFileResultPatched || !isFileResultDom(fileResult)) {
+    if (this.isFileResultPatched || !isResultDomItem(fileResult)) {
       return;
     }
     this.isFileResultPatched = true;
     this.registerMethodPatch({
-      $object: castTo<FileResultDom>(Object.getPrototypeOf(fileResult)),
+      $object: getPrototypeOf(fileResult),
       methodName: 'renderContentMatches',
       patchHandler: ({
         fallback,
@@ -195,18 +100,18 @@ export class NestedPropertySearchPatchComponent extends MonkeyAroundComponent {
     });
   }
 
-  private ensurePropertyMatchDomPatched(fileResult: FileResultDom): void {
+  private ensurePropertyMatchDomPatched(fileResult: ResultDomItem): void {
     if (this.isPropertyMatchDomPatched) {
       return;
     }
-    const propertyMatchDoms = fileResult.vChildren.children.filter(isPropertyMatchDom);
+    const propertyMatchDoms = fileResult.vChildren.children.filter(isResultDomItemPropertyChild);
     const [firstPropertyMatchDom] = propertyMatchDoms;
     if (!firstPropertyMatchDom) {
       return;
     }
     this.isPropertyMatchDomPatched = true;
     this.registerMethodPatch({
-      $object: castTo<PropertyMatchDom>(Object.getPrototypeOf(firstPropertyMatchDom)),
+      $object: getPrototypeOf(firstPropertyMatchDom),
       methodName: 'render',
       patchHandler: ({
         fallback,
@@ -225,18 +130,20 @@ export class NestedPropertySearchPatchComponent extends MonkeyAroundComponent {
     if (this.isPropertyMatcherPatched) {
       return;
     }
-    const searchQueryConstructor = view.searchQuery?.constructor;
-    if (!searchQueryConstructor) {
+    const searchQuery = view.searchQuery;
+    if (!searchQuery) {
       return;
     }
+    // TypeScript types every instance's own `constructor` as a bare `Function`.
+    const searchQueryConstructor = castTo<ExtractConstructor<ObsidianSearchQuery>>(searchQuery.constructor);
 
-    let propertyMatcherPrototype: PropertyMatcher;
+    let propertyMatcherPrototype: SearchPropertyMatcher;
     try {
       const probeMatcher = new searchQueryConstructor(this.app, PROBE_QUERY, false).matcher;
-      if (!probeMatcher || !isPropertyMatcher(probeMatcher)) {
+      if (!probeMatcher || !isSearchPropertyMatcher(probeMatcher)) {
         return;
       }
-      propertyMatcherPrototype = castTo<PropertyMatcher>(Object.getPrototypeOf(probeMatcher));
+      propertyMatcherPrototype = getPrototypeOf(probeMatcher);
     } catch {
       return;
     }
@@ -254,12 +161,13 @@ export class NestedPropertySearchPatchComponent extends MonkeyAroundComponent {
   }
 
   private ensureSearchResultDomPatched(view: SearchView): void {
-    if (this.isSearchResultDomPatched || !view.dom || typeof view.dom.addResult !== 'function') {
+    const searchResultDom: unknown = view.dom;
+    if (this.isSearchResultDomPatched || !isResultDom(searchResultDom)) {
       return;
     }
     this.isSearchResultDomPatched = true;
     this.registerMethodPatch({
-      $object: castTo<SearchResultDom>(Object.getPrototypeOf(view.dom)),
+      $object: getPrototypeOf(searchResultDom),
       methodName: 'addResult',
       patchHandler: ({ fallback }) => {
         const fileResult = fallback();
@@ -270,13 +178,12 @@ export class NestedPropertySearchPatchComponent extends MonkeyAroundComponent {
   }
 
   private installBootstrapPatch(): void {
-    const searchLeaf = this.app.workspace.getLeavesOfType('search')[0];
-    if (!searchLeaf) {
+    const searchView: unknown = this.app.workspace.getLeavesOfType('search')[0]?.view;
+    if (!isSearchView(searchView)) {
       return;
     }
-    const searchViewPrototype = castTo<SearchView>(Object.getPrototypeOf(searchLeaf.view));
     this.registerMethodPatch({
-      $object: searchViewPrototype,
+      $object: getPrototypeOf(searchView),
       methodName: 'startSearch',
       patchHandler: ({
         fallback,
@@ -290,7 +197,7 @@ export class NestedPropertySearchPatchComponent extends MonkeyAroundComponent {
   }
 }
 
-function addValueMatches(target: PropertyMatch[], valueMatcher: SubMatcher, context: SearchMatchContext, path: string, value: unknown): void {
+function addValueMatches(target: ResultProperty[], valueMatcher: SearchMatcher, context: SearchMatchContext, path: string, value: unknown): void {
   if (Array.isArray(value)) {
     for (const [index, element] of value.entries()) {
       const itemMatch = valueMatcher.match(context.cloneForPropertyContent(element));
@@ -310,46 +217,59 @@ function addValueMatches(target: PropertyMatch[], valueMatcher: SubMatcher, cont
   }
 }
 
-function isFileResultDom(candidate: unknown): candidate is FileResultDom {
-  if (candidate === null || typeof candidate !== 'object') {
-    return false;
-  }
-  const fileResult = castTo<Partial<FileResultDom>>(candidate);
-  return typeof fileResult.renderContentMatches === 'function' && Array.isArray(fileResult.vChildren?.children);
+function hasMethod(candidate: object, methodName: string): boolean {
+  return typeof Reflect.get(candidate, methodName) === 'function';
 }
 
-function isPropertyMatchDom(candidate: unknown): candidate is PropertyMatchDom {
-  if (candidate === null || typeof candidate !== 'object') {
+function isObject(candidate: unknown): candidate is object {
+  return candidate !== null && typeof candidate === 'object';
+}
+
+function isResultDom(candidate: unknown): candidate is ResultDom {
+  return isObject(candidate) && hasMethod(candidate, 'addResult');
+}
+
+function isResultDomItem(candidate: unknown): candidate is ResultDomItem {
+  if (!isObject(candidate) || !hasMethod(candidate, 'renderContentMatches')) {
     return false;
   }
+  const vChildren: unknown = Reflect.get(candidate, 'vChildren');
+  return isObject(vChildren) && Array.isArray(Reflect.get(vChildren, 'children'));
+}
+
+function isResultDomItemPropertyChild(candidate: unknown): candidate is ResultDomItemPropertyChild {
   // A content-match row carries `cache` and `matches` too, but also the `content` it excerpts.
-  const row = castTo<Partial<PropertyMatchDom>>(candidate);
-  return typeof row.render === 'function' && 'cache' in row && Array.isArray(row.matches) && !('content' in row);
+  return isObject(candidate) && hasMethod(candidate, 'render') && 'cache' in candidate && Array.isArray(Reflect.get(candidate, 'matches'))
+    && !('content' in candidate);
 }
 
-function isPropertyMatcher(candidate: PropertyMatcher): boolean {
+function isSearchPropertyMatcher(candidate: SearchMatcher): candidate is SearchPropertyMatcher {
   // Structurally feature-detect the property matcher: a `match` method plus the `key`/`value` sub-matchers it
   // reads. If Obsidian ever restructures search internals this guard fails and the patch is skipped, leaving
   // native behavior untouched rather than crashing.
-  return typeof candidate.match === 'function' && 'key' in candidate && 'value' in candidate;
+  return hasMethod(candidate, 'match') && 'key' in candidate && 'value' in candidate;
+}
+
+function isSearchView(candidate: unknown): candidate is SearchView {
+  return isObject(candidate) && hasMethod(candidate, 'startSearch');
 }
 
 function matchNestedProperties(
-  fallback: () => null | PropertyMatchResult | undefined,
+  fallback: () => null | SearchMatchResult | undefined,
   context: SearchMatchContext,
-  matcher: PropertyMatcher
-): null | PropertyMatchResult | undefined {
+  matcher: SearchPropertyMatcher
+): null | SearchMatchResult | undefined {
   const nativeResult = fallback();
   // The property matcher only runs against note content; mirror the native guard.
   if (!Object.hasOwn(context.strings, 'content')) {
     return nativeResult;
   }
-  const frontmatter = context.cache?.frontmatter;
+  const frontmatter = context.cache?.frontmatter as GenericObject | undefined;
   if (!frontmatter) {
     return nativeResult;
   }
 
-  const nestedMatches: PropertyMatch[] = [];
+  const nestedMatches: ResultProperty[] = [];
   for (const { path, value } of collectNestedPropertyEntries(frontmatter)) {
     const keyContext = context.clone();
     keyContext.keys = ['propertyName'];
@@ -367,10 +287,10 @@ function matchNestedProperties(
   if (nestedMatches.length === 0) {
     return nativeResult;
   }
-  return { properties: nativeResult ? [...nativeResult.properties, ...nestedMatches] : nestedMatches };
+  return { properties: nativeResult?.properties ? [...nativeResult.properties, ...nestedMatches] : nestedMatches };
 }
 
-function renderPropertyMatch(fallback: () => void, row: PropertyMatchDom): void {
+function renderPropertyMatch(fallback: () => void, row: ResultDomItemPropertyChild): void {
   const key = row.matches[0]?.key;
   const frontmatter = row.cache.frontmatter;
   // A top-level key, including one whose name merely contains a dot, is the native row's own business.
