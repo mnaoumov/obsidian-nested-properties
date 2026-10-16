@@ -5,7 +5,7 @@ import { getRootFolder } from 'obsidian-dev-utils/script-utils/root';
 // Keeps the in-repo `demo-vault/` in sync with the plugin's public surface WITHOUT
 // launching Obsidian: it reflects the real config from source and asserts every
 // setting is documented in a note, and that the guard note/member still exist
-// (rename drift). Nested Properties is UI-only, so there is no feature-method
+// (rename drift). `Nested Properties` is UI-only, so there is no feature-method
 // interface and no `docs/` folder — only the `PluginSettings` config class. The
 // plugin's runtime behavior is covered by the other integration tests, not here.
 registerDemoVaultCoverageSuite({

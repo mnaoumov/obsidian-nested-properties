@@ -6,7 +6,7 @@ const FULL_KEY_DISPLAY_COMMAND_ID = 'nested-properties:toggle-full-key-display';
 const VAULT_WIDE_DEMO_FOLDER = 'Vault-wide demo';
 const SEARCH_DEMO_FOLDER = 'Search demo';
 
-// Nested Properties has a single live setting - full key display - toggled by a command that flips a
+// `Nested Properties` has a single live setting - full key display - toggled by a command that flips a
 // body class across all windows with no reload. So the demo just runs that command (the same thing the
 // command palette and the Properties-header button do); there is no data.json patch + reload to perform.
 export function toggleFullKeyDisplay(app: App): void {

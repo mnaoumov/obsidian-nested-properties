@@ -12,7 +12,7 @@ mixedList:
 ---
 # Mixed lists
 
-When every item in an array is the same simple type, Nested Properties shows it as a normal **list**. When the items are of **mixed** types (text, number, boolean, nested object, nested array), it shows a **Mixed list** widget instead, so each item keeps its own type and stays editable.
+When every item in an array is the same simple type, `Nested Properties` shows it as a normal **list**. When the items are of **mixed** types (text, number, boolean, nested object, nested array), it shows a **Mixed list** widget instead, so each item keeps its own type and stays editable.
 
 ## Look at the Properties panel
 
