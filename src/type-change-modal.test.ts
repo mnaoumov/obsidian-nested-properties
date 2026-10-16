@@ -1,6 +1,6 @@
 import type { App as AppOriginal } from 'obsidian';
 
-import { castTo } from 'obsidian-dev-utils/object-utils';
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   beforeEach,

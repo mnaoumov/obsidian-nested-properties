@@ -1,7 +1,7 @@
+import type { GenericObject } from '@mnaoumov/typescript-lib/type-guards';
 import type { App as AppOriginal } from 'obsidian';
-import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
-import { castTo } from 'obsidian-dev-utils/object-utils';
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   beforeEach,

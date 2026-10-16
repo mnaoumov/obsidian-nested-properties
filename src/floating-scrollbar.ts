@@ -1,9 +1,9 @@
+import { AllWindowsEventComponent } from '@mnaoumov/obsidian-lib/components/all-windows-event-component';
+import { getAllDomWindows } from '@mnaoumov/obsidian-lib/workspace';
 import {
   App,
   Component
 } from 'obsidian';
-import { AllWindowsEventComponent } from 'obsidian-dev-utils/obsidian/components/all-windows-event-component';
-import { getAllDomWindows } from 'obsidian-dev-utils/obsidian/workspace';
 
 const ARROW_SCROLL_PX = 40;
 const MIN_THUMB_WIDTH_PX = 30;

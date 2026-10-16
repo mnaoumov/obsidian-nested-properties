@@ -3,8 +3,8 @@ import type {
   PropertyWidget
 } from '@obsidian-typings/obsidian-public-latest';
 
+import { MonkeyAroundComponent } from '@mnaoumov/obsidian-lib/components/monkey-around-component';
 import { setIcon } from 'obsidian';
-import { MonkeyAroundComponent } from 'obsidian-dev-utils/obsidian/components/monkey-around-component';
 
 import {
   isComplexValue,

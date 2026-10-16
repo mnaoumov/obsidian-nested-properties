@@ -3,8 +3,8 @@ import type {
   WorkspaceLeaf
 } from 'obsidian';
 
-import { requestAnimationFrameAsync } from 'obsidian-dev-utils/async';
-import { castTo } from 'obsidian-dev-utils/object-utils';
+import { requestAnimationFrameAsync } from '@mnaoumov/typescript-lib/async';
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
 import { App as AppCls } from 'obsidian-test-mocks/obsidian';
 import {
   afterEach,

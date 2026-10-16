@@ -187,7 +187,7 @@ async function wheelAtRootProperty(position: WheelPosition): Promise<WheelMeasur
           clientY,
           deltaY: wheelDeltaInPixels
         });
-        // eslint-disable-next-line obsidian-dev-utils/no-untrusted-input-events -- There is no trusted wheel turn available to a harness, and this dispatch demonstrably exercises the real listener rather than passing vacuously: mis-anchoring the wheel registration onto the floating track makes this test fail, and widening the hit zone makes its sibling fail. Neither the registration nor the handler reads `isTrusted`.
+        // eslint-disable-next-line obsidian-dev-toolkit/no-untrusted-input-events -- There is no trusted wheel turn available to a harness, and this dispatch demonstrably exercises the real listener rather than passing vacuously: mis-anchoring the wheel registration onto the floating track makes this test fail, and widening the hit zone makes its sibling fail. Neither the registration nor the handler reads `isTrusted`.
         targetEl.dispatchEvent($event);
 
         return {

@@ -3,7 +3,7 @@ import type {
   PropertyWidget
 } from '@obsidian-typings/obsidian-public-latest';
 
-import { MonkeyAroundComponent } from 'obsidian-dev-utils/obsidian/components/monkey-around-component';
+import { MonkeyAroundComponent } from '@mnaoumov/obsidian-lib/components/monkey-around-component';
 
 import { isSimpleArray } from '../value-utils.ts';
 

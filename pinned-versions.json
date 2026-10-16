@@ -14,13 +14,13 @@
       "section": "devDependencies",
       "why": "obsidian's peerDependencies names this exact version. A second copy in the tree means two CodeMirror state instances at runtime, so editor extensions would attach to the wrong one.",
       "check": "node -e \"process.stdout.write(require('obsidian/package.json').peerDependencies['@codemirror/state'])\"",
-      "expect": "6.5.0"
+      "expect": "6.7.6"
     },
     "@codemirror/view": {
       "section": "devDependencies",
       "why": "Same as @codemirror/state - obsidian peer-pins it exactly, and the view layer must run against Obsidian's own CodeMirror instance.",
       "check": "node -e \"process.stdout.write(require('obsidian/package.json').peerDependencies['@codemirror/view'])\"",
-      "expect": "6.38.6"
+      "expect": "6.43.13"
     },
     "@puppeteer/browsers": {
       "section": "overrides",
@@ -45,7 +45,7 @@
     },
     "typescript": {
       "section": "devDependencies",
-      "why": "TypeScript 7 (tsgo) breaks this toolchain: @typescript-eslint's parser crashes on the native API, so type-aware ESLint cannot run on 7. @typescript-eslint peer-requires the range below, so 6.x is the last usable major. Hold until obsidian-dev-utils migrates.",
+      "why": "TypeScript 7 (tsgo) breaks this toolchain: @typescript-eslint's parser crashes on the native API, so type-aware ESLint cannot run on 7. @typescript-eslint peer-requires the range below, so 6.x is the last usable major. Hold until @mnaoumov/typescript-dev-toolkit migrates.",
       "check": "node -e \"process.stdout.write(require('typescript-eslint/package.json').peerDependencies.typescript)\"",
       "expect": ">=4.8.4 <6.1.0"
     }

@@ -393,7 +393,7 @@ describe('nested value preservation integration (issue #7)', () => {
            * key press would mean making this probe async and making it depend on real DOM focus landing
            * in a container Obsidian's own UI may be covering. That is fidelity spent for nothing.
            */
-          // eslint-disable-next-line obsidian-dev-utils/no-untrusted-input-events -- The listener under test is the plugin's own keydown handler, which reads only `ke.key` and has no `isTrusted` gate.
+          // eslint-disable-next-line obsidian-dev-toolkit/no-untrusted-input-events -- The listener under test is the plugin's own keydown handler, which reads only `ke.key` and has no `isTrusted` gate.
           input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
         } finally {
           textWidget.render = originalRender;

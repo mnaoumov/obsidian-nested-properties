@@ -1,3 +1,4 @@
+import type { GenericObject } from '@mnaoumov/typescript-lib/type-guards';
 import type {
   ExtractConstructor,
   ObsidianSearchQuery,
@@ -12,13 +13,12 @@ import type {
   SearchView
 } from '@obsidian-typings/obsidian-public-latest';
 import type { App } from 'obsidian';
-import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
+import { MonkeyAroundComponent } from '@mnaoumov/obsidian-lib/components/monkey-around-component';
 import {
   castTo,
   getPrototypeOf
-} from 'obsidian-dev-utils/object-utils';
-import { MonkeyAroundComponent } from 'obsidian-dev-utils/obsidian/components/monkey-around-component';
+} from '@mnaoumov/typescript-lib/object-utils';
 
 import { collectNestedPropertyEntries } from '../nested-property-paths.ts';
 import {

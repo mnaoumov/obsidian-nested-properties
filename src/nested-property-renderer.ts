@@ -1,3 +1,4 @@
+import type { GenericObject } from '@mnaoumov/typescript-lib/type-guards';
 import type {
   MultitextPropertyWidgetComponent,
   PropertyRenderContext,
@@ -5,21 +6,20 @@ import type {
   PropertyWidgetComponentBase
 } from '@obsidian-typings/obsidian-public-latest';
 import type { App } from 'obsidian';
-import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 
+import { AllWindowsEventComponent } from '@mnaoumov/obsidian-lib/components/all-windows-event-component';
+import { getAllDomWindows } from '@mnaoumov/obsidian-lib/workspace';
+import {
+  convertAsyncToSync,
+  invokeAsyncSafely
+} from '@mnaoumov/typescript-lib/async';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 import {
   Component,
   MarkdownView,
   Menu,
   setIcon
 } from 'obsidian';
-import {
-  convertAsyncToSync,
-  invokeAsyncSafely
-} from 'obsidian-dev-utils/async';
-import { AllWindowsEventComponent } from 'obsidian-dev-utils/obsidian/components/all-windows-event-component';
-import { getAllDomWindows } from 'obsidian-dev-utils/obsidian/workspace';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 
 import { FloatingScrollbarComponent } from './floating-scrollbar.ts';
 import { getInitialExpandLevel } from './nested-properties-note-settings.ts';

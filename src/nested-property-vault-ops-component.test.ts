@@ -1,13 +1,13 @@
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type { GenericObject } from '@mnaoumov/typescript-lib/type-guards';
 import type { App as AppOriginal } from 'obsidian';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { GenericObject } from 'obsidian-dev-utils/type-guards';
 import type { MockInstance } from 'vitest';
 
-import { castTo } from 'obsidian-dev-utils/object-utils';
-import { confirm } from 'obsidian-dev-utils/obsidian/modals/confirm';
-import { prompt } from 'obsidian-dev-utils/obsidian/modals/prompt';
-import { selectItem } from 'obsidian-dev-utils/obsidian/modals/select-item';
-import { ResourceLockComponent } from 'obsidian-dev-utils/obsidian/resource-lock';
+import { confirm } from '@mnaoumov/obsidian-lib/modals/confirm';
+import { prompt } from '@mnaoumov/obsidian-lib/modals/prompt';
+import { selectItem } from '@mnaoumov/obsidian-lib/modals/select-item';
+import { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   beforeEach,
@@ -19,9 +19,9 @@ import {
 
 import { NestedPropertyVaultOpsComponent } from './nested-property-vault-ops-component.ts';
 
-vi.mock('obsidian-dev-utils/obsidian/modals/select-item', () => ({ selectItem: vi.fn() }));
-vi.mock('obsidian-dev-utils/obsidian/modals/prompt', () => ({ prompt: vi.fn() }));
-vi.mock('obsidian-dev-utils/obsidian/modals/confirm', () => ({ confirm: vi.fn() }));
+vi.mock('@mnaoumov/obsidian-lib/modals/select-item', () => ({ selectItem: vi.fn() }));
+vi.mock('@mnaoumov/obsidian-lib/modals/prompt', () => ({ prompt: vi.fn() }));
+vi.mock('@mnaoumov/obsidian-lib/modals/confirm', () => ({ confirm: vi.fn() }));
 
 const mockSelectItem = vi.mocked(selectItem);
 const mockPrompt = vi.mocked(prompt);
@@ -77,7 +77,7 @@ function makeComponent(app: AppOriginal): TestComponent {
   const showNotice = vi.fn();
   const pluginNoticeComponent = castTo<PluginNoticeComponent>({ showNotice });
   // The real lock component, spied rather than replaced, so the assertions below observe the locking that
-  // `obsidian-dev-utils`' `process()` primitive actually performs on each written note.
+  // `@mnaoumov/obsidian-lib`'s `process()` primitive actually performs on each written note.
   const resourceLockComponent = new ResourceLockComponent(app, 'nested-properties');
   const lockForPath = vi.spyOn(resourceLockComponent, 'lockForPath');
   const component = new NestedPropertyVaultOpsComponent({ app, pluginNoticeComponent, resourceLockComponent });
