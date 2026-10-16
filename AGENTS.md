@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Nested Properties is an Obsidian plugin that lets you view and edit nested frontmatter properties, rendering nested YAML objects and arrays as a collapsible tree inside the Properties editor (with context menus, add/cut/copy/paste/remove, and horizontal scrolling). It is built on `obsidian-dev-utils`.
+`Nested Properties` is an Obsidian plugin that lets you view and edit nested frontmatter properties, rendering nested YAML objects and arrays as a collapsible tree inside the Properties editor (with context menus, add/cut/copy/paste/remove, and horizontal scrolling). It is built on `obsidian-dev-utils`.
 
 ## Commands
 
