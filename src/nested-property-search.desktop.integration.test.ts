@@ -18,6 +18,8 @@
  * `*.cross-platform.integration.test.ts`.
  */
 
+import type { SearchView } from '@obsidian-typings/obsidian-public-latest';
+
 import { evalInObsidian } from 'obsidian-integration-testing';
 import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
@@ -26,25 +28,9 @@ import {
   it
 } from 'vitest';
 
-interface FileResultDom {
-  el: HTMLElement;
-  renderContentMatches: () => void;
-}
+// The closure drives the internal global-search view typed by `obsidian-typings`. `as` casts and type imports
+// are compile-time only, so no runtime import is needed inside the closure.
 
-// Minimal structural view of the internal global-search view the closure drives (its real type is not in
-// `obsidian-typings`). `as` casts are compile-time only, so no runtime import is needed inside the closure.
-interface ResultFile {
-  path: string;
-}
-
-interface SearchResultDom {
-  resultDomLookup: Map<ResultFile, unknown>;
-}
-
-interface SearchViewLike {
-  dom: SearchResultDom;
-  setQuery: (query: string) => void;
-}
 describe('Native search understands nested properties', () => {
   it('returns the note whose nested property matches and not the one that does not', async () => {
     const result = await evalInObsidian({
@@ -97,7 +83,7 @@ describe('Native search understands nested properties', () => {
             await searchLeaf.setViewState({ type: 'search' });
           }
           const searchViewUnknown: unknown = searchLeaf.view;
-          const searchView = searchViewUnknown as SearchViewLike;
+          const searchView = searchViewUnknown as SearchView;
 
           // `startSearch` empties the result list synchronously then repopulates asynchronously, so waiting
           // on the expected end-state (the match present, or — for the negative control — absent) settles
@@ -197,7 +183,7 @@ describe('Native search understands nested properties', () => {
           }
           await app.workspace.revealLeaf(searchLeaf);
           const searchViewUnknown: unknown = searchLeaf.view;
-          const searchView = searchViewUnknown as SearchViewLike;
+          const searchView = searchViewUnknown as SearchView;
 
           // Rows are drawn lazily, as the result scrolls into view; drawing them here is the native call
           // the view itself makes, so the lines read back are the ones a user sees.
@@ -207,12 +193,11 @@ describe('Native search understands nested properties', () => {
             await waitUntil({
               message: `match lines for "${query}" did not appear`,
               predicate: () => {
-                const fileResultUnknown = [...searchView.dom.resultDomLookup]
+                const fileResult = [...searchView.dom.resultDomLookup]
                   .find(([file]) => file.path === NOTE_PATH)?.[1];
-                if (!fileResultUnknown) {
+                if (!fileResult) {
                   return false;
                 }
-                const fileResult = fileResultUnknown as FileResultDom;
                 fileResult.renderContentMatches();
                 lines = [...fileResult.el.querySelectorAll('.search-result-file-match')].map((el) => el.textContent.trim());
                 return lines.length > 0;
