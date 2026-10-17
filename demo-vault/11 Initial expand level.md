@@ -37,8 +37,39 @@ nestedProperties:
 
 ## Try it
 
-1. Look at the Properties panel above: `generated` and `generated.foo` are open, and the two array items are collapsed with a readable preview.
-2. Change `initialExpandLevel` to `0` in the Properties panel and reopen the note - everything arrives collapsed, each row still readable.
-3. Remove the `nestedProperties` property entirely and reopen the note - the note falls back to the vault-wide setting in **Settings → Nested Properties → Initial expand level**, which is `0` unless you change it.
+**Step 1.** Look at the Properties panel above: `generated` and `generated.foo` are open, and the two array items are collapsed with a readable preview.
+
+**Step 2.** Change `initialExpandLevel` to `0` and reopen the note - everything arrives collapsed, each row still readable. The level applies when a note is opened, so the button reopens this note in the next tab and leaves this one as it is.
+
+```code-button
+---
+caption: Set this note's level to 0 and reopen it
+---
+await require('/demoSetup.ts').setNoteInitialExpandLevel(app, 0);
+```
+
+Manual equivalent: edit `initialExpandLevel` in the Properties panel, then close and reopen the note.
+
+**Step 3.** Remove the `nestedProperties` property entirely and reopen the note - the note falls back to the vault-wide setting in **Settings → Nested Properties → Initial expand level**, which is `0` unless you change it.
+
+```code-button
+---
+caption: Remove the per-note override and reopen
+---
+await require('/demoSetup.ts').setNoteInitialExpandLevel(app, null);
+```
+
+Manual equivalent: right-click `nestedProperties` and choose **Remove**, then close and reopen the note.
+
+**Start over.** Put this note's frontmatter back to how it shipped, at level `2`:
+
+```code-button
+---
+caption: Reset this note's properties and reopen
+---
+await require('/demoSetup.ts').resetInitialExpandLevelDemo(app);
+```
+
+Manual equivalent: add the `nestedProperties` property back as shown under **Per-note override** above, then reopen the note.
 
 Expanding or collapsing a row by hand always wins over the level for as long as the note stays open.

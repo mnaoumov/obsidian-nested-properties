@@ -20,9 +20,9 @@ Write the nested key as a dotted path inside the property brackets:
 
 Because it is real Obsidian search, a nested-property operator composes with everything else - content terms, `path:`, `OR`, `-`, and so on (e.g. `[book.genres: fantasy] -[book.author: Ursula K. Le Guin]`), and it works inside embedded ` ```query ` blocks too.
 
-## Seed a few notes first
+## Try it
 
-Search is most convincing when several notes match. The button below creates a `Search demo` folder with three books that have different `book.author` / `book.genres`, so a query returns more than one match. Manual equivalent: add your own notes with nested `book` frontmatter.
+**Step 1.** Seed a few notes. Search is most convincing when several notes match, so this creates a `Search demo` folder with three books that have different `book.author` / `book.genres`.
 
 ```code-button
 ---
@@ -31,10 +31,32 @@ caption: Seed search demo notes
 await require('/demoSetup.ts').seedSearchDemoNotes(app);
 ```
 
-## Try it
+Manual equivalent: add your own notes with nested `book` frontmatter.
 
-1. Click **Seed search demo notes** above (or add your own notes with nested `book` frontmatter).
-2. Open Obsidian's search (the magnifier in the left sidebar, or `Ctrl`/`Cmd` + `Shift` + `F`).
-3. Type `[book.genres: fantasy]` - both this note and the two fantasy books above match, because `fantasy` is one of their `book.genres`; `Dune` (sci-fi only) does not.
-4. Expand a result: the line under it shows the nested value it matched, such as `book.genres: fantasy sci-fi`, with the matching member highlighted.
-5. Click a result to open it.
+**Step 2.** Search for `[book.genres: fantasy]`. The button opens Obsidian's own search pane with that query typed in.
+
+```code-button
+---
+caption: Search for fantasy books
+---
+await require('/demoSetup.ts').searchFor(app, '[book.genres: fantasy]');
+```
+
+Manual equivalent: open the search pane (the magnifier in the left sidebar, or `Ctrl`/`Cmd` + `Shift` + `F`) and type the query.
+
+Both this note and the two fantasy books match, because `fantasy` is one of their `book.genres`; `Dune` (sci-fi only) does not.
+
+**Step 3.** Expand a result: the line under it shows the nested value it matched, such as `book.genres: fantasy sci-fi`, with the matching member highlighted. Click a result to open it.
+
+**Step 4.** Try a composed query, which excludes this note's author:
+
+```code-button
+---
+caption: Search for fantasy books not by Le Guin
+---
+await require('/demoSetup.ts').searchFor(app, '[book.genres: fantasy] -[book.author: Ursula K. Le Guin]');
+```
+
+Manual equivalent: type `[book.genres: fantasy] -[book.author: Ursula K. Le Guin]` into the search pane. Only `The Hobbit` is left.
+
+The seeded folder is removed by the clean-up button in [09 Vault-wide rename and delete](<./09 Vault-wide rename and delete.md>), or by deleting `Search demo` by hand.
