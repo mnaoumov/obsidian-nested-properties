@@ -1,4 +1,7 @@
-import type { App } from 'obsidian';
+import type {
+  App,
+  TFile
+} from 'obsidian';
 
 import { Notice } from 'obsidian';
 
@@ -6,12 +9,135 @@ const FULL_KEY_DISPLAY_COMMAND_ID = 'nested-properties:toggle-full-key-display';
 const VAULT_WIDE_DEMO_FOLDER = 'Vault-wide demo';
 const SEARCH_DEMO_FOLDER = 'Search demo';
 
-// `Nested Properties` has a single live setting - full key display - toggled by a command that flips a
-// body class across all windows with no reload. So the demo just runs that command (the same thing the
-// command palette and the Properties-header button do); there is no data.json patch + reload to perform.
+const FULL_KEY_DISPLAY_BODY_CLASS = 'nested-properties-full-key-display';
+const CONTEXT_MENU_NOTE_PATH = '06 Context menu actions.md';
+const INITIAL_EXPAND_LEVEL_NOTE_PATH = '11 Initial expand level.md';
+const SHIPPED_INITIAL_EXPAND_LEVEL = 2;
+
+// Full key display is toggled by a command that flips a body class across all windows with no reload. So
+// the demo just runs that command (the same thing the command palette and the Properties-header button
+// do); there is no data.json patch + reload to perform. It throws when the class did not flip, so a click
+// that changed nothing is reported rather than shown as a success.
 export function toggleFullKeyDisplay(app: App): void {
+  const wasEnabled = activeDocument.body.hasClass(FULL_KEY_DISPLAY_BODY_CLASS);
   app.commands.executeCommandById(FULL_KEY_DISPLAY_COMMAND_ID);
-  new Notice('Toggled full key display.');
+  const isEnabled = activeDocument.body.hasClass(FULL_KEY_DISPLAY_BODY_CLASS);
+  if (isEnabled === wasEnabled) {
+    throw new Error('Full key display did not toggle. Is the Nested Properties plugin enabled?');
+  }
+  new Notice(isEnabled ? 'Full key display is on: keys show their full text.' : 'Full key display is off: long keys are truncated again.');
+}
+
+// The context-menu walkthrough copies, pastes and removes keys in its own note, so after one pass there is
+// nothing left to try it on. This puts that note's frontmatter back to how it shipped.
+export async function resetContextMenuDemo(app: App): Promise<void> {
+  await replaceFrontmatter(app, CONTEXT_MENU_NOTE_PATH, [
+    'project:',
+    '  name: Demo',
+    '  tags:',
+    '    - alpha',
+    '    - beta',
+    '  owner:',
+    '    name: Ada',
+    '    email: ada@example.com'
+  ].join('\n'));
+  new Notice('Context-menu demo reset: project is back to how it shipped.');
+}
+
+// Opens Obsidian's own search pane with a query typed in - the same as opening the pane and typing it.
+// It throws when the pane does not end up holding the query, so a search pane that never opened is
+// reported rather than shown as a success.
+export async function searchFor(app: App, query: string): Promise<void> {
+  const existingSearchLeaf = app.workspace.getLeavesOfType('search')[0];
+  const searchLeaf = existingSearchLeaf ?? app.workspace.getLeftLeaf(false);
+  if (!searchLeaf) {
+    throw new Error('Could not open the search pane.');
+  }
+  if (!existingSearchLeaf) {
+    await searchLeaf.setViewState({ active: true, type: 'search' });
+  }
+  await app.workspace.revealLeaf(searchLeaf);
+
+  const searchView = searchLeaf.view as unknown as Partial<{ getQuery(): string; setQuery(value: string): void }>;
+  if (typeof searchView.setQuery !== 'function' || typeof searchView.getQuery !== 'function') {
+    throw new Error('The search pane did not open. Is the core Search plugin enabled?');
+  }
+  searchView.setQuery(query);
+  if (searchView.getQuery() !== query) {
+    throw new Error(`The search pane did not take the query ${query}.`);
+  }
+}
+
+// Sets `nestedProperties.initialExpandLevel` in the expand-level note, or removes the override when given
+// `null`, then shows the note in a second tab rendered at the new level. The level applies when a note is
+// opened, and the tab holding the button is left alone: rebuilding it would redraw the button mid-click.
+// A second press reuses that tab rather than opening another.
+export async function setNoteInitialExpandLevel(app: App, level: null | number): Promise<void> {
+  const note = getNote(app, INITIAL_EXPAND_LEVEL_NOTE_PATH);
+  await app.fileManager.processFrontMatter(note, (frontmatter: Record<string, unknown>) => {
+    if (level === null) {
+      delete frontmatter['nestedProperties'];
+    } else {
+      frontmatter['nestedProperties'] = { initialExpandLevel: level };
+    }
+  });
+
+  await reopenExpandLevelNote(app, level ?? undefined);
+  new Notice(
+    level === null
+      ? 'Removed the per-note override: the note now uses the plugin setting. It is reopened in the next tab.'
+      : `Set this note's initial expand level to ${String(level)}. It is reopened in the next tab.`
+  );
+}
+
+// Puts the expand-level note's frontmatter back to how it shipped, override and all.
+export async function resetInitialExpandLevelDemo(app: App): Promise<void> {
+  await replaceFrontmatter(app, INITIAL_EXPAND_LEVEL_NOTE_PATH, [
+    'nestedProperties:',
+    `  initialExpandLevel: ${String(SHIPPED_INITIAL_EXPAND_LEVEL)}`,
+    'generated:',
+    '  by: human',
+    '  at: 2026-02-09',
+    '  foo:',
+    '    - bar: 1',
+    '    - baz: 2'
+  ].join('\n'));
+  await reopenExpandLevelNote(app, SHIPPED_INITIAL_EXPAND_LEVEL);
+  new Notice(`Expand-level demo reset: the note is back to level ${String(SHIPPED_INITIAL_EXPAND_LEVEL)}. It is reopened in the next tab.`);
+}
+
+// Waits until the metadata cache holds the expected override, so the reopened note renders at that level
+// rather than the previous one, then shows the note in the tab next to the one holding the button.
+async function reopenExpandLevelNote(app: App, expectedLevel: number | undefined): Promise<void> {
+  const note = getNote(app, INITIAL_EXPAND_LEVEL_NOTE_PATH);
+  await waitFor(() => {
+    const nestedProperties = app.metadataCache.getFileCache(note)?.frontmatter?.['nestedProperties'] as undefined | { initialExpandLevel?: unknown };
+    return nestedProperties?.initialExpandLevel === expectedLevel;
+  }, `${INITIAL_EXPAND_LEVEL_NOTE_PATH} did not pick up the new level.`);
+
+  const activeLeaf = app.workspace.getMostRecentLeaf();
+  const otherLeaf = app.workspace.getLeavesOfType('markdown').find((leaf) =>
+    leaf !== activeLeaf && (leaf.view as { file?: { path: string } }).file?.path === note.path
+  );
+  let reopenedLeaf = otherLeaf;
+  if (reopenedLeaf) {
+    await reopenedLeaf.rebuildView();
+  } else {
+    reopenedLeaf = app.workspace.getLeaf('tab');
+    await reopenedLeaf.openFile(note, { active: false });
+  }
+
+  // With no override the level is the plugin setting, which this note cannot know, so only an explicit
+  // level is checked against what the reopened note actually drew.
+  if (expectedLevel === undefined) {
+    return;
+  }
+  const containerEl = reopenedLeaf.view.containerEl;
+  const generatedSelector = `.nested-properties-collapsible[data-path="${CSS.escape(note.path)}:generated"]`;
+  await waitFor(() => {
+    const generatedEl = containerEl.querySelector(generatedSelector);
+    return generatedEl !== null && generatedEl.hasClass('is-collapsed') === (expectedLevel === 0);
+  }, `The reopened note did not render generated ${expectedLevel === 0 ? 'collapsed' : 'expanded'}.`);
 }
 
 // Vault-wide rename/delete only makes sense across MANY notes, which a single demo note cannot show. This
@@ -90,18 +216,7 @@ export async function resetPropertyTypesDemo(app: App): Promise<void> {
     '    released: "2026-03-21"'
   ].join('\n');
 
-  const note = app.vault.getFileByPath(NOTE_PATH);
-  if (!note) {
-    new Notice(`${NOTE_PATH} is not in this vault.`);
-    return;
-  }
-
-  await app.vault.process(note, (content) => {
-    const match = /^---\n[\s\S]*?\n---\n/.exec(content);
-    const body = match ? content.slice(match[0].length) : content;
-    return `---\n${ORIGINAL_FRONTMATTER}\n---\n${body}`;
-  });
-
+  await replaceFrontmatter(app, NOTE_PATH, ORIGINAL_FRONTMATTER);
   await forgetDemoPropertyTypes(app);
   new Notice('Property-type demo reset — frontmatter and saved types are back to how they shipped.');
 }
@@ -121,6 +236,36 @@ async function forgetDemoPropertyTypes(app: App): Promise<void> {
     if (DEMO_TYPE_KEYS.some((demoKey) => typeKey === demoKey || typeKey.startsWith(`${demoKey}.`))) {
       await app.metadataTypeManager.unsetType(typeKey);
     }
+  }
+}
+
+function getNote(app: App, path: string): TFile {
+  const note = app.vault.getFileByPath(path);
+  if (!note) {
+    throw new Error(`${path} is not in this vault.`);
+  }
+  return note;
+}
+
+// Rewrites a note's whole frontmatter block as text, keeping its body. Text rather than
+// `processFrontMatter`, so the keys come back in the order the note shipped with.
+async function replaceFrontmatter(app: App, path: string, frontmatter: string): Promise<void> {
+  await app.vault.process(getNote(app, path), (content) => {
+    const match = /^---\n[\s\S]*?\n---\n/.exec(content);
+    const body = match ? content.slice(match[0].length) : content;
+    return `---\n${frontmatter}\n---\n${body}`;
+  });
+}
+
+async function waitFor(predicate: () => boolean, message: string): Promise<void> {
+  const TIMEOUT_IN_MILLISECONDS = 5000;
+  const POLL_INTERVAL_IN_MILLISECONDS = 50;
+  const deadline = Date.now() + TIMEOUT_IN_MILLISECONDS;
+  while (!predicate()) {
+    if (Date.now() > deadline) {
+      throw new Error(message);
+    }
+    await sleep(POLL_INTERVAL_IN_MILLISECONDS);
   }
 }
 

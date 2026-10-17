@@ -26,7 +26,7 @@ Right-click any nested key and open the **Property type** submenu to convert a v
 4. Expand `apiConfig`, right-click `labels`, and choose **Property type -> Tags** - a type Obsidian's own UI won't let you assign. Reload the vault and the choice sticks.
 5. Expand a `releases` item and right-click `released`. Use **Property type (all items) -> Date** to type that field for every release at once, or **Property type (this item only)** to override a single one.
 
-## Start over
+### Start over
 
 This is the one walkthrough here that accumulates: each conversion rewrites this note's own frontmatter **and** records the chosen type, which - as step 4 points out - survives a reload. So trying step 3 a second time would otherwise start from the already-converted value.
 
