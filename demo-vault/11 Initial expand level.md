@@ -50,7 +50,7 @@ await require('/demoSetup.ts').setNoteInitialExpandLevel(app, 0);
 
 Manual equivalent: edit `initialExpandLevel` in the Properties panel, then close and reopen the note.
 
-**Step 3.** Remove the `nestedProperties` property entirely and reopen the note - the note falls back to the vault-wide setting in **Settings → Nested Properties → Initial expand level**, which is `0` unless you change it.
+**Step 3.** Remove the `nestedProperties` property entirely and reopen the note - the note falls back to the vault-wide setting in **Settings → `Nested Properties` → Initial expand level**, which is `0` unless you change it.
 
 ```code-button
 ---

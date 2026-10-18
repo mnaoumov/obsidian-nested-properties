@@ -128,7 +128,7 @@
 - docs: standardize demo-vault README
 - docs: drop per-plugin demo-vault setup notes (bootstrap covered by the obsidian-dev-utils harness)
 - docs: unnumber demo-vault setup notes
-- docs(demo-vault): number the Nested Properties demo vault example notes
+- docs(demo-vault): number the `Nested Properties` demo vault example notes
 - docs(demo-vault): adopt obsidian-dev-utils 87.x demo-vault helpers and its coverage suite
 
 ## 1.2.12

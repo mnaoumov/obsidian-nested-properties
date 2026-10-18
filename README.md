@@ -53,7 +53,7 @@ Inspired by this [feature request](https://forum.obsidian.md/t/properties-bases-
 
 A copy of the vault ships with every release. You can access it via any of the following:
 
-1. Running the **Nested Properties: Open demo vault** command.
+1. Running the **`Nested Properties`: Open demo vault** command.
 2. Downloading `nested-properties-demo-vault.zip` from the [Releases](https://github.com/mnaoumov/obsidian-nested-properties/releases). It unzips into a single `nested-properties-demo-vault-<version>` folder.
 3. Browsing its source in [`demo-vault/`](./demo-vault/README.md) in this repository.
 
@@ -71,7 +71,7 @@ A copy of the vault ships with every release. You can access it via any of the f
 
 A nested property arrives **collapsed** by default, and a collapsed row is readable on its own: it shows a one-line preview of its content rather than an opaque `{ ... }`, with any complex value inside it elided so the row stays one line tall.
 
-If you would rather some of it arrived already open, set **Settings → Nested Properties → Initial expand level** — `1` opens the nested property but not its children, `2` opens the children too, and so on. An array index counts as a level of its own, so in `generated.foo.0` the array item sits one level below `generated.foo`.
+If you would rather some of it arrived already open, set **Settings → `Nested Properties` → Initial expand level** — `1` opens the nested property but not its children, `2` opens the children too, and so on. An array index counts as a level of its own, so in `generated.foo.0` the array item sits one level below `generated.foo`.
 
 A note can override the setting for itself:
 
