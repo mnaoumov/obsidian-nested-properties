@@ -248,7 +248,7 @@ describe('Plugin', () => {
       const plugin = new Plugin(app, manifest);
       await plugin.onload();
 
-      // Since obsidian-dev-utils 89.0.0 the handler factory is invoked once per menu surface, each
+      // The handler factory is invoked once per menu surface, each
       // getting its own instances — so the handler is constructed more than once by design.
       expect(MockOpenDemoVaultCommandHandler).toHaveBeenCalled();
       const params = MockOpenDemoVaultCommandHandler.mock.calls[0]?.[0];
