@@ -3,7 +3,7 @@
 ## 1.6.2
 
 - test(floating-scrollbar): merge the wheel-listener race fix
-- fix(search): merge the nested value on nested-property match lines
+- fix(search): merge the nested value on nested-property match lines (re #14 - [FR] when using Level1.level2 in search get the value of the property.)
 
 ## 1.6.1
 
