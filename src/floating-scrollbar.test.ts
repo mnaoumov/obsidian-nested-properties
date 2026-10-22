@@ -24,10 +24,6 @@ interface ElementMetrics {
   scrollWidth?: number;
 }
 
-interface ObsidianDevUtilsStateHolder {
-  obsidianDevUtilsState: Partial<Record<string, unknown>>;
-}
-
 interface ScrollbarInternals {
   syncThumb: () => void;
 }
@@ -59,12 +55,7 @@ function applyMetrics(el: HTMLElement, metrics?: ElementMetrics): void {
 }
 
 function createApp(): App {
-  const appMock = AppCls.createConfigured__();
-  // Seed the shared obsidian-lib state on the app, mirroring the sibling plugin tests.
-  // The real `AllWindowsEventComponent` added by the component under test reads it via
-  // `getObsidianDevUtilsState`, so seeding lets the real component run instead of a mock.
-  castTo<ObsidianDevUtilsStateHolder>(appMock).obsidianDevUtilsState = {};
-  return appMock.asOriginalType__();
+  return AppCls.createConfigured__().asOriginalType__();
 }
 
 function createMetadataContainer(): HTMLElement {

@@ -20,8 +20,8 @@
     "Earthsea",
     "frontmatter",
     "GHSA",
-    "hrqm",
     "Invocables",
+    "katex",
     "linkinator",
     "mnaoumov",
     "mouseleave",
@@ -32,7 +32,6 @@
     "offref",
     "Promisable",
     "Sidedock",
-    "smol",
     "subkey",
     "tsbuildinfo",
     "unnumber",
@@ -40,6 +39,9 @@
     "unstub",
     "unvalidated",
     "wdio"
+  ],
+  "ignoreRegExpList": [
+    "/GHSA(-[0-9a-z]{4}){3}/g"
   ],
   "ignoreWords": [],
   "import": [],

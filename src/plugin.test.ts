@@ -19,14 +19,6 @@ import { NestedPropertyVaultOpsComponent } from './nested-property-vault-ops-com
 import { NestedPropertySearchPatchComponent } from './patches/nested-property-search-patch-component.ts';
 import { Plugin } from './plugin.ts';
 
-// The real `PluginBase.onload()` loads obsidian-lib's own notice/context/debug components, which read a
-// shared-state bag off the app via `getObsidianDevUtilsState`. The strict App mock has no such bag, so
-// stub this one utility (return a fresh value wrapper per call) — mirroring obsidian-lib's own PluginBase test.
-vi.mock('@mnaoumov/obsidian-lib/app', async (importOriginal) => ({
-  ...await importOriginal<typeof import('@mnaoumov/obsidian-lib/app')>(),
-  getObsidianDevUtilsState: vi.fn((_app: unknown, _key: string, defaultValue: unknown) => ({ value: defaultValue }))
-}));
-
 interface ObsidianComponentModule {
   Component: new () => object;
 }
