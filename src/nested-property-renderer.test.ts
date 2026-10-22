@@ -73,7 +73,7 @@ type MockFunction = ReturnType<typeof vi.fn>;
 // MarkdownViewBase supplies the metadataEditor surface the test-mocks MarkdownView lacks. The Menu /
 // MenuItem capture infrastructure stands in for the test-mocks Menu, which does not implement
 // addSections, and MenuItem, which exposes no dom — both used by the renderer. These are all Obsidian
-// API surfaces, not dev-utils classes. The dev-utils classes/functions (MonkeyAroundComponent,
+// API surfaces, not obsidian-lib classes. The obsidian-lib classes/functions (MonkeyAroundComponent,
 // convertAsyncToSync, ensureNonNullable, castTo / extractDefaultExportInterop) are NOT mocked — the
 // renderer drives the REAL implementations.
 const hoisted = vi.hoisted(() => {
