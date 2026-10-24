@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## 1.6.3
+
+- build(deps): move to obsidian-lib 6 and obsidian-dev-toolkit 5
+- docs: name obsidian-lib where comments said dev-utils
+- docs: shorten the debugging section
+- docs(changelog): escape the issue-title tags so markdownlint and cspell pass
+- docs(changelog): name the issue each released entry resolved
+- chore: replace leftover obsidian-dev-utils references with @mnaoumov/obsidian-lib
+- docs(readme): lead the Debugging section with `Advanced Debug Mode`
+- build(deps): float brace-expansion, sharp and fast-uri past their advisories
+- docs: mark plugin names as code
+- docs(demo-vault): give every Try it section a code button
+- chore(github): point questions to Discussions from the new-issue page
+- ci: merge attesting release assets through the toolkit's reusable workflow
+- build(deps): move off obsidian-dev-utils onto the @mnaoumov packages
+- docs: mark plugin names as code in markdown and comments
+- refactor(search): merge the obsidian-typings search internals
+- test: merge using the obsidian-typings declarations of Obsidian internals
+
 ## 1.6.2
 
 - test(floating-scrollbar): merge the wheel-listener race fix
