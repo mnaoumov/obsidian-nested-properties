@@ -134,8 +134,8 @@ describe('convertValue', () => {
     });
 
     it('should wrap object in array', () => {
-      const object = { a: 1 };
-      expect(convertValue({ targetType: 'list', value: object })).toEqual([object]);
+      const $object = { a: 1 };
+      expect(convertValue({ targetType: 'list', value: $object })).toEqual([$object]);
     });
 
     it('should wrap primitive in array', () => {
@@ -206,8 +206,8 @@ describe('convertValue', () => {
 
   describe('to object', () => {
     it('should return objects as-is', () => {
-      const object = { a: 1 };
-      expect(convertValue({ targetType: 'object', value: object })).toBe(object);
+      const $object = { a: 1 };
+      expect(convertValue({ targetType: 'object', value: $object })).toBe($object);
     });
 
     it('should convert arrays to empty objects', () => {

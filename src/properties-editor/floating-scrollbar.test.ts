@@ -311,40 +311,40 @@ describe('FloatingScrollbar', () => {
 
   describe('track wheel handler', () => {
     it('should do nothing without activeEl', () => {
-      const event = new WheelEvent('wheel', { cancelable: true, deltaY: 10 });
+      const $event = new WheelEvent('wheel', { cancelable: true, deltaY: 10 });
 
-      getTrack().dispatchEvent(event);
+      getTrack().dispatchEvent($event);
 
-      expect(event.defaultPrevented).toBe(false);
+      expect($event.defaultPrevented).toBe(false);
     });
 
     it('should do nothing when activeEl is not scrollable', () => {
       createPropertyEl({ clientWidth: 100, scrollWidth: 100 });
       scrollbar.update();
 
-      const event = new WheelEvent('wheel', { cancelable: true, deltaY: 10 });
-      getTrack().dispatchEvent(event);
+      const $event = new WheelEvent('wheel', { cancelable: true, deltaY: 10 });
+      getTrack().dispatchEvent($event);
 
-      expect(event.defaultPrevented).toBe(false);
+      expect($event.defaultPrevented).toBe(false);
     });
 
     it('should scroll activeEl by deltaY', () => {
       const activeEl = createPropertyEl({ clientWidth: 100, scrollLeft: 0, scrollWidth: 200 });
       scrollbar.update();
 
-      const event = new WheelEvent('wheel', { cancelable: true, deltaX: 0, deltaY: 50 });
-      getTrack().dispatchEvent(event);
+      const $event = new WheelEvent('wheel', { cancelable: true, deltaX: 0, deltaY: 50 });
+      getTrack().dispatchEvent($event);
 
       expect(activeEl.scrollLeft).toBe(50);
-      expect(event.defaultPrevented).toBe(true);
+      expect($event.defaultPrevented).toBe(true);
     });
 
     it('should scroll activeEl by deltaX when present', () => {
       const activeEl = createPropertyEl({ clientWidth: 100, scrollLeft: 0, scrollWidth: 200 });
       scrollbar.update();
 
-      const event = new WheelEvent('wheel', { cancelable: true, deltaX: 30, deltaY: 50 });
-      getTrack().dispatchEvent(event);
+      const $event = new WheelEvent('wheel', { cancelable: true, deltaX: 30, deltaY: 50 });
+      getTrack().dispatchEvent($event);
 
       expect(activeEl.scrollLeft).toBe(30);
     });
@@ -352,21 +352,21 @@ describe('FloatingScrollbar', () => {
 
   describe('keydown handler', () => {
     it('should do nothing without activeEl', () => {
-      const event = new KeyboardEvent('keydown', { cancelable: true, key: 'ArrowLeft' });
+      const $event = new KeyboardEvent('keydown', { cancelable: true, key: 'ArrowLeft' });
 
-      activeDocument.dispatchEvent(event);
+      activeDocument.dispatchEvent($event);
 
-      expect(event.defaultPrevented).toBe(false);
+      expect($event.defaultPrevented).toBe(false);
     });
 
     it('should do nothing for non-arrow keys', () => {
       createPropertyEl({ clientWidth: 100, scrollWidth: 200 });
       scrollbar.update();
 
-      const event = new KeyboardEvent('keydown', { cancelable: true, key: 'Enter' });
-      activeDocument.dispatchEvent(event);
+      const $event = new KeyboardEvent('keydown', { cancelable: true, key: 'Enter' });
+      activeDocument.dispatchEvent($event);
 
-      expect(event.defaultPrevented).toBe(false);
+      expect($event.defaultPrevented).toBe(false);
     });
 
     it('should do nothing when an input is focused', () => {
@@ -377,10 +377,10 @@ describe('FloatingScrollbar', () => {
       activeDocument.body.append(input);
       input.focus();
 
-      const event = new KeyboardEvent('keydown', { cancelable: true, key: 'ArrowLeft' });
-      activeDocument.dispatchEvent(event);
+      const $event = new KeyboardEvent('keydown', { cancelable: true, key: 'ArrowLeft' });
+      activeDocument.dispatchEvent($event);
 
-      expect(event.defaultPrevented).toBe(false);
+      expect($event.defaultPrevented).toBe(false);
       expect(activeEl.scrollLeft).toBe(0);
     });
 
@@ -392,10 +392,10 @@ describe('FloatingScrollbar', () => {
       activeDocument.body.append(textarea);
       textarea.focus();
 
-      const event = new KeyboardEvent('keydown', { cancelable: true, key: 'ArrowLeft' });
-      activeDocument.dispatchEvent(event);
+      const $event = new KeyboardEvent('keydown', { cancelable: true, key: 'ArrowLeft' });
+      activeDocument.dispatchEvent($event);
 
-      expect(event.defaultPrevented).toBe(false);
+      expect($event.defaultPrevented).toBe(false);
       expect(activeEl.scrollLeft).toBe(0);
     });
 
@@ -410,10 +410,10 @@ describe('FloatingScrollbar', () => {
       activeDocument.body.append(editableEl);
       editableEl.focus();
 
-      const event = new KeyboardEvent('keydown', { cancelable: true, key: 'ArrowLeft' });
-      activeDocument.dispatchEvent(event);
+      const $event = new KeyboardEvent('keydown', { cancelable: true, key: 'ArrowLeft' });
+      activeDocument.dispatchEvent($event);
 
-      expect(event.defaultPrevented).toBe(false);
+      expect($event.defaultPrevented).toBe(false);
       expect(activeEl.scrollLeft).toBe(0);
     });
 
@@ -423,11 +423,11 @@ describe('FloatingScrollbar', () => {
       const activeEl = createPropertyEl({ clientWidth: 100, scrollLeft: INITIAL_SCROLL_LEFT, scrollWidth: 200 });
       scrollbar.update();
 
-      const event = new KeyboardEvent('keydown', { cancelable: true, key: 'ArrowLeft' });
-      activeDocument.dispatchEvent(event);
+      const $event = new KeyboardEvent('keydown', { cancelable: true, key: 'ArrowLeft' });
+      activeDocument.dispatchEvent($event);
 
       expect(activeEl.scrollLeft).toBe(INITIAL_SCROLL_LEFT - ARROW_SCROLL_PX);
-      expect(event.defaultPrevented).toBe(true);
+      expect($event.defaultPrevented).toBe(true);
     });
 
     it('should scroll right on ArrowRight', () => {
@@ -435,11 +435,11 @@ describe('FloatingScrollbar', () => {
       const activeEl = createPropertyEl({ clientWidth: 100, scrollLeft: 0, scrollWidth: 200 });
       scrollbar.update();
 
-      const event = new KeyboardEvent('keydown', { cancelable: true, key: 'ArrowRight' });
-      activeDocument.dispatchEvent(event);
+      const $event = new KeyboardEvent('keydown', { cancelable: true, key: 'ArrowRight' });
+      activeDocument.dispatchEvent($event);
 
       expect(activeEl.scrollLeft).toBe(ARROW_SCROLL_PX);
-      expect(event.defaultPrevented).toBe(true);
+      expect($event.defaultPrevented).toBe(true);
     });
 
     it('should allow arrow keys when a non-editable HTMLElement is focused', () => {
@@ -452,8 +452,8 @@ describe('FloatingScrollbar', () => {
       activeDocument.body.append(nonEditableEl);
       nonEditableEl.focus();
 
-      const event = new KeyboardEvent('keydown', { cancelable: true, key: 'ArrowRight' });
-      activeDocument.dispatchEvent(event);
+      const $event = new KeyboardEvent('keydown', { cancelable: true, key: 'ArrowRight' });
+      activeDocument.dispatchEvent($event);
 
       expect(activeEl.scrollLeft).toBe(ARROW_SCROLL_PX);
     });
@@ -497,10 +497,10 @@ describe('FloatingScrollbar', () => {
       const svgEl = activeWindow.createSvg('svg');
       propertyEl.append(svgEl);
 
-      const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, clientY: 495, deltaY: 20 });
-      svgEl.dispatchEvent(event);
+      const $event = new WheelEvent('wheel', { bubbles: true, cancelable: true, clientY: 495, deltaY: 20 });
+      svgEl.dispatchEvent($event);
 
-      expect(event.defaultPrevented).toBe(false);
+      expect($event.defaultPrevented).toBe(false);
     });
 
     it('should attach in other windows, not only the active one', () => {
@@ -525,10 +525,10 @@ describe('FloatingScrollbar', () => {
       createMetadataContainer().append(target);
       scrollbar.update();
 
-      const event = new WheelEvent('wheel', { bubbles: true, cancelable: true });
-      target.dispatchEvent(event);
+      const $event = new WheelEvent('wheel', { bubbles: true, cancelable: true });
+      target.dispatchEvent($event);
 
-      expect(event.defaultPrevented).toBe(false);
+      expect($event.defaultPrevented).toBe(false);
     });
 
     it('should do nothing when property element is not scrollable', () => {
@@ -537,31 +537,31 @@ describe('FloatingScrollbar', () => {
       propertyEl.append(inner);
       scrollbar.update();
 
-      const event = new WheelEvent('wheel', { bubbles: true, cancelable: true });
-      inner.dispatchEvent(event);
+      const $event = new WheelEvent('wheel', { bubbles: true, cancelable: true });
+      inner.dispatchEvent($event);
 
-      expect(event.defaultPrevented).toBe(false);
+      expect($event.defaultPrevented).toBe(false);
     });
 
     it('should do nothing when not near scrollbar', () => {
       const propertyEl = createScrollableProperty();
       scrollbar.update();
 
-      const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, clientY: 400 });
-      propertyEl.lastElementChild?.dispatchEvent(event);
+      const $event = new WheelEvent('wheel', { bubbles: true, cancelable: true, clientY: 400 });
+      propertyEl.lastElementChild?.dispatchEvent($event);
 
-      expect(event.defaultPrevented).toBe(false);
+      expect($event.defaultPrevented).toBe(false);
     });
 
     it('should scroll when near scrollbar', () => {
       const propertyEl = createScrollableProperty();
       scrollbar.update();
 
-      const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, clientY: 495, deltaY: 20 });
-      propertyEl.lastElementChild?.dispatchEvent(event);
+      const $event = new WheelEvent('wheel', { bubbles: true, cancelable: true, clientY: 495, deltaY: 20 });
+      propertyEl.lastElementChild?.dispatchEvent($event);
 
       expect(propertyEl.scrollLeft).toBe(20);
-      expect(event.defaultPrevented).toBe(true);
+      expect($event.defaultPrevented).toBe(true);
     });
 
     it('should scroll a property that is not the active element', () => {
@@ -599,11 +599,11 @@ describe('FloatingScrollbar', () => {
       containerEl.remove();
       scrollbar.update();
       containerEl.append(propertyEl);
-      const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, clientY: 495, deltaY: 20 });
-      propertyEl.lastElementChild?.dispatchEvent(event);
+      const $event = new WheelEvent('wheel', { bubbles: true, cancelable: true, clientY: 495, deltaY: 20 });
+      propertyEl.lastElementChild?.dispatchEvent($event);
 
       expect(propertyEl.scrollLeft).toBe(0);
-      expect(event.defaultPrevented).toBe(false);
+      expect($event.defaultPrevented).toBe(false);
     });
 
     it('should detach every listener on unload', () => {
@@ -611,11 +611,11 @@ describe('FloatingScrollbar', () => {
       scrollbar.update();
 
       scrollbar.unload();
-      const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, clientY: 495, deltaY: 20 });
-      propertyEl.lastElementChild?.dispatchEvent(event);
+      const $event = new WheelEvent('wheel', { bubbles: true, cancelable: true, clientY: 495, deltaY: 20 });
+      propertyEl.lastElementChild?.dispatchEvent($event);
 
       expect(propertyEl.scrollLeft).toBe(0);
-      expect(event.defaultPrevented).toBe(false);
+      expect($event.defaultPrevented).toBe(false);
     });
   });
 
@@ -749,11 +749,11 @@ describe('FloatingScrollbar', () => {
 
   describe('track mousedown (drag)', () => {
     it('should do nothing without activeEl', () => {
-      const event = new MouseEvent('mousedown', { cancelable: true });
+      const $event = new MouseEvent('mousedown', { cancelable: true });
 
-      getTrack().dispatchEvent(event);
+      getTrack().dispatchEvent($event);
 
-      expect(event.defaultPrevented).toBe(false);
+      expect($event.defaultPrevented).toBe(false);
     });
 
     it('should scroll to clicked position and set up drag listeners', () => {
@@ -762,10 +762,10 @@ describe('FloatingScrollbar', () => {
       const track = getTrack();
       track.getBoundingClientRect = (): DOMRect => castTo<DOMRect>({ left: 0, width: 200 });
 
-      const event = new MouseEvent('mousedown', { cancelable: true, clientX: 100 });
-      track.dispatchEvent(event);
+      const $event = new MouseEvent('mousedown', { cancelable: true, clientX: 100 });
+      track.dispatchEvent($event);
 
-      expect(event.defaultPrevented).toBe(true);
+      expect($event.defaultPrevented).toBe(true);
       // Click at ratio 0.5 over a maxScroll of 100 => scrollLeft 50.
       expect(activeEl.scrollLeft).toBe(50);
 

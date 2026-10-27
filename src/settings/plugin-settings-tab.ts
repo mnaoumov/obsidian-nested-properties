@@ -22,8 +22,8 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
         }),
         name: 'Initial expand level',
         render: (setting) => {
-          setting.addNumber((number) => {
-            this.bind({ propertyName: 'initialExpandLevel', valueComponent: number });
+          setting.addNumber(($number) => {
+            this.bind({ propertyName: 'initialExpandLevel', valueComponent: $number });
           });
         }
       })
