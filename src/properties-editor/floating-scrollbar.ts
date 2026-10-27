@@ -27,8 +27,8 @@ const WHEEL_LISTENER_OPTIONS: AddEventListenerOptions = { capture: true, passive
 const ROOT_PROPERTY_SELECTOR = '.metadata-property:not(.nested-properties-container .metadata-property):has(> .metadata-property-value > .nested-properties-container):not(.is-collapsed)';
 
 interface PendingUpdate {
-  animationFrameId: number;
-  ownerWindow: Window;
+  readonly animationFrameId: number;
+  readonly ownerWindow: Window;
 }
 
 export class FloatingScrollbarComponent extends Component {

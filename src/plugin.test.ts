@@ -20,16 +20,16 @@ import { NestedPropertySearchPatchComponent } from './search/nested-property-sea
 import { NestedPropertyVaultOpsComponent } from './vault-ops/nested-property-vault-ops-component.ts';
 
 interface ObsidianComponentModule {
-  Component: new () => object;
+  readonly Component: new () => object;
 }
 
 interface RendererWithToggle {
-  toggleFullKeyDisplay: ReturnType<typeof vi.fn>;
+  readonly toggleFullKeyDisplay: ReturnType<typeof vi.fn>;
 }
 
 interface VaultOpsWithCommands {
-  deleteNestedPropertyAcrossVault: ReturnType<typeof vi.fn>;
-  renameNestedPropertyAcrossVault: ReturnType<typeof vi.fn>;
+  readonly deleteNestedPropertyAcrossVault: ReturnType<typeof vi.fn>;
+  readonly renameNestedPropertyAcrossVault: ReturnType<typeof vi.fn>;
 }
 
 async function loadableComponentStub(): Promise<ReturnType<typeof vi.fn>> {

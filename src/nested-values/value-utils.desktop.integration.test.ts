@@ -23,10 +23,15 @@ import {
 const vault = getTemporaryVault();
 
 interface Context {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- The setup assigns the note after creating the browser context.
   file: TFile;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- The setup assigns the view after opening the note.
   markdownView: MarkdownView;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- The setup attaches the native widget after creating the browser context.
   mixedListWidget: PropertyWidget;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- The setup attaches the native widget after creating the browser context.
   objectWidget: PropertyWidget;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- The setup attaches the native widget after creating the browser context.
   simpleListWidget: PropertyWidget<MultitextPropertyWidgetComponent>;
 }
 

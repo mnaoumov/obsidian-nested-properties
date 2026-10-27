@@ -19,78 +19,79 @@ import { NestedPropertySearchPatchComponent } from './nested-property-search-pat
 // `obsidian-test-mocks`, with the two workspace methods the component calls stubbed on it.
 
 interface FakeFileResultInstance {
-  renderContentMatches: () => void;
-  vChildren: FakeRowList;
+  readonly renderContentMatches: () => void;
+  readonly vChildren: FakeRowList;
 }
 
 interface FakeLeaf {
-  view: object;
+  readonly view: object;
 }
 
 interface FakeRow {
-  cache: FrontmatterCache;
-  render: () => void;
-  renderCount: number;
-  text: string;
+  readonly cache: FrontmatterCache;
+  readonly render: () => void;
+  readonly renderCount: number;
+  readonly text: string;
 }
 
 interface FakeRowList {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Rendering replaces the child rows with the latest search results.
   children: FakeRow[];
 }
 
 interface FakeSearchResultDomInstance {
-  addResult: (createRows: () => FakeRow[]) => FakeFileResultInstance;
+  readonly addResult: (createRows: () => FakeRow[]) => FakeFileResultInstance;
 }
 
 interface FakeSubMatcher {
-  match: (context: FakeContext) => MatcherContent | null;
+  readonly match: (context: FakeContext) => MatcherContent | null;
 }
 
 interface FrontmatterCache {
-  frontmatter?: GenericObject | undefined;
+  readonly frontmatter?: GenericObject | undefined;
 }
 
 interface MatchContextInit {
-  cache?: FrontmatterCache | undefined;
-  content?: unknown;
-  hasContent?: boolean;
+  readonly cache?: FrontmatterCache | undefined;
+  readonly content?: unknown;
+  readonly hasContent?: boolean;
 }
 
 interface MatcherContent {
-  content?: unknown[];
+  readonly content?: unknown[];
 }
 
 interface PropertyMatcherInit {
-  key: FakeSubMatcher;
-  nativeResult?: unknown;
-  value: FakeSubMatcher | null;
+  readonly key: FakeSubMatcher;
+  readonly nativeResult?: unknown;
+  readonly value: FakeSubMatcher | null;
 }
 
 interface PropertyMatcherPrototype {
-  match: (this: PropertyMatcherState, context: FakeContext) => unknown;
+  readonly match: (this: PropertyMatcherState, context: FakeContext) => unknown;
 }
 
 interface PropertyMatcherState {
-  nativeResult?: unknown;
+  readonly nativeResult?: unknown;
 }
 
 interface ResultClasses {
-  FakeContentMatchDom: new () => FakeRow;
-  FakePropertyMatchDom: new (frontmatter: GenericObject | undefined, matches: RowMatch[]) => FakeRow;
-  FakeSearchResultDom: new () => FakeSearchResultDomInstance;
+  readonly FakeContentMatchDom: new () => FakeRow;
+  readonly FakePropertyMatchDom: new (frontmatter: GenericObject | undefined, matches: RowMatch[]) => FakeRow;
+  readonly FakeSearchResultDom: new () => FakeSearchResultDomInstance;
 }
 
 interface RowMatch {
-  key: string;
-  pos?: unknown;
-  subkey?: number[];
+  readonly key: string;
+  readonly pos?: unknown;
+  readonly subkey?: number[];
 }
 
 interface SearchViewSetup {
-  app: AppOriginal;
-  component: NestedPropertySearchPatchComponent;
-  prototype: PropertyMatcherPrototype;
-  startSearch: () => void;
+  readonly app: AppOriginal;
+  readonly component: NestedPropertySearchPatchComponent;
+  readonly prototype: PropertyMatcherPrototype;
+  readonly startSearch: () => void;
 }
 
 interface SearchViewSetupOptions {
@@ -100,6 +101,7 @@ interface SearchViewSetupOptions {
 }
 
 interface UnknownRowList {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Rendering replaces the child rows with the latest search results.
   children: unknown[];
 }
 
