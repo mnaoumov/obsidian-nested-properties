@@ -20,11 +20,11 @@ import {
   getPrototypeOf
 } from '@mnaoumov/typescript-lib/object-utils';
 
-import { collectNestedPropertyEntries } from '../nested-property-paths.ts';
+import { collectNestedPropertyEntries } from '../nested-values/nested-property-paths.ts';
 import {
   formatValueSummary,
   isComplexValue
-} from '../value-utils.ts';
+} from '../nested-values/value-utils.ts';
 
 // Obsidian exposes no public API for search operators, so the global-search internals come from
 // `obsidian-typings`. The patch still feature-detects every shape at runtime and no-ops if one ever changes,

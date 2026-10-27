@@ -18,10 +18,10 @@ import {
   vi
 } from 'vitest';
 
-import type { PluginSettingsComponent } from './plugin-settings-component.ts';
+import type { PluginSettingsComponent } from '../settings/plugin-settings-component.ts';
 
+import { PluginSettings } from '../settings/plugin-settings.ts';
 import { NestedPropertyRendererComponent } from './nested-property-renderer.ts';
-import { PluginSettings } from './plugin-settings.ts';
 
 // The subset of Obsidian's `createDiv` options the renderer passes and these tests read back.
 interface CreateDivOptions {

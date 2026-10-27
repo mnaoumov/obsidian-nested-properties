@@ -9,7 +9,7 @@ import { MonkeyAroundComponent } from '@mnaoumov/obsidian-lib/components/monkey-
 import {
   isComplexValue,
   isSimpleArray
-} from '../value-utils.ts';
+} from '../../nested-values/value-utils.ts';
 
 interface MetadataTypeManagerGetTypeInfoPatchComponentConstructorParams {
   readonly listWidget: PropertyWidget<MultitextPropertyWidgetComponent>;

@@ -5,7 +5,7 @@ import type {
 
 import { MonkeyAroundComponent } from '@mnaoumov/obsidian-lib/components/monkey-around-component';
 
-import { isSimpleArray } from '../value-utils.ts';
+import { isSimpleArray } from '../../nested-values/value-utils.ts';
 
 export class MultiTextPropertyWidgetPatchComponent extends MonkeyAroundComponent {
   public constructor(private readonly multiTextPropertyWidget: PropertyWidget<MultitextPropertyWidgetComponent>) {
