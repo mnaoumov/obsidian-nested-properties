@@ -12,8 +12,8 @@ import {
 import { TypeChangeModal } from './type-change-modal.ts';
 
 interface ModalElements {
-  contentEl: HTMLElement;
-  titleEl: HTMLElement;
+  readonly contentEl: HTMLElement;
+  readonly titleEl: HTMLElement;
 }
 
 function getButton(contentEl: HTMLElement, index: number): HTMLButtonElement {

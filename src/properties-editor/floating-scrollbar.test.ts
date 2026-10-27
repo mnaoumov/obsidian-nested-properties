@@ -18,14 +18,14 @@ import {
 import { FloatingScrollbarComponent } from './floating-scrollbar.ts';
 
 interface ElementMetrics {
-  clientWidth?: number;
-  rect?: Partial<DOMRect>;
-  scrollLeft?: number;
-  scrollWidth?: number;
+  readonly clientWidth?: number;
+  readonly rect?: Partial<DOMRect>;
+  readonly scrollLeft?: number;
+  readonly scrollWidth?: number;
 }
 
 interface ScrollbarInternals {
-  syncThumb: () => void;
+  readonly syncThumb: () => void;
 }
 
 const VIEWPORT_HEIGHT_PX = 800;

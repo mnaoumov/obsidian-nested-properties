@@ -30,39 +30,41 @@ interface CreateDivOptions {
 }
 
 interface MockClassList {
-  add: MockFunction;
-  contains: MockFunction;
-  remove: MockFunction;
-  toggle: MockFunction;
+  readonly add: MockFunction;
+  readonly contains: MockFunction;
+  readonly remove: MockFunction;
+  readonly toggle: MockFunction;
 }
 
 interface MockDomElement {
-  addEventListener: MockFunction;
-  after: MockFunction;
-  classList: MockClassList;
-  click: MockFunction;
-  closest: MockFunction;
-  createDiv: MockFunction;
-  createEl: MockFunction;
-  createSpan: MockFunction;
-  dataset: Record<string, string | undefined>;
-  empty: MockFunction;
-  firstChild: MockDomElement | null;
-  focus: MockFunction;
-  getAttribute: MockFunction;
-  getAttributeNames: MockFunction;
-  hasClass: MockFunction;
-  insertBefore: MockFunction;
-  instanceOf: MockFunction;
+  readonly addEventListener: MockFunction;
+  readonly after: MockFunction;
+  readonly classList: MockClassList;
+  readonly click: MockFunction;
+  readonly closest: MockFunction;
+  readonly createDiv: MockFunction;
+  readonly createEl: MockFunction;
+  readonly createSpan: MockFunction;
+  readonly dataset: Record<string, string | undefined>;
+  readonly empty: MockFunction;
+  readonly firstChild: MockDomElement | null;
+  readonly focus: MockFunction;
+  readonly getAttribute: MockFunction;
+  readonly getAttributeNames: MockFunction;
+  readonly hasClass: MockFunction;
+  readonly insertBefore: MockFunction;
+  readonly instanceOf: MockFunction;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Tests simulate the input being detached before deferred focus.
   isConnected: boolean;
-  querySelector: MockFunction;
-  querySelectorAll: MockFunction;
-  remove: MockFunction;
-  removeAttribute: MockFunction;
-  setAttr: MockFunction;
-  setAttribute: MockFunction;
-  size: number;
-  toggleClass: MockFunction;
+  readonly querySelector: MockFunction;
+  readonly querySelectorAll: MockFunction;
+  readonly remove: MockFunction;
+  readonly removeAttribute: MockFunction;
+  readonly setAttr: MockFunction;
+  readonly setAttribute: MockFunction;
+  readonly size: number;
+  readonly toggleClass: MockFunction;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Tests edit the input value before dispatching change events.
   value: string;
 }
 
@@ -94,24 +96,24 @@ const hoisted = vi.hoisted(() => {
   }
 
   interface MenuItemDom {
-    addClass: MockFunctionLocal;
+    readonly addClass: MockFunctionLocal;
   }
 
   interface MenuItemMock {
-    _onClickFunction: ((...$arguments: unknown[]) => unknown) | null;
-    dom: MenuItemDom;
-    onClick: MockFunctionLocal;
-    setChecked: MockFunctionLocal;
-    setIcon: MockFunctionLocal;
-    setSection: MockFunctionLocal;
-    setSubmenu: MockFunctionLocal;
-    setTitle: MockFunctionLocal;
+    readonly _onClickFunction: ((...$arguments: unknown[]) => unknown) | null;
+    readonly dom: MenuItemDom;
+    readonly onClick: MockFunctionLocal;
+    readonly setChecked: MockFunctionLocal;
+    readonly setIcon: MockFunctionLocal;
+    readonly setSection: MockFunctionLocal;
+    readonly setSubmenu: MockFunctionLocal;
+    readonly setTitle: MockFunctionLocal;
   }
 
   type MockFunctionLocal = ReturnType<typeof vi.fn>;
 
   interface SubmenuMock {
-    addItem: MockFunctionLocal;
+    readonly addItem: MockFunctionLocal;
   }
 
   function createMenuItem(): MenuItemMock {
@@ -209,10 +211,11 @@ vi.mock('obsidian', async (importOriginal) => ({
 }));
 
 interface ObsidianComponentModule {
-  Component: new () => UpdatableComponent;
+  readonly Component: new () => UpdatableComponent;
 }
 
 interface UpdatableComponent {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- The scrollbar stub attaches its update mock after constructing the component.
   update: () => void;
 }
 
@@ -239,59 +242,61 @@ vi.mock('./type-change-modal.ts', () => ({
 import { FloatingScrollbarComponent } from './floating-scrollbar.ts';
 
 interface FakeContainer {
-  win: FakeWindow;
+  readonly win: FakeWindow;
 }
 
 interface FakeLeaf {
-  getContainer: () => FakeContainer;
+  readonly getContainer: () => FakeContainer;
 }
 
 interface FakeWindow {
-  document: FakeWindowDocument;
+  readonly document: FakeWindowDocument;
 }
 
 interface FakeWindowBody {
-  removeClass: MockFunction;
-  toggleClass: MockFunction;
+  readonly removeClass: MockFunction;
+  readonly toggleClass: MockFunction;
 }
 
 interface FakeWindowDocument {
-  body: FakeWindowBody;
+  readonly body: FakeWindowBody;
 }
 
 type GetTypeInfoFunction = (p: string, v: unknown) => TypeInfo;
 
 interface MockApp {
-  metadataCache: MockMetadataCache;
-  metadataTypeManager: MockMetadataTypeManager;
-  workspace: MockWorkspace;
+  readonly metadataCache: MockMetadataCache;
+  readonly metadataTypeManager: MockMetadataTypeManager;
+  readonly workspace: MockWorkspace;
 }
 
 interface MockMetadataCache {
-  getCache: MockFunction;
+  readonly getCache: MockFunction;
 }
 
 interface MockMetadataTypeManager {
-  getAssignedWidget: MockFunction;
-  getTypeInfo: MockFunction;
-  getWidget: MockFunction;
-  registeredTypeWidgets: Record<string, PropertyWidget>;
-  setType: MockFunction;
-  unsetType: MockFunction;
+  readonly getAssignedWidget: MockFunction;
+  readonly getTypeInfo: MockFunction;
+  readonly getWidget: MockFunction;
+  readonly registeredTypeWidgets: Record<string, PropertyWidget>;
+  readonly setType: MockFunction;
+  readonly unsetType: MockFunction;
 }
 
 interface MockWorkspace {
-  getLeavesOfType: MockFunction;
+  readonly getLeavesOfType: MockFunction;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Tests replace the leaf iterator to simulate windows.
   iterateAllLeaves: MockFunction;
-  onLayoutReady: MockFunction;
+  readonly onLayoutReady: MockFunction;
 }
 
 interface RendererTestAccess {
-  _loaded: boolean;
-  cleanups__: (() => unknown)[];
-  expansionOverrides: Map<string, boolean>;
+  readonly _loaded: boolean;
+  readonly cleanups__: (() => unknown)[];
+  readonly expansionOverrides: Map<string, boolean>;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Tests set and clear the deferred focus target.
   pendingFocusKey: null | string;
-  showNestedPropertyMenu: (params: ShowNestedPropertyMenuTestParams) => void;
+  readonly showNestedPropertyMenu: (params: ShowNestedPropertyMenuTestParams) => void;
 }
 
 interface ShowNestedPropertyMenuTestParams {
