@@ -4,12 +4,12 @@ import { PluginDataHandler } from '@mnaoumov/obsidian-lib/data-handler';
 import { PluginBase } from '@mnaoumov/obsidian-lib/plugin/plugin';
 import { invokeAsyncSafely } from '@mnaoumov/typescript-lib/async';
 
-import { NestedPropertyRendererComponent } from './nested-property-renderer.ts';
-import { NestedPropertyVaultOpsComponent } from './nested-property-vault-ops-component.ts';
-import { NestedPropertySearchPatchComponent } from './patches/nested-property-search-patch-component.ts';
-import { PluginSettingsComponent } from './plugin-settings-component.ts';
-import { PluginSettingsTab } from './plugin-settings-tab.ts';
-import { PluginSettings } from './plugin-settings.ts';
+import { NestedPropertyRendererComponent } from './properties-editor/nested-property-renderer.ts';
+import { NestedPropertySearchPatchComponent } from './search/nested-property-search-patch-component.ts';
+import { PluginSettingsComponent } from './settings/plugin-settings-component.ts';
+import { PluginSettingsTab } from './settings/plugin-settings-tab.ts';
+import { PluginSettings } from './settings/plugin-settings.ts';
+import { NestedPropertyVaultOpsComponent } from './vault-ops/nested-property-vault-ops-component.ts';
 
 export class Plugin extends PluginBase {
   protected override async onloadImpl(): Promise<void> {

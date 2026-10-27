@@ -21,20 +21,20 @@ import {
   setIcon
 } from 'obsidian';
 
-import { FloatingScrollbarComponent } from './floating-scrollbar.ts';
-import { getInitialExpandLevel } from './nested-properties-note-settings.ts';
-import { MetadataTypeManagerGetTypeInfoPatchComponent } from './patches/metadata-type-manager-get-type-info-patch-component.ts';
-import { MultiTextPropertyWidgetPatchComponent } from './patches/multi-text-property-widget-patch-component.ts';
-import { UnknownWidgetRenderPatchComponent } from './patches/unknown-widget-render-patch-component.ts';
-import { PluginSettingsComponent } from './plugin-settings-component.ts';
-import { TypeChangeModal } from './type-change-modal.ts';
 import {
   convertValue,
   formatValueSummary,
   isComplexValue,
   isLossyConversion,
   isSimpleArray
-} from './value-utils.ts';
+} from '../nested-values/value-utils.ts';
+import { getInitialExpandLevel } from '../settings/nested-properties-note-settings.ts';
+import { PluginSettingsComponent } from '../settings/plugin-settings-component.ts';
+import { FloatingScrollbarComponent } from './floating-scrollbar.ts';
+import { MetadataTypeManagerGetTypeInfoPatchComponent } from './patches/metadata-type-manager-get-type-info-patch-component.ts';
+import { MultiTextPropertyWidgetPatchComponent } from './patches/multi-text-property-widget-patch-component.ts';
+import { UnknownWidgetRenderPatchComponent } from './patches/unknown-widget-render-patch-component.ts';
+import { TypeChangeModal } from './type-change-modal.ts';
 
 const LIST_WIDGET_TYPE = 'list';
 const OBJECT_WIDGET_TYPE = 'object';

@@ -9,13 +9,13 @@ import process from 'node:process';
 // interface and no `docs/` folder — only the `PluginSettings` config class. The
 // plugin's runtime behavior is covered by the other integration tests, not here.
 registerDemoVaultCoverageSuite({
-  configInterfaces: [{ interfaceName: 'PluginSettings', sourcePath: 'src/plugin-settings.ts' }],
+  configInterfaces: [{ interfaceName: 'PluginSettings', sourcePath: 'src/settings/plugin-settings.ts' }],
   interfaces: [],
   nonTrivialGuard: {
     expectDemoNote: '08 Full key display.md',
     expectMember: 'isFullKeyDisplayEnabled',
     interfaceName: 'PluginSettings',
-    sourcePath: 'src/plugin-settings.ts'
+    sourcePath: 'src/settings/plugin-settings.ts'
   },
   rootFolder: getRootFolder() ?? process.cwd()
 });

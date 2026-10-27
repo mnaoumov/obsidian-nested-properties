@@ -16,7 +16,7 @@ import {
   collectNestedPropertyPaths,
   didDeleteNestedProperty,
   didRenameNestedProperty
-} from './nested-property-paths.ts';
+} from '../nested-values/nested-property-paths.ts';
 
 /**
  * A note that carries frontmatter, as yielded by the single vault traversal every vault-wide operation

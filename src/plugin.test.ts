@@ -14,10 +14,10 @@ import {
   vi
 } from 'vitest';
 
-import { NestedPropertyRendererComponent } from './nested-property-renderer.ts';
-import { NestedPropertyVaultOpsComponent } from './nested-property-vault-ops-component.ts';
-import { NestedPropertySearchPatchComponent } from './patches/nested-property-search-patch-component.ts';
 import { Plugin } from './plugin.ts';
+import { NestedPropertyRendererComponent } from './properties-editor/nested-property-renderer.ts';
+import { NestedPropertySearchPatchComponent } from './search/nested-property-search-patch-component.ts';
+import { NestedPropertyVaultOpsComponent } from './vault-ops/nested-property-vault-ops-component.ts';
 
 interface ObsidianComponentModule {
   Component: new () => object;
@@ -46,7 +46,7 @@ async function loadableComponentStub(): Promise<ReturnType<typeof vi.fn>> {
   });
 }
 
-vi.mock('./nested-property-renderer.ts', async () => ({
+vi.mock('./properties-editor/nested-property-renderer.ts', async () => ({
   NestedPropertyRendererComponent: await loadableComponentStub()
 }));
 
@@ -65,7 +65,7 @@ async function loadableVaultOpsStub(): Promise<ReturnType<typeof vi.fn>> {
   });
 }
 
-vi.mock('./nested-property-vault-ops-component.ts', async () => ({
+vi.mock('./vault-ops/nested-property-vault-ops-component.ts', async () => ({
   NestedPropertyVaultOpsComponent: await loadableVaultOpsStub()
 }));
 
@@ -79,7 +79,7 @@ async function loadablePlainComponentStub(): Promise<ReturnType<typeof vi.fn>> {
   });
 }
 
-vi.mock('./patches/nested-property-search-patch-component.ts', async () => ({
+vi.mock('./search/nested-property-search-patch-component.ts', async () => ({
   NestedPropertySearchPatchComponent: await loadablePlainComponentStub()
 }));
 

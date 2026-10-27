@@ -9,7 +9,7 @@ import { setIcon } from 'obsidian';
 import {
   isComplexValue,
   isSimpleArray
-} from '../value-utils.ts';
+} from '../../nested-values/value-utils.ts';
 
 interface UnknownWidgetRenderPatchComponentConstructorParams {
   readonly listWidget: PropertyWidget<MultitextPropertyWidgetComponent>;
