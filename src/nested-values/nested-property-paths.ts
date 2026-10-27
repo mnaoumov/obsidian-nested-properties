@@ -162,8 +162,8 @@ export function didRenameNestedProperty(params: DidRenameNestedPropertyParams): 
   return true;
 }
 
-function collectEntriesInto(object: GenericObject, prefix: string, entries: NestedPropertyEntry[]): void {
-  for (const [key, value] of Object.entries(object)) {
+function collectEntriesInto($object: GenericObject, prefix: string, entries: NestedPropertyEntry[]): void {
+  for (const [key, value] of Object.entries($object)) {
     const path = prefix ? `${prefix}.${key}` : key;
     if (prefix) {
       entries.push({ path, value });
