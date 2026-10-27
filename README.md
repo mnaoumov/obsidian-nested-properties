@@ -82,14 +82,18 @@ nestedProperties:
 ---
 ```
 
-## Similar plugins
+## See also
 
-- [`Nested Frontmatter Properties`](https://community.obsidian.md/plugins/nested-frontmatter-properties) — shows nested objects and arrays of objects as indented, editable rows in the Properties panel, with adding and removing items and keys; it is kept deliberately small, so it has no collapsible tree, type changes, vault-wide rename or delete, or search support.
-- [`Nested Frontmatter`](https://github.com/tonyxiao/obsidian-nested-frontmatter) — not in the community directory; renders nested objects and arrays as readable rows in the Properties panel and makes links inside nested values clickable; it is read-only by design, and this plugin edits them.
-- [`Better Properties`](https://github.com/unxok/obsidian-better-properties) — not in the community directory; adds new property types to the Properties panel, an object type among them, plus per-property settings; nesting is one feature of a broader toolkit, while this plugin covers nesting alone, with vault-wide rename, delete and search.
-- [`YAML Properties`](https://community.obsidian.md/plugins/yaml-properties) — replaces the in-note Properties editor with an editable, syntax-highlighted YAML block, so nested values are edited as text; this plugin keeps the Properties panel and gives each nested key its own row.
-- [`YAML Editor`](https://community.obsidian.md/plugins/yaml-editor) — a YAML text editor for frontmatter, YAML code blocks and `.yaml` files, with completions learned from the vault, folding and snippets; it edits YAML as text rather than in the Properties panel.
-- [`Solenoid Properties`](https://community.obsidian.md/plugins/solenoid-properties) — adds list, table, frame and cube property types with a pop-up editor for tabular data stored as nested YAML; it targets tables of data, while this plugin renders any nested object or array.
+[My other Obsidian resources](https://github.com/mnaoumov/obsidian-resources)
+
+| Plugin | Features | How `Nested Properties` differs |
+| --- | --- | --- |
+| [`Better Properties`](https://github.com/unxok/obsidian-better-properties) | Unlisted; additional property types and per-property settings; object type | Narrower focus: nesting; vault-wide rename/delete and search |
+| [`Nested Frontmatter`](https://github.com/tonyxiao/obsidian-nested-frontmatter) | Unlisted; read-only nested Properties rows; clickable links | Same nesting goal; editable values |
+| [`Nested Frontmatter Properties`](https://community.obsidian.md/plugins/nested-frontmatter-properties) | Nested object/array rows in the Properties panel; add/remove keys and items | Broader nesting UI: collapsible tree, type changes, vault-wide rename/delete and search |
+| [`Solenoid Properties`](https://community.obsidian.md/plugins/solenoid-properties) | List/table/frame/cube property types; popup editor for nested tabular YAML | Broader nesting scope: arbitrary nested objects and arrays |
+| [`YAML Editor`](https://community.obsidian.md/plugins/yaml-editor) | YAML text editor; frontmatter, blocks and files; completion, folding, snippets | Alternative UI: edits nested values through Properties rows |
+| [`YAML Properties`](https://community.obsidian.md/plugins/yaml-properties) | Replaces in-note Properties with editable YAML text | Alternative UI: keeps Properties and gives each nested key a row |
 
 Last searched for similar plugins on 2026-10-26.
 
@@ -126,10 +130,6 @@ Contributions are welcome — see [CONTRIBUTING](./CONTRIBUTING.md) to get set u
 <a href="https://www.buymeacoffee.com/mnaoumov" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="60" width="217"></a>
 
 <!-- markdownlint-enable MD033 -->
-
-## My other Obsidian resources
-
-[See my other Obsidian resources](https://github.com/mnaoumov/obsidian-resources).
 
 ## License
 
