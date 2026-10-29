@@ -8,6 +8,7 @@ import { prompt } from '@mnaoumov/obsidian-lib/modals/prompt';
 import { selectItem } from '@mnaoumov/obsidian-lib/modals/select-item';
 import { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
 import { castTo } from '@mnaoumov/typescript-lib/object-utils';
+import dedent from 'dedent';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   beforeEach,
@@ -40,24 +41,22 @@ interface TestComponent {
   readonly showNotice: ReturnType<typeof vi.fn>;
 }
 
-const NESTED_A = [
-  '---',
-  'top:',
-  '  level1:',
-  '    level2: x',
-  '  other: 1',
-  '---',
-  ''
-].join('\n');
+const NESTED_A = dedent`
+  ---
+  top:
+    level1:
+      level2: x
+    other: 1
+  ---\n
+`;
 
-const NESTED_B = [
-  '---',
-  'top:',
-  '  level1:',
-  '    level2: y',
-  '---',
-  ''
-].join('\n');
+const NESTED_B = dedent`
+  ---
+  top:
+    level1:
+      level2: y
+  ---\n
+`;
 
 const NO_FRONTMATTER = 'Just body text.\n';
 
@@ -174,15 +173,14 @@ describe('NestedPropertyVaultOpsComponent', () => {
     });
 
     it('skips notes where the target path already exists', async () => {
-      const withTarget = [
-        '---',
-        'top:',
-        '  level1:',
-        '    level2: y',
-        '    renamed: existing',
-        '---',
-        ''
-      ].join('\n');
+      const withTarget = dedent`
+        ---
+        top:
+          level1:
+            level2: y
+            renamed: existing
+        ---\n
+      `;
       const app = App.createConfigured__({ files: { 'a.md': NESTED_A, 'b.md': withTarget } }).asOriginalType__();
       const { component, showNotice } = makeComponent(app);
       mockSelectItem.mockResolvedValue({ count: 2, path: 'top.level1.level2' });
