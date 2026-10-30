@@ -1,3 +1,4 @@
+import type { BulkOperationCommitComponent } from '@mnaoumov/obsidian-lib/components/bulk-operation-commit-component';
 import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
 import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
 import type { GenericObject } from '@mnaoumov/typescript-lib/type-guards';
@@ -6,6 +7,7 @@ import type {
   TFile
 } from 'obsidian';
 
+import { reportBulkOperationProgress } from '@mnaoumov/obsidian-lib/bulk-operation-progress';
 import { processFrontmatter } from '@mnaoumov/obsidian-lib/file-manager';
 import { confirm } from '@mnaoumov/obsidian-lib/modals/confirm';
 import { prompt } from '@mnaoumov/obsidian-lib/modals/prompt';
@@ -55,6 +57,11 @@ interface NestedPropertyVaultOpsComponentApplyRenameParams {
 
 interface NestedPropertyVaultOpsComponentConstructorParams {
   readonly app: App;
+  /**
+   * Wraps each vault-wide write in `chore: before OP<n>` / `OP<n>: <summary>` git commits when the
+   * plugin's `shouldCommitBulkOperations` setting is on, so `git revert` undoes the run.
+   */
+  readonly bulkOperationCommitComponent: Pick<BulkOperationCommitComponent, 'runBulkOperation'>;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly resourceLockComponent: null | ResourceLockComponent;
 }
@@ -67,12 +74,14 @@ interface NestedPropertyVaultOpsComponentConstructorParams {
  */
 export class NestedPropertyVaultOpsComponent extends Component {
   private readonly app: App;
+  private readonly bulkOperationCommitComponent: Pick<BulkOperationCommitComponent, 'runBulkOperation'>;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly resourceLockComponent: null | ResourceLockComponent;
 
   public constructor(params: NestedPropertyVaultOpsComponentConstructorParams) {
     super();
     this.app = params.app;
+    this.bulkOperationCommitComponent = params.bulkOperationCommitComponent;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.resourceLockComponent = params.resourceLockComponent;
   }
@@ -103,7 +112,11 @@ export class NestedPropertyVaultOpsComponent extends Component {
       return;
     }
 
-    const count = await this.applyDelete({ path: selected.path });
+    // Only the writes are wrapped, after every dialog: a lock held across a dialog gets no heartbeat.
+    const count = await this.bulkOperationCommitComponent.runBulkOperation({
+      operation: () => this.applyDelete({ path: selected.path }),
+      summary: `Delete nested property ${selected.path} from all notes`
+    });
     this.pluginNoticeComponent.showNotice(`Deleted the nested property "${selected.path}" from ${describeNoteCount(count)}.`);
   }
 
@@ -138,7 +151,10 @@ export class NestedPropertyVaultOpsComponent extends Component {
       return;
     }
 
-    const count = await this.applyRename({ fromPath: selected.path, toPath: trimmedNewPath });
+    const count = await this.bulkOperationCommitComponent.runBulkOperation({
+      operation: () => this.applyRename({ fromPath: selected.path, toPath: trimmedNewPath }),
+      summary: `Rename nested property ${selected.path} to ${trimmedNewPath} in all notes`
+    });
     this.pluginNoticeComponent.showNotice(
       `Renamed the nested property "${selected.path}" to "${trimmedNewPath}" in ${describeNoteCount(count)}.`
     );
@@ -154,6 +170,7 @@ export class NestedPropertyVaultOpsComponent extends Component {
       await this.writeFrontmatter(note.file, (fileFrontmatter) => {
         didDeleteNestedProperty({ frontmatter: fileFrontmatter, path });
       });
+      reportBulkOperationProgress();
       count++;
     }
     return count;
@@ -175,6 +192,7 @@ export class NestedPropertyVaultOpsComponent extends Component {
       await this.writeFrontmatter(note.file, (fileFrontmatter) => {
         didRenameNestedProperty({ fromPath, frontmatter: fileFrontmatter, toPath });
       });
+      reportBulkOperationProgress();
       count++;
     }
     return count;

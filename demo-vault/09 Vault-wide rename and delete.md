@@ -61,4 +61,8 @@ await require('/demoSetup.ts').removeDemoFolders(app);
 
 Manual equivalent: delete the `Vault-wide demo` and `Search demo` folders.
 
+## Undo with git
+
+On desktop, when the vault is inside a git repository, turn on **Settings → `Nested Properties` → Should commit bulk operations** (off by default). Each rename or delete then lands as two commits: `chore: before OP<n>` holds whatever was pending, and `OP<n>: <summary>` holds only what the run changed. The **Undo a bulk operation...** command lists those runs and reverts the one you pick with `git revert`. Manual equivalent: `git revert <sha>` of the `OP<n>` commit.
+
 Only nested paths (two or more segments) are offered; plain top-level keys are still managed by Obsidian's own "All properties" view. When renaming, notes where the target path already exists are skipped so nothing is overwritten.

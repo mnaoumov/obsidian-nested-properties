@@ -10,6 +10,7 @@ import { PluginSettingsTabBase } from '@mnaoumov/obsidian-lib/plugin/plugin-sett
 import { SettingEx } from '@mnaoumov/obsidian-lib/setting-ex';
 import { castTo } from '@mnaoumov/typescript-lib/object-utils';
 import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
+import { Platform } from 'obsidian';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   beforeEach,
@@ -31,8 +32,14 @@ import { PluginSettingsTab } from './plugin-settings-tab.ts';
  * command, and the settings component only persists it.
  */
 const EXPECTED_BOUND_KEYS: (keyof PluginSettings)[] = [
-  'initialExpandLevel'
+  'initialExpandLevel',
+  'shouldCommitBulkOperations'
 ];
+
+interface VisibleDefinition {
+  readonly name: string;
+  readonly visible: () => boolean;
+}
 
 describe('PluginSettingsTab', () => {
   let app: AppOriginal;
@@ -68,6 +75,23 @@ describe('PluginSettingsTab', () => {
     const tab = createTab();
     callDisplay(tab);
     expect(getBoundKeys().sort()).toEqual([...EXPECTED_BOUND_KEYS].sort());
+  });
+
+  // The commits run the system `git`, which only the desktop app can reach.
+  it('should show the bulk operation commits row on desktop only', () => {
+    const tab = createTab();
+    const definition = castTo<VisibleDefinition[]>(tab.getSettingDefinitions())
+      .find((candidate) => candidate.name === 'Should commit bulk operations');
+    const isDesktop = Platform.isDesktop;
+
+    try {
+      Platform.isDesktop = true;
+      expect(definition?.visible()).toBe(true);
+      Platform.isDesktop = false;
+      expect(definition?.visible()).toBe(false);
+    } finally {
+      Platform.isDesktop = isDesktop;
+    }
   });
 
   /**

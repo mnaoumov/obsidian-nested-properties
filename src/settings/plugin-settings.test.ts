@@ -17,4 +17,9 @@ describe('PluginSettings', () => {
     const settings = new PluginSettings();
     expect(settings.initialExpandLevel).toBe(0);
   });
+
+  it('should default shouldCommitBulkOperations to false', () => {
+    const settings = new PluginSettings();
+    expect(settings.shouldCommitBulkOperations).toBe(false);
+  });
 });

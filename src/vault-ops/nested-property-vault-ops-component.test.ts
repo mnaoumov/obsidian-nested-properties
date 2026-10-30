@@ -1,8 +1,10 @@
+import type { BulkOperationCommitComponent } from '@mnaoumov/obsidian-lib/components/bulk-operation-commit-component';
 import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
 import type { GenericObject } from '@mnaoumov/typescript-lib/type-guards';
 import type { App as AppOriginal } from 'obsidian';
 import type { MockInstance } from 'vitest';
 
+import { registerBulkOperationProgressListener } from '@mnaoumov/obsidian-lib/bulk-operation-progress';
 import { confirm } from '@mnaoumov/obsidian-lib/modals/confirm';
 import { prompt } from '@mnaoumov/obsidian-lib/modals/prompt';
 import { selectItem } from '@mnaoumov/obsidian-lib/modals/select-item';
@@ -35,9 +37,12 @@ interface NestedPropertyPathCount {
   readonly path: string;
 }
 
+type RunBulkOperationSpy = MockInstance<BulkOperationCommitComponent['runBulkOperation']>;
+
 interface TestComponent {
   readonly component: NestedPropertyVaultOpsComponent;
   readonly lockForPath: LockForPathSpy;
+  readonly runBulkOperation: RunBulkOperationSpy;
   readonly showNotice: ReturnType<typeof vi.fn>;
 }
 
@@ -79,8 +84,12 @@ function makeComponent(app: AppOriginal): TestComponent {
   // `@mnaoumov/obsidian-lib`'s `process()` primitive actually performs on each written note.
   const resourceLockComponent = new ResourceLockComponent(app, 'nested-properties');
   const lockForPath = vi.spyOn(resourceLockComponent, 'lockForPath');
-  const component = new NestedPropertyVaultOpsComponent({ app, pluginNoticeComponent, resourceLockComponent });
-  return { component, lockForPath, showNotice };
+  // Runs the operation as the real component does when bulk-operation commits are off; the summary is what
+  // the commit subject would carry when they are on.
+  const runBulkOperation: RunBulkOperationSpy = vi.fn(async (params) => params.operation());
+  const bulkOperationCommitComponent = castTo<BulkOperationCommitComponent>({ runBulkOperation });
+  const component = new NestedPropertyVaultOpsComponent({ app, bulkOperationCommitComponent, pluginNoticeComponent, resourceLockComponent });
+  return { component, lockForPath, runBulkOperation, showNotice };
 }
 
 describe('NestedPropertyVaultOpsComponent', () => {
@@ -208,6 +217,40 @@ describe('NestedPropertyVaultOpsComponent', () => {
       expect(lockedPaths(lockForPath)).toEqual(['a.md', 'b.md']);
     });
 
+    it('runs the writes as one bulk operation, reporting progress per written note', async () => {
+      const app = App.createConfigured__({
+        files: { 'a.md': NESTED_A, 'b.md': NESTED_B, 'plain.md': NO_FRONTMATTER }
+      }).asOriginalType__();
+      const { component, runBulkOperation } = makeComponent(app);
+      mockSelectItem.mockResolvedValue({ count: 2, path: 'top.level1.level2' });
+      mockPrompt.mockResolvedValue('top.level1.renamed');
+      const progressListener = vi.fn();
+      const unregister = registerBulkOperationProgressListener(progressListener);
+
+      try {
+        await component.renameNestedPropertyAcrossVault();
+      } finally {
+        unregister();
+      }
+
+      expect(runBulkOperation).toHaveBeenCalledTimes(1);
+      expect(runBulkOperation.mock.calls[0]?.[0].summary).toBe(
+        'Rename nested property top.level1.level2 to top.level1.renamed in all notes'
+      );
+      expect(progressListener).toHaveBeenCalledTimes(2);
+    });
+
+    it('starts no bulk operation when the rename prompt is cancelled', async () => {
+      const app = App.createConfigured__({ files: { 'a.md': NESTED_A } }).asOriginalType__();
+      const { component, runBulkOperation } = makeComponent(app);
+      mockSelectItem.mockResolvedValue({ count: 1, path: 'top.other' });
+      mockPrompt.mockResolvedValue(null);
+
+      await component.renameNestedPropertyAcrossVault();
+
+      expect(runBulkOperation).not.toHaveBeenCalled();
+    });
+
     it('reports zero notes when the target parent chain is not an object', async () => {
       const app = App.createConfigured__({ files: { 'a.md': NESTED_A } }).asOriginalType__();
       const { component, showNotice } = makeComponent(app);
@@ -284,6 +327,38 @@ describe('NestedPropertyVaultOpsComponent', () => {
       await component.deleteNestedPropertyAcrossVault();
 
       expect(lockedPaths(lockForPath)).toEqual(['a.md']);
+    });
+
+    it('runs the writes as one bulk operation, reporting progress per written note', async () => {
+      const app = App.createConfigured__({
+        files: { 'a.md': NESTED_A, 'b.md': NESTED_B, 'plain.md': NO_FRONTMATTER }
+      }).asOriginalType__();
+      const { component, runBulkOperation } = makeComponent(app);
+      mockSelectItem.mockResolvedValue({ count: 2, path: 'top.level1.level2' });
+      mockConfirm.mockResolvedValue(true);
+      const progressListener = vi.fn();
+      const unregister = registerBulkOperationProgressListener(progressListener);
+
+      try {
+        await component.deleteNestedPropertyAcrossVault();
+      } finally {
+        unregister();
+      }
+
+      expect(runBulkOperation).toHaveBeenCalledTimes(1);
+      expect(runBulkOperation.mock.calls[0]?.[0].summary).toBe('Delete nested property top.level1.level2 from all notes');
+      expect(progressListener).toHaveBeenCalledTimes(2);
+    });
+
+    it('starts no bulk operation when the confirmation is declined', async () => {
+      const app = App.createConfigured__({ files: { 'a.md': NESTED_A } }).asOriginalType__();
+      const { component, runBulkOperation } = makeComponent(app);
+      mockSelectItem.mockResolvedValue({ count: 1, path: 'top.other' });
+      mockConfirm.mockResolvedValue(false);
+
+      await component.deleteNestedPropertyAcrossVault();
+
+      expect(runBulkOperation).not.toHaveBeenCalled();
     });
   });
 });
