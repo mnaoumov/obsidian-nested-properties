@@ -1,4 +1,6 @@
 import { OpenDemoVaultCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/open-demo-vault-command-handler';
+import { UndoBulkOperationCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/undo-bulk-operation-command-handler';
+import { BulkOperationCommitComponent } from '@mnaoumov/obsidian-lib/components/bulk-operation-commit-component';
 import { PluginSettingsTabComponent } from '@mnaoumov/obsidian-lib/components/plugin-settings-tab-component';
 import { PluginDataHandler } from '@mnaoumov/obsidian-lib/data-handler';
 import { PluginBase } from '@mnaoumov/obsidian-lib/plugin/plugin';
@@ -51,9 +53,18 @@ export class Plugin extends PluginBase {
       id: 'toggle-full-key-display',
       name: 'Toggle full key display'
     });
+    const bulkOperationCommitComponent = this.addChild(
+      new BulkOperationCommitComponent({
+        app: this.app,
+        isEnabled: (): boolean => pluginSettingsComponent.settings.shouldCommitBulkOperations,
+        pluginId: this.manifest.id,
+        pluginNoticeComponent: this.pluginNoticeComponent
+      })
+    );
     const nestedPropertyVaultOpsComponent = this.addChild(
       new NestedPropertyVaultOpsComponent({
         app: this.app,
+        bulkOperationCommitComponent,
         pluginNoticeComponent: this.pluginNoticeComponent,
         resourceLockComponent: this.resourceLockComponent
       })
@@ -78,6 +89,10 @@ export class Plugin extends PluginBase {
       })
     );
     await this.commandHandlerComponent.registerCommandHandlers(() => [
+      new UndoBulkOperationCommandHandler({
+        bulkOperationCommitComponent,
+        isEnabled: (): boolean => pluginSettingsComponent.settings.shouldCommitBulkOperations
+      }),
       new OpenDemoVaultCommandHandler({
         app: this.app,
         pluginId: this.manifest.id,

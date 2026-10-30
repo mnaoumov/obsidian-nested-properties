@@ -4,6 +4,8 @@ import type {
 } from 'obsidian';
 
 import { OpenDemoVaultCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/open-demo-vault-command-handler';
+import { UndoBulkOperationCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/undo-bulk-operation-command-handler';
+import { BulkOperationCommitComponent } from '@mnaoumov/obsidian-lib/components/bulk-operation-commit-component';
 import { castTo } from '@mnaoumov/typescript-lib/object-utils';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
@@ -14,6 +16,8 @@ import {
   vi
 } from 'vitest';
 
+import type { PluginSettings } from './settings/plugin-settings.ts';
+
 import { Plugin } from './plugin.ts';
 import { NestedPropertyRendererComponent } from './properties-editor/nested-property-renderer.ts';
 import { NestedPropertySearchPatchComponent } from './search/nested-property-search-patch-component.ts';
@@ -21,6 +25,14 @@ import { NestedPropertyVaultOpsComponent } from './vault-ops/nested-property-vau
 
 interface ObsidianComponentModule {
   readonly Component: new () => object;
+}
+
+interface PluginSettingsComponentWithSettings {
+  readonly settings: PluginSettings;
+}
+
+interface PluginWithSettings {
+  readonly pluginSettingsComponent: PluginSettingsComponentWithSettings;
 }
 
 interface RendererWithToggle {
@@ -96,6 +108,22 @@ vi.mock('@mnaoumov/obsidian-lib/command-handlers/open-demo-vault-command-handler
   })
 }));
 
+vi.mock('@mnaoumov/obsidian-lib/components/bulk-operation-commit-component', async () => ({
+  BulkOperationCommitComponent: await loadablePlainComponentStub()
+}));
+
+vi.mock('@mnaoumov/obsidian-lib/command-handlers/undo-bulk-operation-command-handler', () => ({
+  // eslint-disable-next-line prefer-arrow-callback -- a non-arrow function so it is constructable via `new`.
+  UndoBulkOperationCommandHandler: vi.fn(function undoBulkOperationCommandHandlerStub() {
+    return {
+      buildCommand: vi.fn(() => ({ id: 'undo-bulk-operation', name: 'Undo a bulk operation...' })),
+      onRegistered: vi.fn()
+    };
+  })
+}));
+
+const MockBulkOperationCommitComponent = vi.mocked(BulkOperationCommitComponent);
+const MockUndoBulkOperationCommandHandler = vi.mocked(UndoBulkOperationCommandHandler);
 const MockNestedPropertyRendererComponent = vi.mocked(NestedPropertyRendererComponent);
 const MockNestedPropertyVaultOpsComponent = vi.mocked(NestedPropertyVaultOpsComponent);
 const MockNestedPropertySearchPatchComponent = vi.mocked(NestedPropertySearchPatchComponent);
@@ -234,6 +262,38 @@ describe('Plugin', () => {
 
       expect(addChildSpy).toHaveBeenCalledWith(instanceOf(MockNestedPropertySearchPatchComponent));
       expect(MockNestedPropertySearchPatchComponent.mock.calls[0]?.[0]?.app).toBe(app);
+    });
+
+    it('should commit bulk operations only while the setting is on', async () => {
+      const plugin = new Plugin(app, manifest);
+      await plugin.onload();
+
+      const params = MockBulkOperationCommitComponent.mock.calls[0]?.[0];
+      expect(params?.app).toBe(app);
+      expect(params?.pluginId).toBe(manifest.id);
+      expect(params?.isEnabled()).toBe(false);
+      castTo<PluginWithSettings>(plugin).pluginSettingsComponent.settings.shouldCommitBulkOperations = true;
+      expect(params?.isEnabled()).toBe(true);
+    });
+
+    it('should hand the bulk operation commit component to the vault-ops component', async () => {
+      const plugin = new Plugin(app, manifest);
+      await plugin.onload();
+
+      expect(MockNestedPropertyVaultOpsComponent.mock.calls[0]?.[0]?.bulkOperationCommitComponent)
+        .toBe(instanceOf(MockBulkOperationCommitComponent));
+    });
+
+    it('should register the undo-bulk-operation command handler with the same component and setting', async () => {
+      const plugin = new Plugin(app, manifest);
+      await plugin.onload();
+
+      expect(MockUndoBulkOperationCommandHandler).toHaveBeenCalled();
+      const params = MockUndoBulkOperationCommandHandler.mock.calls[0]?.[0];
+      expect(params?.bulkOperationCommitComponent).toBe(instanceOf(MockBulkOperationCommitComponent));
+      expect(params?.isEnabled()).toBe(false);
+      castTo<PluginWithSettings>(plugin).pluginSettingsComponent.settings.shouldCommitBulkOperations = true;
+      expect(params?.isEnabled()).toBe(true);
     });
 
     it('should register the open-demo-vault command handler with the app, plugin id, and version', async () => {

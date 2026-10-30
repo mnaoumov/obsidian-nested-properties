@@ -13,4 +13,11 @@ export class PluginSettings {
   public initialExpandLevel = 0;
 
   public isFullKeyDisplayEnabled = false;
+
+  /**
+   * Whether each vault-wide rename or delete of a nested property is recorded as git commits
+   * (`chore: before OP<n>`, then `OP<n>: <summary>`), so `git revert` undoes it. Desktop only, and only for a
+   * vault inside a git work tree.
+   */
+  public shouldCommitBulkOperations = false;
 }
