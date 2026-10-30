@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Filing an issue (for AI agents and humans)
+
+Open issues through the [issue forms](https://github.com/mnaoumov/obsidian-nested-properties/issues/new/choose), not as blank issues.
+
+Filing from the CLI or the API (`gh issue create --body`, or an AI agent filing for you) skips the form, and `gh issue create --template` cannot load an issue form. In that case, open the matching form in [`.github/ISSUE_TEMPLATE/`](https://github.com/mnaoumov/obsidian-nested-properties/tree/HEAD/.github/ISSUE_TEMPLATE), copy every field as a `### <label>` heading in the form's order, and fill in each one. Always state the plugin version, the Obsidian version and your operating system.
+
 ## Overview
 
 `Nested Properties` is an Obsidian plugin that lets you view and edit nested frontmatter properties, rendering nested YAML objects and arrays as a collapsible tree inside the Properties editor (with context menus, add/cut/copy/paste/remove, and horizontal scrolling). It is built on `@mnaoumov/obsidian-lib`, with `@mnaoumov/obsidian-dev-toolkit` and `@mnaoumov/typescript-dev-toolkit` as its build, lint and test tooling.
