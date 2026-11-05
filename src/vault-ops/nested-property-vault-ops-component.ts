@@ -180,13 +180,14 @@ export class NestedPropertyVaultOpsComponent extends Component {
     const { fromPath, toPath } = params;
     let count = 0;
     for (const note of this.iterateNotesWithNestedProperties()) {
-      if (!note.paths.includes(fromPath) || note.paths.includes(toPath)) {
-        continue;
-      }
       // Decide on a deep clone first (the mutating write cannot report back through Obsidian's
       // synchronous frontmatter callback in a way the type checker can observe).
-      // eslint-disable-next-line n/no-unsupported-features/node-builtins -- structuredClone is a Web/Electron API available in Obsidian's renderer; the rule wrongly flags it against the Node engines range.
-      if (!didRenameNestedProperty({ fromPath, frontmatter: structuredClone(note.frontmatter), toPath })) {
+      if (
+        !note.paths.includes(fromPath)
+        || note.paths.includes(toPath)
+        // eslint-disable-next-line n/no-unsupported-features/node-builtins -- structuredClone is a Web/Electron API available in Obsidian's renderer; the rule wrongly flags it against the Node engines range.
+        || !didRenameNestedProperty({ fromPath, frontmatter: structuredClone(note.frontmatter), toPath })
+      ) {
         continue;
       }
       await this.writeFrontmatter(note.file, (fileFrontmatter) => {

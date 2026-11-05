@@ -7,9 +7,9 @@
 - docs: add issue-filing instructions for AI agents
 - feat: add a Report a bug command
 - chore(github): give the bug form the field ids bug-report links prefill
-- feat: record vault-wide nested property renames and deletes as git commits that can be reverted
+- feat: record vault-wide nested property renames and deletes as `git` commits that can be reverted
 - build(deps): override re2js to ^2.9.1 for GHSA-gg6h-894w-4m9c
-- build(deps): bump typescript-dev-toolkit to ^5.2.0 and apply prefer-dedent
+- build(deps): bump `typescript-dev-toolkit` to ^5.2.0 and apply prefer-dedent
 - build(deps): bump @mnaoumov/typescript-dev-toolkit to ^5.1.0
 - chore(deps): update vulnerable development dependencies
 - chore: adopt keyword identifier lint rule
@@ -20,22 +20,22 @@
 
 ## 1.6.3
 
-- build(deps): move to obsidian-lib 6 and obsidian-dev-toolkit 5
-- docs: name obsidian-lib where comments said dev-utils
+- build(deps): move to `obsidian-lib` 6 and `obsidian-dev-toolkit` 5
+- docs: name `obsidian-lib` where comments said dev-utils
 - docs: shorten the debugging section
-- docs(changelog): escape the issue-title tags so markdownlint and cspell pass
+- docs(changelog): escape the issue-title tags so `markdownlint` and `cspell` pass
 - docs(changelog): name the issue each released entry resolved
-- chore: replace leftover obsidian-dev-utils references with @mnaoumov/obsidian-lib
+- chore: replace leftover `obsidian-dev-utils` references with @mnaoumov/obsidian-lib
 - docs(readme): lead the Debugging section with `Advanced Debug Mode`
 - build(deps): float brace-expansion, sharp and fast-uri past their advisories
 - docs: mark plugin names as code
 - docs(demo-vault): give every Try it section a code button
 - chore(github): point questions to Discussions from the new-issue page
 - ci: merge attesting release assets through the toolkit's reusable workflow
-- build(deps): move off obsidian-dev-utils onto the @mnaoumov packages
+- build(deps): move off `obsidian-dev-utils` onto the @mnaoumov packages
 - docs: mark plugin names as code in markdown and comments
-- refactor(search): merge the obsidian-typings search internals
-- test: merge using the obsidian-typings declarations of Obsidian internals
+- refactor(search): merge the `obsidian-typings` search internals
+- test: merge using the `obsidian-typings` declarations of Obsidian internals
 
 ## 1.6.2
 
@@ -47,9 +47,9 @@
 - test(screenshots): merge the Node-side dark theme for the desktop capture
 - test(screenshots): merge the drop of the local caret hiding
 - fix(screenshots): merge the caret-free desktop captures
-- chore(deps): merge the obsidian-integration-testing 17 float
+- chore(deps): merge the `obsidian-integration-testing` 17 float
 - fix(floating-scrollbar): merge the cross-window pending-frame fix
-- chore(deps): merge the obsidian-test-mocks ^7.0.0 raise
+- chore(deps): merge the `obsidian-test-mocks` ^7.0.0 raise
 - perf(floating-scrollbar): stop the cursor handler running on every pointer move
 - perf(floating-scrollbar): stop blocking every wheel event in the app
 - fix(test): merge the headless demo-vault toolkit install
@@ -57,7 +57,7 @@
 - test(floating-scrollbar): cover the native-scrollbar wheel path in a real Obsidian
 - style(comments): stop rewriting symbol names that open a comment
 - chore(screenshots): delete the orphan frame the capture suite never wrote
-- build(markdownlint): forbid hard-wrapped markdown paragraphs
+- build(`markdownlint`): forbid hard-wrapped markdown paragraphs
 - test: size the search closure's wait ceiling to its six call sites
 - refactor: route the vault-wide property writes through processFrontmatter
 - fix(deps): float devalue to 5.9.4, clearing GHSA-9rgm-9g3h-6x36
@@ -68,9 +68,9 @@
 - docs: replace the private rule-id citations with what they assert
 - docs: name the library and the sibling plugins so a reader can resolve them
 - docs: replace the private tracker references with what they pointed at
-- chore(deps): move to obsidian-dev-utils 103
+- chore(deps): move to `obsidian-dev-utils` 103
 - test: bring the in-closure wait ceilings under the transport's per-eval cap
-- chore: adopt the npm run gate branch gate
+- chore: adopt the `npm` run gate branch gate
 - test: bring the in-closure wait ceiling under the transport's per-eval cap
 - refactor(android): drive the Android suites with trusted input
 - docs: name the unversioned demo-vault asset and the folder it unzips into
@@ -88,7 +88,7 @@
 ## 1.5.0
 
 - chore(deps): sweep caret-ranged dependencies to latest
-- fix(deps): move to obsidian-integration-testing 11 and obsidian-dev-utils 96.5.2
+- fix(deps): move to `obsidian-integration-testing` 11 and `obsidian-dev-utils` 96.5.2
 - fix(deps): drop the brace-expansion file: override that breaks a clean install
 - feat: left margin from 144px to 20px re PR #11
 - test(nested-properties): record the deliberate untrusted-input exception
@@ -96,13 +96,13 @@
 
 ## 1.4.4
 
-- docs(readme): render the same in Obsidian's plugin page as on GitHub
+- docs(readme): render the same in Obsidian's plugin page as on `GitHub`
 - chore: update libs
-- chore: update obsidian-dev-utils to 94.6.1
-- chore: update obsidian-dev-utils to 94.6.0
+- chore: update `obsidian-dev-utils` to 94.6.1
+- chore: update `obsidian-dev-utils` to 94.6.0
 - fix: override deepmerge-ts to clear GHSA-ggr8-5vv4-36mx
 - test: gate the demo vault by clicking every code button
-- chore: teach cspell the advisory wording
+- chore: teach `cspell` the advisory wording
 - chore: update libs
 - docs(demo-vault): give the cumulative walkthrough a reset
 - docs: capture the community-store screenshot set
@@ -110,11 +110,11 @@
 ## 1.4.3
 
 - docs: make the demo vault the documentation, in the standard layout
-- feat(demo-vault): migrate to obsidian-dev-utils 93.3.1 and adopt the authoring convention
+- feat(demo-vault): migrate to `obsidian-dev-utils` 93.3.1 and adopt the authoring convention
 
 ## 1.4.2
 
-- chore: update libs and adopt obsidian-integration-testing 10
+- chore: update libs and adopt `obsidian-integration-testing` 10
 
 ## 1.4.1
 
@@ -123,8 +123,8 @@
 - chore: update libs
 - refactor(test): collapse the shared integration suites into one cross-platform file each
 - chore: update libs
-- chore(vitest): adopt the shared Obsidian plugin vitest configuration
-- chore: update libs and clear the npm audit
+- chore(`vitest`): adopt the shared Obsidian plugin `vitest` configuration
+- chore: update libs and clear the `npm` audit
 - docs: fix the demo vault download instructions
 
 ## 1.4.0
@@ -163,10 +163,10 @@
 ## 1.2.13
 
 - docs: standardize demo-vault README
-- docs: drop per-plugin demo-vault setup notes (bootstrap covered by the obsidian-dev-utils harness)
+- docs: drop per-plugin demo-vault setup notes (bootstrap covered by the `obsidian-dev-utils` harness)
 - docs: unnumber demo-vault setup notes
 - docs(demo-vault): number the `Nested Properties` demo vault example notes
-- docs(demo-vault): adopt obsidian-dev-utils 87.x demo-vault helpers and its coverage suite
+- docs(demo-vault): adopt `obsidian-dev-utils` 87.x demo-vault helpers and its coverage suite
 
 ## 1.2.12
 
@@ -180,7 +180,7 @@
 ## 1.2.10
 
 - chore: update libs
-- chore: update obsidian-dev-utils to 85.0.0
+- chore: update `obsidian-dev-utils` to 85.0.0
 - refactor: pass params objects to nested property renderer
 - build: lock typescript to 6.0.3
 - test: wire integration-testing vitest-setup into integration projects

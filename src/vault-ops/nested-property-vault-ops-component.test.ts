@@ -28,7 +28,6 @@ vi.mock('@mnaoumov/obsidian-lib/modals/confirm', () => ({ confirm: vi.fn() }));
 
 const mockSelectItem = vi.mocked(selectItem);
 const mockPrompt = vi.mocked(prompt);
-const mockConfirm = vi.mocked(confirm);
 
 type LockForPathSpy = MockInstance<ResourceLockComponent['lockForPath']>;
 
@@ -284,7 +283,7 @@ describe('NestedPropertyVaultOpsComponent', () => {
 
       await component.deleteNestedPropertyAcrossVault();
 
-      expect(mockConfirm).not.toHaveBeenCalled();
+      expect(vi.mocked(confirm)).not.toHaveBeenCalled();
       expect(showNotice).not.toHaveBeenCalled();
       expect(mockSelectItem.mock.calls[0]?.[0].itemTextFunction({ count: 1, path: 'top.other' })).toBe('top.other (1)');
     });
@@ -293,7 +292,7 @@ describe('NestedPropertyVaultOpsComponent', () => {
       const app = App.createConfigured__({ files: { 'a.md': NESTED_A } }).asOriginalType__();
       const { component, showNotice } = makeComponent(app);
       mockSelectItem.mockResolvedValue({ count: 1, path: 'top.other' });
-      mockConfirm.mockResolvedValue(false);
+      vi.mocked(confirm).mockResolvedValue(false);
 
       await component.deleteNestedPropertyAcrossVault();
 
@@ -307,7 +306,7 @@ describe('NestedPropertyVaultOpsComponent', () => {
       }).asOriginalType__();
       const { component, showNotice } = makeComponent(app);
       mockSelectItem.mockResolvedValue({ count: 2, path: 'top.level1.level2' });
-      mockConfirm.mockResolvedValue(true);
+      vi.mocked(confirm).mockResolvedValue(true);
 
       await component.deleteNestedPropertyAcrossVault();
 
@@ -322,7 +321,7 @@ describe('NestedPropertyVaultOpsComponent', () => {
       }).asOriginalType__();
       const { component, lockForPath } = makeComponent(app);
       mockSelectItem.mockResolvedValue({ count: 1, path: 'top.other' });
-      mockConfirm.mockResolvedValue(true);
+      vi.mocked(confirm).mockResolvedValue(true);
 
       await component.deleteNestedPropertyAcrossVault();
 
@@ -335,7 +334,7 @@ describe('NestedPropertyVaultOpsComponent', () => {
       }).asOriginalType__();
       const { component, runBulkOperation } = makeComponent(app);
       mockSelectItem.mockResolvedValue({ count: 2, path: 'top.level1.level2' });
-      mockConfirm.mockResolvedValue(true);
+      vi.mocked(confirm).mockResolvedValue(true);
       const progressListener = vi.fn();
       const unregister = registerBulkOperationProgressListener(progressListener);
 
@@ -354,7 +353,7 @@ describe('NestedPropertyVaultOpsComponent', () => {
       const app = App.createConfigured__({ files: { 'a.md': NESTED_A } }).asOriginalType__();
       const { component, runBulkOperation } = makeComponent(app);
       mockSelectItem.mockResolvedValue({ count: 1, path: 'top.other' });
-      mockConfirm.mockResolvedValue(false);
+      vi.mocked(confirm).mockResolvedValue(false);
 
       await component.deleteNestedPropertyAcrossVault();
 
