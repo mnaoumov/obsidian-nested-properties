@@ -262,8 +262,6 @@ interface FakeWindowDocument {
   readonly body: FakeWindowBody;
 }
 
-type GetTypeInfoFunction = (p: string, v: unknown) => TypeInfo;
-
 interface MockApp {
   readonly metadataCache: MockMetadataCache;
   readonly metadataTypeManager: MockMetadataTypeManager;
@@ -428,6 +426,7 @@ const unknownWidget: PropertyWidget = {
 };
 
 describe('NestedPropertyRenderer', () => {
+  type GetTypeInfoFunction = (p: string, v: unknown) => TypeInfo;
   let renderer: NestedPropertyRendererComponent;
 
   beforeEach(() => {

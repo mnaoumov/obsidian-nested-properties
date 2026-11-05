@@ -674,7 +674,16 @@ export class NestedPropertyRendererComponent extends Component {
     const itemKey = getItemTypeKey(path);
     const fieldKey = getFieldTypeKey(path);
     const effectiveType = this.getWidget({ label, path, value }).type;
-    if (fieldKey !== null && fieldKey !== itemKey) {
+    if (fieldKey === null || fieldKey === itemKey) {
+      this.addTypeSubmenu({
+        checkedType: effectiveType,
+        menu,
+        onValueChange,
+        title: 'Property type',
+        typeKey: itemKey,
+        value
+      });
+    } else {
       // Array-item field: offer both the shared per-field default and a per-item override.
       const inferredType = this.app.metadataTypeManager.getTypeInfo(label, value).inferred.type;
       const fieldAssignedType = this.app.metadataTypeManager.getAssignedWidget(fieldKey);
@@ -691,15 +700,6 @@ export class NestedPropertyRendererComponent extends Component {
         menu,
         onValueChange,
         title: 'Property type (this item only)',
-        typeKey: itemKey,
-        value
-      });
-    } else {
-      this.addTypeSubmenu({
-        checkedType: effectiveType,
-        menu,
-        onValueChange,
-        title: 'Property type',
         typeKey: itemKey,
         value
       });

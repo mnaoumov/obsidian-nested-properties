@@ -161,10 +161,10 @@ describe('mobile store screenshots', () => {
 
   it('5 - long keys shown in full', async () => {
     await dismissMenu();
-    await runCommand('toggle-full-key-display');
+    await runToggleFullKeyDisplayCommand();
     await openNote(LONG_KEY_NOTE_PATH);
     await shoot(5, 'Show long keys in full instead of truncated');
-    await runCommand('toggle-full-key-display');
+    await runToggleFullKeyDisplayCommand();
   });
 });
 
@@ -344,11 +344,10 @@ async function openNote(path: string): Promise<void> {
 }
 
 /**
- * Runs one of the plugin's commands.
- *
- * @param commandId - The plugin-relative command id.
+ * Runs the plugin's toggle-full-key-display command.
  */
-async function runCommand(commandId: string): Promise<void> {
+async function runToggleFullKeyDisplayCommand(): Promise<void> {
+  const commandId = 'toggle-full-key-display';
   await evalInObsidian({
     async callback({ app, command, pluginId }) {
       const SETTLE_DELAY_IN_MILLISECONDS = 1200;
