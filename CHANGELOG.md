@@ -2,242 +2,290 @@
 
 ## 1.7.0
 
-- test(demo-vault): cover the shouldCommitBulkOperations setting in the demo vault
-- docs(readme): point bug reports at the Report a bug command
-- docs: add issue-filing instructions for AI agents
-- feat: add a Report a bug command
-- chore(github): give the bug form the field ids bug-report links prefill
-- feat: record vault-wide nested property renames and deletes as `git` commits that can be reverted
-- build(deps): override re2js to ^2.9.1 for GHSA-gg6h-894w-4m9c
-- build(deps): bump `typescript-dev-toolkit` to ^5.2.0 and apply prefer-dedent
-- build(deps): bump @mnaoumov/typescript-dev-toolkit to ^5.1.0
-- chore(deps): update vulnerable development dependencies
-- chore: adopt keyword identifier lint rule
-- chore: adopt readonly interface members
-- docs(readme): combine related resources and plugin comparisons
-- refactor(src): group the source files into subject folders
-- docs(readme): list similar plugins
+This release has 2 new features and 4 documentation changes. 9 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- add a Report a bug command
+- record vault-wide nested property renames and deletes as `git` commits that can be reverted
+
+### Documentation
+
+- **readme:** point bug reports at the Report a bug command
+- add issue-filing instructions for AI agents
+- **readme:** combine related resources and plugin comparisons
+- **readme:** list similar plugins
 
 ## 1.6.3
 
-- build(deps): move to `obsidian-lib` 6 and `obsidian-dev-toolkit` 5
-- docs: name `obsidian-lib` where comments said dev-utils
-- docs: shorten the debugging section
-- docs(changelog): escape the issue-title tags so `markdownlint` and `cspell` pass
-- docs(changelog): name the issue each released entry resolved
-- chore: replace leftover `obsidian-dev-utils` references with @mnaoumov/obsidian-lib
-- docs(readme): lead the Debugging section with `Advanced Debug Mode`
-- build(deps): float brace-expansion, sharp and fast-uri past their advisories
-- docs: mark plugin names as code
-- docs(demo-vault): give every Try it section a code button
-- chore(github): point questions to Discussions from the new-issue page
-- ci: merge attesting release assets through the toolkit's reusable workflow
-- build(deps): move off `obsidian-dev-utils` onto the @mnaoumov packages
-- docs: mark plugin names as code in markdown and comments
-- refactor(search): merge the `obsidian-typings` search internals
-- test: merge using the `obsidian-typings` declarations of Obsidian internals
+This release has 8 documentation changes. 8 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### Documentation
+
+- name `obsidian-lib` where comments said dev-utils
+- shorten the debugging section
+- **changelog:** escape the issue-title tags so `markdownlint` and `cspell` pass
+- **changelog:** name the issue each released entry resolved
+- **readme:** lead the Debugging section with `Advanced Debug Mode`
+- mark plugin names as code
+- **demo-vault:** give every Try it section a code button
+- mark plugin names as code in markdown and comments
 
 ## 1.6.2
 
-- test(floating-scrollbar): merge the wheel-listener race fix
-- fix(search): merge the nested value on nested-property match lines (re #14 - \[FR\] when using Level1.level2 in search get the value of the property.)
+This release has 1 fix. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### Fixed
+
+- **search:** merge the nested value on nested-property match lines (re #14 - \[FR\] when using Level1.level2 in search get the value of the property.)
 
 ## 1.6.1
 
-- test(screenshots): merge the Node-side dark theme for the desktop capture
-- test(screenshots): merge the drop of the local caret hiding
-- fix(screenshots): merge the caret-free desktop captures
-- chore(deps): merge the `obsidian-integration-testing` 17 float
-- fix(floating-scrollbar): merge the cross-window pending-frame fix
-- chore(deps): merge the `obsidian-test-mocks` ^7.0.0 raise
-- perf(floating-scrollbar): stop the cursor handler running on every pointer move
-- perf(floating-scrollbar): stop blocking every wheel event in the app
-- fix(test): merge the headless demo-vault toolkit install
-- fix(deps): restore the lockfile's missing resolved and integrity fields
-- test(floating-scrollbar): cover the native-scrollbar wheel path in a real Obsidian
-- style(comments): stop rewriting symbol names that open a comment
-- chore(screenshots): delete the orphan frame the capture suite never wrote
-- build(`markdownlint`): forbid hard-wrapped markdown paragraphs
-- test: size the search closure's wait ceiling to its six call sites
-- refactor: route the vault-wide property writes through processFrontmatter
-- fix(deps): float devalue to 5.9.4, clearing GHSA-9rgm-9g3h-6x36
-- test: record the capture suite's open-note budget as deliberately under the cap
-- chore(deps): drop the dead markdown-it override
-- chore(deps): drop the dead js-yaml override
-- style(comments): stop capitalizing the middle of a wrapped comment
-- docs: replace the private rule-id citations with what they assert
-- docs: name the library and the sibling plugins so a reader can resolve them
-- docs: replace the private tracker references with what they pointed at
-- chore(deps): move to `obsidian-dev-utils` 103
-- test: bring the in-closure wait ceilings under the transport's per-eval cap
-- chore: adopt the `npm` run gate branch gate
-- test: bring the in-closure wait ceiling under the transport's per-eval cap
-- refactor(android): drive the Android suites with trusted input
-- docs: name the unversioned demo-vault asset and the folder it unzips into
-- chore: make the LICENSE copyright line checkable by the linter and guard it against the year roll-over
-- test(test-mocks): drop the hand-rolled app.plugins stub, and sweep the dependencies
+This release has 5 fixes, 2 improvements and 4 documentation changes. 21 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### Fixed
+
+- **screenshots:** merge the caret-free desktop captures
+- **floating-scrollbar:** merge the cross-window pending-frame fix
+- **test:** merge the headless demo-vault toolkit install
+- **deps:** restore the lockfile's missing resolved and integrity fields
+- **deps:** float devalue to 5.9.4, clearing GHSA-9rgm-9g3h-6x36
+
+### Improved
+
+- **floating-scrollbar:** stop the cursor handler running on every pointer move
+- **floating-scrollbar:** stop blocking every wheel event in the app
+
+### Documentation
+
+- replace the private rule-id citations with what they assert
+- name the library and the sibling plugins so a reader can resolve them
+- replace the private tracker references with what they pointed at
+- name the unversioned demo-vault asset and the folder it unzips into
 
 ## 1.6.0
 
-- test: read the mock Component's renamed _loaded flag
-- chore: lint
-- chore: update libs
-- feat: re #12
-- fix(build): wire build:compile to buildCompile and drop the duplicate leaf script
+This release has 1 new feature and 1 fix. 3 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- \[FR\] Support properties preview by default (#12)
+
+### Fixed
+
+- **build:** wire build:compile to buildCompile and drop the duplicate leaf script
 
 ## 1.5.0
 
-- chore(deps): sweep caret-ranged dependencies to latest
-- fix(deps): move to `obsidian-integration-testing` 11 and `obsidian-dev-utils` 96.5.2
-- fix(deps): drop the brace-expansion file: override that breaks a clean install
-- feat: left margin from 144px to 20px re PR #11
-- test(nested-properties): record the deliberate untrusted-input exception
-- test(nested-properties): right-click and dismiss with trusted input in the capture suite
+This release has 1 new feature and 2 fixes. 3 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- left margin from 144px to 20px re PR #11
+
+### Fixed
+
+- **deps:** move to `obsidian-integration-testing` 11 and `obsidian-dev-utils` 96.5.2
+- **deps:** drop the brace-expansion file: override that breaks a clean install
 
 ## 1.4.4
 
-- docs(readme): render the same in Obsidian's plugin page as on `GitHub`
-- chore: update libs
-- chore: update `obsidian-dev-utils` to 94.6.1
-- chore: update `obsidian-dev-utils` to 94.6.0
-- fix: override deepmerge-ts to clear GHSA-ggr8-5vv4-36mx
-- test: gate the demo vault by clicking every code button
-- chore: teach `cspell` the advisory wording
-- chore: update libs
-- docs(demo-vault): give the cumulative walkthrough a reset
-- docs: capture the community-store screenshot set
+This release has 1 fix and 3 documentation changes. 6 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### Fixed
+
+- override deepmerge-ts to clear GHSA-ggr8-5vv4-36mx
+
+### Documentation
+
+- **readme:** render the same in Obsidian's plugin page as on `GitHub`
+- **demo-vault:** give the cumulative walkthrough a reset
+- capture the community-store screenshot set
 
 ## 1.4.3
 
-- docs: make the demo vault the documentation, in the standard layout
-- feat(demo-vault): migrate to `obsidian-dev-utils` 93.3.1 and adopt the authoring convention
+This release has 1 new feature and 1 documentation change.
+
+### New
+
+- **demo-vault:** migrate to `obsidian-dev-utils` 93.3.1 and adopt the authoring convention
+
+### Documentation
+
+- make the demo vault the documentation, in the standard layout
 
 ## 1.4.2
 
-- chore: update libs and adopt `obsidian-integration-testing` 10
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 1.4.1
 
-- test: cover the expanded-path bookkeeping of expand/collapse all
-- fix: await the settings load before the renderer that reads them
-- chore: update libs
-- refactor(test): collapse the shared integration suites into one cross-platform file each
-- chore: update libs
-- chore(`vitest`): adopt the shared Obsidian plugin `vitest` configuration
-- chore: update libs and clear the `npm` audit
-- docs: fix the demo vault download instructions
+This release has 1 fix and 1 documentation change. 6 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### Fixed
+
+- await the settings load before the renderer that reads them
+
+### Documentation
+
+- fix the demo vault download instructions
 
 ## 1.4.0
 
-- feat: re #1
-- docs: demo nested-property commands in demo vault (re #6, re #1)
-- test: add behavioral integration tests for nested-property commands (re #6, re #1)
-- feat: re #1
-- feat: re #6
+This release has 3 new features and 1 documentation change. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### New
+
+- re #1
+- \[FR\] Allow finding nested properties via Obsidian's search (#1)
+- \[FR\] Allow nested properties renaming (#6)
+
+### Documentation
+
+- demo nested-property commands in demo vault (re #6, re #1)
 
 ## 1.3.1
 
-- fix: re #7
-- chore: update libs
+This release has 1 fix. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### Fixed
+
+- re #7
 
 ## 1.3.0
 
-- test: reach 100% unit-test coverage
-- chore: spellcheck
-- feat: re #8
+This release has 1 new feature. 2 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- \[FR\] Save nested property type (#8)
 
 ## 1.2.16
 
-- fix: expand long key
+This release has 1 fix.
+
+### Fixed
+
+- expand long key
 
 ## 1.2.15
 
-- chore: update libs
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 1.2.14
 
-- chore: update libs
-- chore(demo-vault): drop committed Invocables placeholder
-- fix(demo-vault): export invoke() from startup script; add Invocables folder
+This release has 1 fix. 2 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### Fixed
+
+- **demo-vault:** export invoke() from startup script; add Invocables folder
 
 ## 1.2.13
 
-- docs: standardize demo-vault README
-- docs: drop per-plugin demo-vault setup notes (bootstrap covered by the `obsidian-dev-utils` harness)
-- docs: unnumber demo-vault setup notes
-- docs(demo-vault): number the `Nested Properties` demo vault example notes
-- docs(demo-vault): adopt `obsidian-dev-utils` 87.x demo-vault helpers and its coverage suite
+This release has 5 documentation changes.
+
+### Documentation
+
+- standardize demo-vault README
+- drop per-plugin demo-vault setup notes (bootstrap covered by the `obsidian-dev-utils` harness)
+- unnumber demo-vault setup notes
+- **demo-vault:** number the `Nested Properties` demo vault example notes
+- **demo-vault:** adopt `obsidian-dev-utils` 87.x demo-vault helpers and its coverage suite
 
 ## 1.2.12
 
-- fix: re #9
-- feat: demo-vault
+This release has 1 new feature and 1 fix.
+
+### New
+
+- demo-vault
+
+### Fixed
+
+- \[FR\] Command to toggle full word display for nested property keys (#9)
 
 ## 1.2.11
 
-- feat: re #9
+This release has 1 new feature.
+
+### New
+
+- \[FR\] Command to toggle full word display for nested property keys (#9)
 
 ## 1.2.10
 
-- chore: update libs
-- chore: update `obsidian-dev-utils` to 85.0.0
-- refactor: pass params objects to nested property renderer
-- build: lock typescript to 6.0.3
-- test: wire integration-testing vitest-setup into integration projects
-- chore: update libs
-- chore: clean up tsconfig
+This release has maintenance changes only. 7 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
 
 ## 1.2.9
 
-- refactor: new template
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 1.2.8
 
-- refactor: new template
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 1.2.7
 
-- chore: update libs
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 1.2.6
 
-- chore: update libs
-- chore: upgrade dependencies and green up all checks
+This release has maintenance changes only. 2 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
 
 ## 1.2.5
 
-- chore: update template
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 1.2.4
 
-- refactor: new template
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 1.2.3
 
-- refactor: new template
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 1.2.2
 
-- chore: update libs
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 1.2.1
 
-- tests: add 100% coverage
-- refactor: new template
+This release has 1 other change. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### Other changes
+
+- add 100% coverage
 
 ## 1.2.0
 
+This release has 1 new feature and 1 other change.
+
+### New
+
+- add mixed list type
+
+### Other changes
+
 - Style improvements: use native cursor, center chevrons, fit-content add property buttons (#5 by @davidvkimball)
-- feat: add mixed list type
 
 ## 1.1.0
 
-- test: add unit tests
-- fix: hide wrong type warning
-- feat: allow scrolling with keyboard
-- feat: add floating scrollbar
-- fix: `add item` button to lists re #3 #4
+This release has 2 new features and 2 fixes. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### New
+
+- allow scrolling with keyboard
+- add floating scrollbar
+
+### Fixed
+
+- hide wrong type warning
+- `add item` button to lists re #3 #4
 
 ## 1.0.0
 
-- feat: initial
+This release has 1 new feature.
+
+### New
+
+- initial
