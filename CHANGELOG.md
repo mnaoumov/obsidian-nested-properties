@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## 1.8.0
+
+This release has 2 new features and 3 documentation changes. 4 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- Improve editing using keyboard. (#15)
+- navigate nested properties from the keyboard
+
+### Documentation
+
+- **changelog:** regroup the published release notes for readers
+- make issue attachments optional and strongly encouraged
+- link to the Obsidian resources page
+
 ## 1.7.0
 
 This release has 2 new features and 4 documentation changes. 9 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
