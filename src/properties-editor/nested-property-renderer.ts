@@ -31,6 +31,7 @@ import {
 import { getInitialExpandLevel } from '../settings/nested-properties-note-settings.ts';
 import { PluginSettingsComponent } from '../settings/plugin-settings-component.ts';
 import { FloatingScrollbarComponent } from './floating-scrollbar.ts';
+import { NestedPropertyKeyboardNavigator } from './keyboard-navigation.ts';
 import { MetadataTypeManagerGetTypeInfoPatchComponent } from './patches/metadata-type-manager-get-type-info-patch-component.ts';
 import { MultiTextPropertyWidgetPatchComponent } from './patches/multi-text-property-widget-patch-component.ts';
 import { TextPropertyWidgetPatchComponent } from './patches/text-property-widget-patch-component.ts';
@@ -42,10 +43,8 @@ const OBJECT_WIDGET_TYPE = 'object';
 const FULL_KEY_DISPLAY_BODY_CLASS = 'nested-properties-full-key-display';
 
 interface CreateSummaryParams {
-  readonly expansionOverrides: Map<string, boolean>;
+  readonly onExpand: (this: void) => void;
   readonly parentEl: HTMLElement;
-  readonly path: string;
-  readonly propertyEl: HTMLElement;
   readonly value: unknown;
 }
 
@@ -85,6 +84,17 @@ interface NestedPropertyRendererComponentGetWidgetParams {
 interface NestedPropertyRendererComponentIsExpandedParams {
   readonly path: string;
   readonly sourcePath: string;
+}
+
+interface NestedPropertyRendererComponentRegisterCollapsibleRowParams {
+  readonly path: string;
+  readonly propertyEl: HTMLElement;
+  readonly remove?: (this: void) => void;
+}
+
+interface NestedPropertyRendererComponentRemoveEntryParams {
+  readonly onDelete: (this: void) => void;
+  readonly parentPath: string;
 }
 
 interface NestedPropertyRendererComponentRenderArrayParams {
@@ -139,6 +149,12 @@ interface NestedPropertyRendererComponentRenderObjectParams {
   readonly parentPath: string;
 }
 
+interface NestedPropertyRendererComponentSetRowExpandedParams {
+  readonly isExpanded: boolean;
+  readonly path: string;
+  readonly propertyEl: HTMLElement;
+}
+
 interface NestedPropertyRendererComponentShowNestedPropertyMenuParams {
   readonly $event: MouseEvent;
   readonly getValue: (this: void) => unknown;
@@ -148,10 +164,16 @@ interface NestedPropertyRendererComponentShowNestedPropertyMenuParams {
   readonly path: string;
 }
 
+interface PendingFocus {
+  readonly path: string;
+  readonly shouldFocusValue: boolean;
+}
+
 interface RenderAddItemButtonParams {
   readonly array: unknown[];
   readonly containerEl: HTMLElement;
   readonly onValueChange: (this: void, newValue: unknown) => void;
+  readonly setPendingFocusIndex: (this: void, index: number) => void;
 }
 
 interface RenderAddPropertyButtonParams {
@@ -178,11 +200,15 @@ export class NestedPropertyRendererComponent extends Component {
   private readonly expansionOverrides = new Map<string, boolean>();
   private floatingScrollbar?: FloatingScrollbarComponent;
   private isFullKeyDisplayEnabled = false;
+  private readonly keyboardNavigator = new NestedPropertyKeyboardNavigator();
   private lastMenuCloseTime = 0;
 
   // The full path of each nested entry's render context. A top-level context carries the property key, but a
   // nested one carries only its own label, so a converted nested value is located through this map.
   private readonly nestedContextPaths = new WeakMap<PropertyRenderContext, string>();
+  // A row to focus once the nested widget re-renders: a structural change (an added item, a removed entry)
+  // replaces every nested row, so the row the keyboard was on is gone.
+  private pendingFocus: null | PendingFocus = null;
   private pendingFocusKey: null | string = null;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
 
@@ -243,9 +269,15 @@ export class NestedPropertyRendererComponent extends Component {
           // Show the value that was just typed in full, rather than leaving it to a click to expand.
           const path = this.nestedContextPaths.get(context) ?? `${context.sourcePath}:${context.key}`;
           this.expansionOverrides.set(path, true);
+          const metadataContainerEl = el.closest<HTMLElement>('.metadata-container');
           // After the text widget has finished its commit (it sets its own text and blurs right after `onChange`).
           window.setTimeout(() => {
             this.rerenderPropertyContaining(el);
+            // When the redraw replaced the nested row that had the keyboard focus, the focus fell to the body; it
+            // goes to the row's replacement. A focus the user moved elsewhere, say by clicking away, stays there.
+            if (metadataContainerEl && isFocusLost()) {
+              this.keyboardNavigator.focusRowByPath({ path, scopeEl: metadataContainerEl, shouldFocusValue: false });
+            }
           }, 0);
         },
         textWidget: this.app.metadataTypeManager.getWidget('text')
@@ -282,6 +314,14 @@ export class NestedPropertyRendererComponent extends Component {
     const allWindowsEventComponent = this.addChild(new AllWindowsEventComponent(this.app));
     allWindowsEventComponent.registerAllWindowsHandler((win) => {
       this.applyFullKeyDisplayClass(win);
+    });
+    // The capture phase, so the nested tree sees a key before Obsidian's own row handlers do.
+    allWindowsEventComponent.registerAllDocumentsDomEvent({
+      callback: ($event) => {
+        this.keyboardNavigator.handleKeydown($event);
+      },
+      options: { capture: true },
+      type: 'keydown'
     });
 
     this.floatingScrollbar = this.addChild(new FloatingScrollbarComponent(this.app));
@@ -338,9 +378,7 @@ export class NestedPropertyRendererComponent extends Component {
       }
     }
 
-    if (activeDocument.activeElement instanceof HTMLElement) {
-      activeDocument.activeElement.blur();
-    }
+    blurActiveElement();
 
     // Persist to Obsidian's native `types.json`. When the chosen type matches what would be inferred
     // from the value anyway, unset the key instead so `types.json` stays free of redundant entries.
@@ -399,6 +437,16 @@ export class NestedPropertyRendererComponent extends Component {
     return getPathDepth(path) < initialExpandLevel;
   }
 
+  private registerCollapsibleRow(params: NestedPropertyRendererComponentRegisterCollapsibleRowParams): void {
+    const { path, propertyEl, remove } = params;
+    this.keyboardNavigator.registerRow(propertyEl, {
+      ...(remove && { remove }),
+      setExpanded: (isExpanded) => {
+        this.setRowExpanded({ isExpanded, path, propertyEl });
+      }
+    });
+  }
+
   private reloadAllProperties(): void {
     for (const leaf of this.app.workspace.getLeavesOfType('markdown')) {
       if (!(leaf.view instanceof MarkdownView)) {
@@ -409,6 +457,19 @@ export class NestedPropertyRendererComponent extends Component {
       leaf.view.metadataEditor.synchronize({});
       leaf.view.metadataEditor.synchronize(data);
     }
+  }
+
+  /**
+   * Removes an entry from the keyboard, and then puts the focus on its parent row once the tree has re-rendered.
+   *
+   * Obsidian does not redraw a property's value while the focus is inside it, so the focus leaves the row first,
+   * exactly as the type change does.
+   */
+  private removeEntry(params: NestedPropertyRendererComponentRemoveEntryParams): void {
+    const { onDelete, parentPath } = params;
+    blurActiveElement();
+    this.pendingFocus = { path: parentPath, shouldFocusValue: false };
+    onDelete();
   }
 
   private renderArray(params: NestedPropertyRendererComponentRenderArrayParams): void {
@@ -431,7 +492,15 @@ export class NestedPropertyRendererComponent extends Component {
         value: item
       });
     }
-    renderAddItemButton({ array, containerEl, onValueChange: onArrayChange });
+    renderAddItemButton({
+      array,
+      containerEl,
+      onValueChange: onArrayChange,
+      setPendingFocusIndex: (index) => {
+        // The new item's value, ready to type into, as Obsidian's own Add property leaves its new key.
+        this.pendingFocus = { path: `${parentPath}.${String(index)}`, shouldFocusValue: true };
+      }
+    });
   }
 
   private renderComplexWidget(params: NestedPropertyRendererComponentRenderComplexWidgetParams): PropertyWidgetComponentBase {
@@ -460,6 +529,8 @@ export class NestedPropertyRendererComponent extends Component {
       if (!isExpanded) {
         propertyEl.classList.add('is-collapsed');
       }
+      propertyEl.setAttribute('aria-expanded', String(isExpanded));
+      this.registerCollapsibleRow({ path: rootPath, propertyEl });
 
       const existingIcon = propertyEl.querySelector(':scope .metadata-property-key .metadata-property-icon');
       if (existingIcon instanceof HTMLElement) {
@@ -474,10 +545,7 @@ export class NestedPropertyRendererComponent extends Component {
         collapseButton.addEventListener('click', ($event) => {
           $event.stopPropagation();
           $event.preventDefault();
-          const isCollapsed = propertyEl.hasClass('is-collapsed');
-          propertyEl.toggleClass('is-collapsed', !isCollapsed);
-          this.expansionOverrides.set(rootPath, isCollapsed);
-          this.floatingScrollbar?.update();
+          this.setRowExpanded({ isExpanded: propertyEl.hasClass('is-collapsed'), path: rootPath, propertyEl });
         });
       }
 
@@ -491,7 +559,13 @@ export class NestedPropertyRendererComponent extends Component {
     }
 
     if (propertyEl instanceof HTMLElement) {
-      createSummary({ expansionOverrides: this.expansionOverrides, parentEl: el, path: rootPath, propertyEl, value });
+      createSummary({
+        onExpand: () => {
+          this.setRowExpanded({ isExpanded: true, path: rootPath, propertyEl });
+        },
+        parentEl: el,
+        value
+      });
     }
 
     const containerEl = el.createDiv({ cls: 'nested-properties-container' });
@@ -518,6 +592,15 @@ export class NestedPropertyRendererComponent extends Component {
         sizeTopLevelKeyInputs(metadataContainerEl);
       }
 
+      if (this.pendingFocus) {
+        const { path, shouldFocusValue } = this.pendingFocus;
+        this.pendingFocus = null;
+        const focusScopeEl = containerEl.closest<HTMLElement>('.metadata-container');
+        if (focusScopeEl) {
+          this.keyboardNavigator.focusRowByPath({ path, scopeEl: focusScopeEl, shouldFocusValue });
+        }
+      }
+
       if (this.pendingFocusKey) {
         const key = this.pendingFocusKey;
         this.pendingFocusKey = null;
@@ -541,8 +624,12 @@ export class NestedPropertyRendererComponent extends Component {
     }, 0);
 
     return {
+      // Obsidian's own row calls this for Enter or ArrowRight: the tree opens and its first row takes the focus.
       focus: (): void => {
-        containerEl.focus();
+        if (propertyEl instanceof HTMLElement) {
+          this.setRowExpanded({ isExpanded: true, path: rootPath, propertyEl });
+        }
+        this.keyboardNavigator.focusFirstStop(containerEl);
       },
       type: widgetType
     };
@@ -558,8 +645,15 @@ export class NestedPropertyRendererComponent extends Component {
     if (isComplex) {
       const isExpanded = this.isExpanded({ path, sourcePath: context.sourcePath });
       const propertyEl = containerEl.createDiv({
-        attr: { 'data-path': path },
+        attr: { 'aria-expanded': String(isExpanded), 'data-path': path, 'tabindex': '0' },
         cls: ['metadata-property', 'nested-properties-collapsible', ...(isExpanded ? [] : ['is-collapsed'])]
+      });
+      this.registerCollapsibleRow({
+        path,
+        propertyEl,
+        remove: () => {
+          this.removeEntry({ onDelete, parentPath });
+        }
       });
       propertyEl.addEventListener('contextmenu', ($event) => {
         $event.stopPropagation();
@@ -573,9 +667,7 @@ export class NestedPropertyRendererComponent extends Component {
       collapseButton.addEventListener('click', ($event) => {
         $event.stopPropagation();
         $event.preventDefault();
-        const isCollapsed = propertyEl.hasClass('is-collapsed');
-        propertyEl.toggleClass('is-collapsed', !isCollapsed);
-        this.expansionOverrides.set(path, isCollapsed);
+        this.setRowExpanded({ isExpanded: propertyEl.hasClass('is-collapsed'), path, propertyEl });
       });
 
       const complexWidget = this.getWidget({ label, path, value });
@@ -593,12 +685,18 @@ export class NestedPropertyRendererComponent extends Component {
       keyInput.size = Math.max(1, label.length);
 
       const valueEl = propertyEl.createDiv({ cls: 'metadata-property-value' });
-      createSummary({ expansionOverrides: this.expansionOverrides, parentEl: valueEl, path, propertyEl, value });
+      createSummary({
+        onExpand: () => {
+          this.setRowExpanded({ isExpanded: true, path, propertyEl });
+        },
+        parentEl: valueEl,
+        value
+      });
       const nestedContainer = valueEl.createDiv({ cls: 'nested-properties-container' });
       this.renderNestedValue({ containerEl: nestedContainer, context, onValueChange, path, value });
       return;
     }
-    const propertyEl = containerEl.createDiv({ cls: 'metadata-property' });
+    const propertyEl = containerEl.createDiv({ attr: { 'data-path': path, 'tabindex': '0' }, cls: 'metadata-property' });
     propertyEl.addEventListener('contextmenu', ($event) => {
       $event.stopPropagation();
       this.showNestedPropertyMenu({ $event, getValue, label, onDelete, onValueChange, path });
@@ -610,13 +708,25 @@ export class NestedPropertyRendererComponent extends Component {
     valueEl.setAttr('data-property-type', widget.type);
     const entryContext: PropertyRenderContext = {
       app: context.app,
-      blur: context.blur.bind(context),
+      // Like Obsidian's own row, a value that is done with (a text value committed with Enter) hands the focus
+      // back to its own row, rather than to the top-level row the whole tree sits in.
+      blur: () => {
+        propertyEl.focus();
+      },
       key: label,
       onChange: onValueChange,
       sourcePath: context.sourcePath
     };
     this.nestedContextPaths.set(entryContext, path);
-    widget.render(valueEl, value, entryContext);
+    const rendered = widget.render(valueEl, value, entryContext);
+    this.keyboardNavigator.registerRow(propertyEl, {
+      focusValue: (mode) => {
+        rendered.focus(mode);
+      },
+      remove: () => {
+        this.removeEntry({ onDelete, parentPath });
+      }
+    });
   }
 
   private renderKeyEl(params: NestedPropertyRendererComponentRenderKeyElParams): void {
@@ -705,6 +815,16 @@ export class NestedPropertyRendererComponent extends Component {
         return;
       }
     }
+  }
+
+  /**
+   * Expands or collapses a row, remembering the choice for its path.
+   */
+  private setRowExpanded(params: NestedPropertyRendererComponentSetRowExpandedParams): void {
+    const { isExpanded, path, propertyEl } = params;
+    setCollapsedState(propertyEl, !isExpanded);
+    this.expansionOverrides.set(path, isExpanded);
+    this.floatingScrollbar?.update();
   }
 
   private showNestedPropertyMenu(params: NestedPropertyRendererComponentShowNestedPropertyMenuParams): void {
@@ -804,9 +924,18 @@ export class NestedPropertyRendererComponent extends Component {
   }
 }
 
+// Obsidian does not redraw a property's value while the focus is inside it, so a structural change made from
+// inside the tree moves the focus out first.
+function blurActiveElement(): void {
+  if (activeDocument.activeElement instanceof HTMLElement) {
+    activeDocument.activeElement.blur();
+  }
+}
+
 function collapseAllIn(parentNode: ParentNode, expansionOverrides: Map<string, boolean>): void {
   for (const el of parentNode.querySelectorAll<HTMLElement>(':scope .nested-properties-collapsible')) {
     el.classList.add('is-collapsed');
+    el.setAttribute('aria-expanded', 'false');
     const path = el.dataset['path'];
     if (path) {
       // An EXPLICIT collapse, not a deletion: absence now means "fall back to the initial expand level",
@@ -817,19 +946,19 @@ function collapseAllIn(parentNode: ParentNode, expansionOverrides: Map<string, b
 }
 
 function createSummary(params: CreateSummaryParams): void {
-  const { expansionOverrides, parentEl, path, propertyEl, value } = params;
+  const { onExpand, parentEl, value } = params;
   const summary = parentEl.createSpan({ cls: 'nested-properties-summary', text: formatValueSummary(value) });
   summary.addEventListener('click', ($event) => {
     $event.stopPropagation();
     $event.preventDefault();
-    propertyEl.classList.remove('is-collapsed');
-    expansionOverrides.set(path, true);
+    onExpand();
   });
 }
 
 function expandAllIn(parentNode: ParentNode, expansionOverrides: Map<string, boolean>): void {
   for (const el of parentNode.querySelectorAll<HTMLElement>(':scope .nested-properties-collapsible')) {
     el.classList.remove('is-collapsed');
+    el.setAttribute('aria-expanded', 'true');
     const path = el.dataset['path'];
     if (path) {
       expansionOverrides.set(path, true);
@@ -901,21 +1030,30 @@ function injectHeaderButtons(params: InjectHeaderButtonsParams): void {
   });
 }
 
+// The focus has fallen to the body, which is where it goes when the element holding it is removed.
+function isFocusLost(): boolean {
+  return activeDocument.activeElement === activeDocument.body;
+}
+
 function renderAddItemButton(params: RenderAddItemButtonParams): void {
-  const { array, containerEl, onValueChange } = params;
-  const newItemButtonEl = containerEl.createDiv({ cls: 'nested-properties-add-item' });
+  const { array, containerEl, onValueChange, setPendingFocusIndex } = params;
+  // Reachable from the keyboard like Obsidian's own Add property button: Tab stops on it, Enter or Space presses it.
+  const newItemButtonEl = containerEl.createDiv({ attr: { role: 'button', tabindex: '0' }, cls: 'nested-properties-add-item' });
   setIcon(newItemButtonEl, 'plus');
   newItemButtonEl.createSpan({ text: 'Add item' });
   newItemButtonEl.addEventListener('click', ($event) => {
     $event.stopPropagation();
     $event.preventDefault();
+    // A click focuses the button, which sits inside the value Obsidian then declines to redraw.
+    blurActiveElement();
+    setPendingFocusIndex(array.length);
     onValueChange([...array, '']);
   });
 }
 
 function renderAddPropertyButton(params: RenderAddPropertyButtonParams): void {
   const { $object, containerEl, onValueChange, setPendingFocusKey } = params;
-  const newPropertyButtonEl = containerEl.createDiv({ cls: 'nested-properties-add-property' });
+  const newPropertyButtonEl = containerEl.createDiv({ attr: { role: 'button', tabindex: '0' }, cls: 'nested-properties-add-property' });
   setIcon(newPropertyButtonEl, 'plus');
   newPropertyButtonEl.createSpan({ text: 'Add property' });
   newPropertyButtonEl.addEventListener('click', ($event) => {
@@ -969,6 +1107,8 @@ function renderAddPropertyButton(params: RenderAddPropertyButtonParams): void {
 
       ke.preventDefault();
       restoreButton();
+      // Back on the button, as Escape in Obsidian's own new key input goes back to its row.
+      newPropertyButtonEl.focus();
     });
     input.addEventListener('blur', () => {
       if (input.isConnected) {
@@ -976,6 +1116,11 @@ function renderAddPropertyButton(params: RenderAddPropertyButtonParams): void {
       }
     });
   });
+}
+
+function setCollapsedState(propertyEl: HTMLElement, isCollapsed: boolean): void {
+  propertyEl.toggleClass('is-collapsed', isCollapsed);
+  propertyEl.setAttribute('aria-expanded', String(!isCollapsed));
 }
 
 function sizeTopLevelKeyInputs(metadataContainerEl: HTMLElement): void {

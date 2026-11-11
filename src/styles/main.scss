@@ -107,9 +107,14 @@
   cursor: var(--cursor);
   border-radius: var(--radius-s);
 
-  &:hover {
+  &:hover,
+  &:focus-visible {
     color: var(--text-normal);
     background: var(--background-modifier-hover);
+  }
+
+  &:focus-visible {
+    box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
   }
 
   svg {

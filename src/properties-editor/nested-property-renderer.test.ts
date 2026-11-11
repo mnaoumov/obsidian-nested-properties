@@ -19,8 +19,10 @@ import {
 } from 'vitest';
 
 import type { PluginSettingsComponent } from '../settings/plugin-settings-component.ts';
+import type { NestedRowKeyboardActions } from './keyboard-navigation.ts';
 
 import { PluginSettings } from '../settings/plugin-settings.ts';
+import { NestedPropertyKeyboardNavigator } from './keyboard-navigation.ts';
 import { NestedPropertyRendererComponent } from './nested-property-renderer.ts';
 
 // The subset of Obsidian's `createDiv` options the renderer passes and these tests read back.
@@ -260,7 +262,9 @@ interface FakeWindowBody {
 }
 
 interface FakeWindowDocument {
+  readonly addEventListener: MockFunction;
   readonly body: FakeWindowBody;
+  readonly removeEventListener: MockFunction;
 }
 
 interface MockApp {
@@ -289,10 +293,17 @@ interface MockWorkspace {
   readonly onLayoutReady: MockFunction;
 }
 
+interface PendingFocusTestAccess {
+  readonly path: string;
+  readonly shouldFocusValue: boolean;
+}
+
 interface RendererTestAccess {
   readonly _loaded: boolean;
   readonly cleanups__: (() => unknown)[];
   readonly expansionOverrides: Map<string, boolean>;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Tests set the row to focus after a re-render.
+  pendingFocus: null | PendingFocusTestAccess;
   // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Tests set and clear the deferred focus target.
   pendingFocusKey: null | string;
   readonly showNestedPropertyMenu: (params: ShowNestedPropertyMenuTestParams) => void;
@@ -314,10 +325,12 @@ function asNodeList(els: MockDomElement[]): NodeListOf<Element> {
 function createFakeWindow(): FakeWindow {
   return {
     document: {
+      addEventListener: vi.fn(),
       body: {
         removeClass: vi.fn(),
         toggleClass: vi.fn()
-      }
+      },
+      removeEventListener: vi.fn()
     }
   };
 }
@@ -707,6 +720,206 @@ describe('NestedPropertyRenderer', () => {
 
       expect(context.onChange).toHaveBeenCalledWith('{ a: 1 }');
       expect(testAccess(renderer).expansionOverrides.has('test.md:testKey')).toBe(false);
+    });
+  });
+
+  describe('keyboard navigation (issue #15)', () => {
+    interface RegisteredRow {
+      readonly actions: NestedRowKeyboardActions;
+      readonly rowEl: MockDomElement;
+    }
+
+    function spyOnRegisteredRows(): RegisteredRow[] {
+      const rows: RegisteredRow[] = [];
+      vi.spyOn(NestedPropertyKeyboardNavigator.prototype, 'registerRow').mockImplementation((rowEl, actions) => {
+        rows.push({ actions, rowEl: castTo<MockDomElement>(rowEl) });
+      });
+      return rows;
+    }
+
+    function findRow(rows: RegisteredRow[], isMatch: (actions: NestedRowKeyboardActions) => boolean): RegisteredRow {
+      return ensureNonNullable(rows.find((row) => isMatch(row.actions)));
+    }
+
+    function createTopLevelPropertyEl(): MockDomElement {
+      const keyEl = createMockEl({ querySelector: vi.fn(() => null) });
+      return createMockEl({
+        querySelector: vi.fn((selector: string) => (selector === ':scope .metadata-property-key' ? keyEl : null))
+      });
+    }
+
+    it('should hand every document keydown to the navigator, in the capture phase', () => {
+      const handleKeydownSpy = vi.spyOn(NestedPropertyKeyboardNavigator.prototype, 'handleKeydown').mockImplementation(vi.fn());
+      loadRenderer();
+
+      const fakeWindow = castTo<FakeWindow>(activeWindow);
+      const keydownCall = fakeWindow.document.addEventListener.mock.calls.find((call) => call[0] === 'keydown');
+      expect(keydownCall?.[2]).toEqual({ capture: true });
+      const $event = new KeyboardEvent('keydown', { key: 'ArrowDown' });
+      castTo<(keydownEvent: KeyboardEvent) => void>(keydownCall?.[1])($event);
+
+      expect(handleKeydownSpy).toHaveBeenCalledWith($event);
+    });
+
+    it('should register a top-level object row, with expand and collapse but no removal', () => {
+      const rows = spyOnRegisteredRows();
+      loadRenderer();
+      const propertyEl = createTopLevelPropertyEl();
+      const el = createMockEl();
+      el.closest.mockReturnValue(propertyEl);
+
+      renderWidget('object', el, { a: 1 }, createMockContext());
+      const topLevelRow = ensureNonNullable(rows.find((row) => row.rowEl === propertyEl));
+      topLevelRow.actions.setExpanded?.(true);
+
+      expect(propertyEl.setAttribute).toHaveBeenCalledWith('aria-expanded', 'false');
+      expect(topLevelRow.actions.remove).toBeUndefined();
+      expect(propertyEl.toggleClass).toHaveBeenCalledWith('is-collapsed', false);
+      expect(propertyEl.setAttribute).toHaveBeenCalledWith('aria-expanded', 'true');
+      expect(testAccess(renderer).expansionOverrides.get('test.md:testKey')).toBe(true);
+    });
+
+    it('should expand the tree and focus its first row when Obsidian focuses the widget', () => {
+      const focusFirstStopSpy = vi.spyOn(NestedPropertyKeyboardNavigator.prototype, 'focusFirstStop');
+      loadRenderer();
+      const propertyEl = createTopLevelPropertyEl();
+      const containerEl = createMockEl();
+      const el = createMockEl({ createDiv: vi.fn(() => containerEl) });
+      el.closest.mockReturnValue(propertyEl);
+
+      renderWidget('object', el, { a: 1 }, createMockContext()).focus();
+
+      expect(propertyEl.toggleClass).toHaveBeenCalledWith('is-collapsed', false);
+      expect(focusFirstStopSpy).toHaveBeenCalledWith(containerEl);
+    });
+
+    it('should register a value row that focuses its widget, removes its entry and takes the focus back on blur', () => {
+      const rows = spyOnRegisteredRows();
+      loadRenderer();
+      const context = createMockContext();
+
+      renderWidget('object', createMockEl(), { simple: 'hello' }, context);
+      const valueRow = findRow(rows, (actions) => actions.focusValue !== undefined);
+      const rendered = castTo<RenderWidgetResult>(vi.mocked(textWidget.render).mock.results.at(-1)?.value);
+      valueRow.actions.focusValue?.('end');
+      const entryContext = ensureNonNullable(vi.mocked(textWidget.render).mock.lastCall)[2];
+      entryContext.blur();
+      valueRow.actions.remove?.();
+
+      expect(rendered.focus).toHaveBeenCalledWith('end');
+      expect(valueRow.rowEl.focus).toHaveBeenCalled();
+      expect(context.blur).not.toHaveBeenCalled();
+      expect(context.onChange).toHaveBeenCalledWith({});
+      expect(testAccess(renderer).pendingFocus).toEqual({ path: 'test.md:testKey', shouldFocusValue: false });
+    });
+
+    it('should register a nested object row that expands, collapses and removes its entry', () => {
+      const rows = spyOnRegisteredRows();
+      loadRenderer();
+      const context = createMockContext();
+
+      renderWidget('object', createMockEl(), { nested: { a: 1 } }, context);
+      const objectRow = findRow(rows, (actions) => actions.remove !== undefined && actions.setExpanded !== undefined);
+      objectRow.actions.setExpanded?.(false);
+      objectRow.actions.remove?.();
+
+      expect(objectRow.rowEl.toggleClass).toHaveBeenCalledWith('is-collapsed', true);
+      expect(objectRow.rowEl.setAttribute).toHaveBeenCalledWith('aria-expanded', 'false');
+      expect(testAccess(renderer).expansionOverrides.get('test.md:testKey.nested')).toBe(false);
+      expect(context.onChange).toHaveBeenCalledWith({});
+    });
+
+    it('should expand a nested object from its collapsed summary', () => {
+      loadRenderer();
+      const summaryEl = createMockEl();
+      const valueEl = createMockEl({ createSpan: vi.fn(() => summaryEl) });
+      const rowEl = createMockEl({
+        createDiv: vi.fn((options: CreateDivOptions | string | undefined) => {
+          const cls = typeof options === 'object' ? options.cls : undefined;
+          return String(cls) === 'metadata-property-value' ? valueEl : createMockEl();
+        })
+      });
+      const containerEl = createMockEl({ createDiv: vi.fn(() => rowEl) });
+      const el = createMockEl({ createDiv: vi.fn(() => containerEl) });
+
+      renderWidget('object', el, { nested: { a: 1 } }, createMockContext());
+      findEventHandler(summaryEl, 'click')({ preventDefault: vi.fn(), stopPropagation: vi.fn() });
+
+      expect(rowEl.toggleClass).toHaveBeenCalledWith('is-collapsed', false);
+      expect(testAccess(renderer).expansionOverrides.get('test.md:testKey.nested')).toBe(true);
+    });
+
+    it('should focus the pending row once the tree re-renders, and only once', () => {
+      const focusRowByPathSpy = vi.spyOn(NestedPropertyKeyboardNavigator.prototype, 'focusRowByPath');
+      loadRenderer();
+      const metadataContainerEl = createMockEl();
+      const containerEl = createMockEl({ closest: vi.fn(() => metadataContainerEl) });
+      testAccess(renderer).pendingFocus = { path: 'test.md:testKey.a', shouldFocusValue: true };
+
+      renderWidget('object', createMockEl({ createDiv: vi.fn(() => containerEl) }), { a: 1 }, createMockContext());
+      vi.runAllTimers();
+      renderWidget('object', createMockEl({ createDiv: vi.fn(() => containerEl) }), { a: 1 }, createMockContext());
+      vi.runAllTimers();
+
+      expect(focusRowByPathSpy).toHaveBeenCalledOnce();
+      expect(focusRowByPathSpy).toHaveBeenCalledWith({ path: 'test.md:testKey.a', scopeEl: metadataContainerEl, shouldFocusValue: true });
+      expect(testAccess(renderer).pendingFocus).toBeNull();
+    });
+
+    it('should drop the pending row when the tree is outside a Properties editor', () => {
+      const focusRowByPathSpy = vi.spyOn(NestedPropertyKeyboardNavigator.prototype, 'focusRowByPath');
+      loadRenderer();
+      testAccess(renderer).pendingFocus = { path: 'test.md:testKey.a', shouldFocusValue: false };
+
+      renderWidget('object', createMockEl(), { a: 1 }, createMockContext());
+      vi.runAllTimers();
+
+      expect(focusRowByPathSpy).not.toHaveBeenCalled();
+      expect(testAccess(renderer).pendingFocus).toBeNull();
+    });
+
+    it('should focus a new list item\'s value once it renders', () => {
+      loadRenderer();
+      const addItemButton = createMockEl();
+      const containerEl = createMockEl({ createDiv: vi.fn(() => addItemButton) });
+      const context = createMockContext();
+
+      renderWidget('list', createMockEl({ createDiv: vi.fn(() => containerEl) }), ['a'], context);
+      findEventHandler(addItemButton, 'click')({ preventDefault: vi.fn(), stopPropagation: vi.fn() });
+
+      expect(context.onChange).toHaveBeenCalledWith(['a', '']);
+      expect(testAccess(renderer).pendingFocus).toEqual({ path: 'test.md:testKey.1', shouldFocusValue: true });
+    });
+
+    describe('after a typed value is converted', () => {
+      function convertInto(metadataContainerEl: MockDomElement | null): void {
+        loadRenderer();
+        const el = createMockEl({ closest: vi.fn(() => metadataContainerEl) });
+        getWidget('text').render(castTo<HTMLElement>(el), '', createMockContext());
+        const lastCall = ensureNonNullable(vi.mocked(textWidget.render).mock.lastCall);
+        lastCall[2].onChange('{ a: 1 }');
+        vi.runAllTimers();
+      }
+
+      it('should put a focus the redraw dropped on the converted row', () => {
+        const focusRowByPathSpy = vi.spyOn(NestedPropertyKeyboardNavigator.prototype, 'focusRowByPath');
+        const bodyEl = createMockEl();
+        vi.stubGlobal('activeDocument', { activeElement: bodyEl, body: bodyEl, querySelectorAll: vi.fn(() => []) });
+        const metadataContainerEl = createMockEl();
+
+        convertInto(metadataContainerEl);
+
+        expect(focusRowByPathSpy).toHaveBeenCalledWith({ path: 'test.md:testKey', scopeEl: metadataContainerEl, shouldFocusValue: false });
+      });
+
+      it('should leave a focus the user moved elsewhere where it is', () => {
+        const focusRowByPathSpy = vi.spyOn(NestedPropertyKeyboardNavigator.prototype, 'focusRowByPath');
+        vi.stubGlobal('activeDocument', { activeElement: createMockEl(), body: createMockEl(), querySelectorAll: vi.fn(() => []) });
+
+        convertInto(createMockEl());
+
+        expect(focusRowByPathSpy).not.toHaveBeenCalled();
+      });
     });
   });
 
@@ -2549,7 +2762,8 @@ describe('NestedPropertyRenderer', () => {
 
       const handler = findEventHandler(summary, 'click');
       handler({ preventDefault: vi.fn(), stopPropagation: vi.fn() });
-      expect(propertyEl.classList.remove).toHaveBeenCalledWith('is-collapsed');
+      expect(propertyEl.toggleClass).toHaveBeenCalledWith('is-collapsed', false);
+      expect(propertyEl.setAttribute).toHaveBeenCalledWith('aria-expanded', 'true');
     });
   });
 
