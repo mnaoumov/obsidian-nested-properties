@@ -20,6 +20,7 @@ Welcome to the [Nested Properties](https://github.com/mnaoumov/obsidian-nested-p
 
 - [06 Context menu actions](<./06 Context menu actions.md>)
 - [07 Changing property types](<./07 Changing property types.md>)
+- [12 Typing nested values](<./12 Typing nested values.md>)
 
 ## Display
 

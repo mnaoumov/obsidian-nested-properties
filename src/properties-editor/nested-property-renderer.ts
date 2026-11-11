@@ -33,6 +33,7 @@ import { PluginSettingsComponent } from '../settings/plugin-settings-component.t
 import { FloatingScrollbarComponent } from './floating-scrollbar.ts';
 import { MetadataTypeManagerGetTypeInfoPatchComponent } from './patches/metadata-type-manager-get-type-info-patch-component.ts';
 import { MultiTextPropertyWidgetPatchComponent } from './patches/multi-text-property-widget-patch-component.ts';
+import { TextPropertyWidgetPatchComponent } from './patches/text-property-widget-patch-component.ts';
 import { UnknownWidgetRenderPatchComponent } from './patches/unknown-widget-render-patch-component.ts';
 import { TypeChangeModal } from './type-change-modal.ts';
 
@@ -178,6 +179,10 @@ export class NestedPropertyRendererComponent extends Component {
   private floatingScrollbar?: FloatingScrollbarComponent;
   private isFullKeyDisplayEnabled = false;
   private lastMenuCloseTime = 0;
+
+  // The full path of each nested entry's render context. A top-level context carries the property key, but a
+  // nested one carries only its own label, so a converted nested value is located through this map.
+  private readonly nestedContextPaths = new WeakMap<PropertyRenderContext, string>();
   private pendingFocusKey: null | string = null;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
 
@@ -228,6 +233,22 @@ export class NestedPropertyRendererComponent extends Component {
         metadataTypeManager: this.app.metadataTypeManager,
         mixedListWidget: this.mixedListWidget,
         objectWidget: this.objectWidget
+      })
+    );
+
+    this.addChild(
+      new TextPropertyWidgetPatchComponent({
+        isEnabled: (): boolean => this.pluginSettingsComponent.settings.shouldConvertFlowCollections,
+        onValueConverted: (context, el): void => {
+          // Show the value that was just typed in full, rather than leaving it to a click to expand.
+          const path = this.nestedContextPaths.get(context) ?? `${context.sourcePath}:${context.key}`;
+          this.expansionOverrides.set(path, true);
+          // After the text widget has finished its commit (it sets its own text and blurs right after `onChange`).
+          window.setTimeout(() => {
+            this.rerenderPropertyContaining(el);
+          }, 0);
+        },
+        textWidget: this.app.metadataTypeManager.getWidget('text')
       })
     );
 
@@ -587,13 +608,15 @@ export class NestedPropertyRendererComponent extends Component {
     const widget = this.getWidget({ label, path, value });
     const valueEl = propertyEl.createDiv({ cls: 'metadata-property-value' });
     valueEl.setAttr('data-property-type', widget.type);
-    widget.render(valueEl, value, {
+    const entryContext: PropertyRenderContext = {
       app: context.app,
       blur: context.blur.bind(context),
       key: label,
       onChange: onValueChange,
       sourcePath: context.sourcePath
-    });
+    };
+    this.nestedContextPaths.set(entryContext, path);
+    widget.render(valueEl, value, entryContext);
   }
 
   private renderKeyEl(params: NestedPropertyRendererComponentRenderKeyElParams): void {
@@ -655,6 +678,33 @@ export class NestedPropertyRendererComponent extends Component {
         this.pendingFocusKey = key;
       }
     });
+  }
+
+  /**
+   * Re-renders the top-level property whose row holds `el`, from the value Obsidian now stores for it.
+   *
+   * Obsidian redraws a property's value only when its data changes from outside the Properties editor, never
+   * after the editor's own `onChange`: its widgets never change a value's type, so they never needed to. A text
+   * value converted into a nested one (issue #15) is saved as an object but would keep showing the typed text,
+   * and a nested entry's in-place edit is not redrawn at all, so the row is redrawn here.
+   */
+  private rerenderPropertyContaining(el: HTMLElement): void {
+    if (!el.isConnected) {
+      return;
+    }
+
+    for (const leaf of this.app.workspace.getLeavesOfType('markdown')) {
+      if (!(leaf.view instanceof MarkdownView)) {
+        continue;
+      }
+
+      const property = leaf.view.metadataEditor.rendered.find((candidate) => candidate.containerEl.contains(el));
+      if (property) {
+        // The redrawn nested widget updates the floating scrollbar itself, once it has laid out.
+        property.renderProperty(property.entry, true);
+        return;
+      }
+    }
   }
 
   private showNestedPropertyMenu(params: NestedPropertyRendererComponentShowNestedPropertyMenuParams): void {

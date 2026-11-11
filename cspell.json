@@ -23,6 +23,7 @@
     "Invocables",
     "katex",
     "linkinator",
+    "longtext",
     "mnaoumov",
     "mouseleave",
     "mousemove",
@@ -38,7 +39,9 @@
     "unsets",
     "unstub",
     "unvalidated",
-    "wdio"
+    "wdio",
+    "wikilink",
+    "wikilinks"
   ],
   "ignoreRegExpList": [
     "/GHSA(-[0-9a-z]{4}){3}/g"

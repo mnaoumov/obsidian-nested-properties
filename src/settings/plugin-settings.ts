@@ -20,4 +20,10 @@ export class PluginSettings {
    * vault inside a git work tree.
    */
   public shouldCommitBulkOperations = false;
+
+  /**
+   * Whether a text value typed as a YAML flow collection - `{ key: value }`, or a list holding an object such
+   * as `[{ key: value }]` - is turned into the nested value it describes when it is committed (issue #15).
+   */
+  public shouldConvertFlowCollections = true;
 }
