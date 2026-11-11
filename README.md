@@ -63,6 +63,7 @@ A copy of the vault ships with every release. You can access it via any of the f
 - **Mixed and complex shapes** — lists holding different types, and arrays of objects. [03 Mixed lists](<./demo-vault/03 Mixed lists.md>) · [04 Array of objects](<./demo-vault/04 Array of objects.md>)
 - **Edit in place** — add, remove and reorder entries from the context menu, and change a nested property's type without rewriting the YAML. [06 Context menu actions](<./demo-vault/06 Context menu actions.md>) · [07 Changing property types](<./demo-vault/07 Changing property types.md>)
 - **Type a nested value from the keyboard** — enter `{ author: Jane, year: 2024 }` or `[{ title: Intro }]` as a property's value and press Enter, and it becomes an object or a list of objects. [12 Typing nested values](<./demo-vault/12 Typing nested values.md>)
+- **Keyboard navigation** — move through the tree, open and close it, edit a value, add an entry and remove one with the keys Obsidian uses for its own properties. [13 Keyboard navigation](<./demo-vault/13 Keyboard navigation.md>)
 - **Rename or delete a nested key across the whole vault**, not just in the note you are looking at. On desktop, with the vault in a `git` repository, the **Should commit bulk operations** setting records each run as `git` commits, and the **Undo a bulk operation...** command reverts one. [09 Vault-wide rename and delete](<./demo-vault/09 Vault-wide rename and delete.md>)
 - **Find them** — search nested properties the way you search anything else. [10 Search nested properties](<./demo-vault/10 Search nested properties.md>)
 - **See the full key** of a nested entry when the short name is ambiguous. [08 Full key display](<./demo-vault/08 Full key display.md>)
@@ -92,6 +93,23 @@ A text value written as a one-line YAML collection becomes the nested value it d
 - `{author:Jane}` works too: the space after a key's colon is optional.
 
 It works on a nested text entry as well as on a top-level property. Ordinary text is left alone: wikilinks such as `[[Note]]`, placeholders such as `{{date}}`, plain lists such as `[a, b]` and anything that is not valid YAML stay as typed. To keep a value like `{ a: 1 }` as text, turn off **Settings → `Nested Properties` → Should convert flow collections**.
+
+### Keyboard navigation
+
+A nested property works like a list of rows, and an object or list row opens onto its children. With a row focused, the keys are the ones Obsidian already uses for its own properties:
+
+| Key | On a row |
+| --- | --- |
+| **↓** or **j**, **Tab** | Next row, skipping the rows inside anything collapsed |
+| **↑** or **k**, **Shift+Tab** | Previous row |
+| **Enter**, **Space** or **→** | Edit a value; on an object or list, open it and go to its first row |
+| **A** / **i** | Edit a value with the cursor at its end / start |
+| **←** | Close an open object or list; otherwise go to the row it sits in |
+| **Delete** (**Cmd+Backspace** on macOS) | Remove the entry |
+| **o** | Add a property (or an item) next to this one |
+| **Shift+F10** or the **Menu** key | Open the row's menu |
+
+**Add property** and **Add item** take the focus too, and **Enter** or **Space** presses them. A value finished with **Enter** hands the focus back to its row.
 
 ## See also
 
