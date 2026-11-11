@@ -256,7 +256,7 @@ describe('nested property type persistence integration', () => {
         markdownView.metadataEditor.synchronize(data);
         await sleep(500);
 
-        for (const valueEl of activeDocument.querySelectorAll<HTMLElement>(':scope .nested-properties-container > .metadata-property > .metadata-property-value')) {
+        for (const valueEl of markdownView.containerEl.querySelectorAll<HTMLElement>(':scope .nested-properties-container > .metadata-property > .metadata-property-value')) {
           const keyInput = valueEl.parentElement?.querySelector(':scope .metadata-property-key > .metadata-property-key-input');
           if (keyInput instanceof HTMLInputElement && keyInput.value === 'd') {
             return valueEl.dataset['propertyType'];
@@ -281,7 +281,7 @@ describe('nested property type persistence integration', () => {
         await sleep(500);
 
         const types: (null | string)[] = [];
-        for (const valueEl of activeDocument.querySelectorAll<HTMLElement>(':scope .nested-properties-container > .metadata-property > .metadata-property-value')) {
+        for (const valueEl of markdownView.containerEl.querySelectorAll<HTMLElement>(':scope .nested-properties-container > .metadata-property > .metadata-property-value')) {
           const keyInput = valueEl.parentElement?.querySelector(':scope .metadata-property-key > .metadata-property-key-input');
           if (keyInput instanceof HTMLInputElement && keyInput.value === 'released') {
             types.push(valueEl.dataset['propertyType'] ?? null);
