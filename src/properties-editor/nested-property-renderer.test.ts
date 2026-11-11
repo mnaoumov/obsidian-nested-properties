@@ -90,6 +90,7 @@ const hoisted = vi.hoisted(() => {
   // resolves against the same constructor.
   class MarkdownViewBase {
     public metadataEditor = {
+      rendered: [] as unknown[],
       serialize: vi.fn(() => ({ key: 'val' })),
       synchronize: vi.fn()
     };
@@ -445,7 +446,7 @@ describe('NestedPropertyRenderer', () => {
       metadataTypeManager: {
         getAssignedWidget: vi.fn(() => null),
         getTypeInfo: getTypeInfoOriginal,
-        getWidget: vi.fn(() => unknownWidget),
+        getWidget: vi.fn((type: string) => (type === 'text' ? textWidget : unknownWidget)),
         registeredTypeWidgets: {
           multitext: multitextWidget,
           text: textWidget,
@@ -601,6 +602,111 @@ describe('NestedPropertyRenderer', () => {
     it('should name objectWidget as Object', () => {
       loadRenderer();
       expect(getWidget('object').name()).toBe('Object');
+    });
+  });
+
+  describe('flow collection conversion (issue #15)', () => {
+    interface RenderedPropertyContainerMock {
+      readonly contains: MockFunction;
+    }
+
+    interface RenderedPropertyEntryMock {
+      readonly key: string;
+      readonly value: unknown;
+    }
+
+    interface RenderedPropertyMock {
+      readonly containerEl: RenderedPropertyContainerMock;
+      readonly entry: RenderedPropertyEntryMock;
+      readonly renderProperty: MockFunction;
+    }
+
+    // The text widget's own render is a mock; the context it was last handed is the one the patch wrapped.
+    function getLastTextRenderContext(): PropertyRenderContext {
+      const lastCall = vi.mocked(textWidget.render).mock.lastCall;
+      if (!lastCall) {
+        throw new Error('The text widget was not rendered');
+      }
+      return lastCall[2];
+    }
+
+    function createRenderedProperty(isHoldingRow: boolean): RenderedPropertyMock {
+      return {
+        containerEl: { contains: vi.fn(() => isHoldingRow) },
+        entry: { key: 'testKey', value: { a: 1 } },
+        renderProperty: vi.fn()
+      };
+    }
+
+    it('should commit a typed flow mapping as an object, expand it and redraw its row', () => {
+      const mockView = new hoisted.MarkdownViewBase();
+      const otherProperty = createRenderedProperty(false);
+      const property = createRenderedProperty(true);
+      mockView.metadataEditor.rendered = [otherProperty, property];
+      mockApp.workspace.getLeavesOfType.mockReturnValue([{ view: {} }, { view: mockView }]);
+      loadRenderer();
+
+      const context = createMockContext();
+      getWidget('text').render(castTo<HTMLElement>(createMockEl()), '', context);
+      getLastTextRenderContext().onChange('{ a: 1 }');
+
+      expect(context.onChange).toHaveBeenCalledWith({ a: 1 });
+      expect(testAccess(renderer).expansionOverrides.get('test.md:testKey')).toBe(true);
+
+      vi.runAllTimers();
+      expect(property.renderProperty).toHaveBeenCalledWith(property.entry, true);
+      expect(otherProperty.renderProperty).not.toHaveBeenCalled();
+    });
+
+    it('should expand a converted nested entry under its full path', () => {
+      loadRenderer();
+
+      const context = createMockContext();
+      renderWidget('object', createMockEl(), { simple: 'hello' }, context);
+      getLastTextRenderContext().onChange('{ b: 2 }');
+
+      expect(context.onChange).toHaveBeenCalledWith({ simple: { b: 2 } });
+      expect(testAccess(renderer).expansionOverrides.get('test.md:testKey.simple')).toBe(true);
+    });
+
+    it('should not redraw anything when the row is already gone', () => {
+      const mockView = new hoisted.MarkdownViewBase();
+      const property = createRenderedProperty(true);
+      mockView.metadataEditor.rendered = [property];
+      mockApp.workspace.getLeavesOfType.mockReturnValue([{ view: mockView }]);
+      loadRenderer();
+
+      getWidget('text').render(castTo<HTMLElement>(createMockEl({ isConnected: false })), '', createMockContext());
+      getLastTextRenderContext().onChange('{ a: 1 }');
+      vi.runAllTimers();
+
+      expect(property.renderProperty).not.toHaveBeenCalled();
+    });
+
+    it('should not redraw anything when no Properties editor holds the row', () => {
+      const mockView = new hoisted.MarkdownViewBase();
+      const otherProperty = createRenderedProperty(false);
+      mockView.metadataEditor.rendered = [otherProperty];
+      mockApp.workspace.getLeavesOfType.mockReturnValue([{ view: mockView }]);
+      loadRenderer();
+
+      getWidget('text').render(castTo<HTMLElement>(createMockEl()), '', createMockContext());
+      getLastTextRenderContext().onChange('{ a: 1 }');
+      vi.runAllTimers();
+
+      expect(otherProperty.renderProperty).not.toHaveBeenCalled();
+    });
+
+    it('should leave the typed text alone when the setting is off', () => {
+      mockPluginSettings.shouldConvertFlowCollections = false;
+      loadRenderer();
+
+      const context = createMockContext();
+      getWidget('text').render(castTo<HTMLElement>(createMockEl()), '', context);
+      getLastTextRenderContext().onChange('{ a: 1 }');
+
+      expect(context.onChange).toHaveBeenCalledWith('{ a: 1 }');
+      expect(testAccess(renderer).expansionOverrides.has('test.md:testKey')).toBe(false);
     });
   });
 

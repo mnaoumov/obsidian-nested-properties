@@ -33,7 +33,8 @@ import { PluginSettingsTab } from './plugin-settings-tab.ts';
  */
 const EXPECTED_BOUND_KEYS: (keyof PluginSettings)[] = [
   'initialExpandLevel',
-  'shouldCommitBulkOperations'
+  'shouldCommitBulkOperations',
+  'shouldConvertFlowCollections'
 ];
 
 interface VisibleDefinition {

@@ -30,6 +30,31 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
       }),
       this.settingEx({
         desc: createFragment((f) => {
+          f.appendText('Whether a text value typed in YAML flow style becomes a nested property when you press Enter or leave the field.');
+          f.createEl('br');
+          f.appendText('For example, ');
+          appendCodeBlock(f, '{ author: Jane, year: 2024 }');
+          f.appendText(' becomes an object, and ');
+          appendCodeBlock(f, '[{ name: a }, { name: b }]');
+          f.appendText(' a list of objects. ');
+          appendCodeBlock(f, '{}');
+          f.appendText(' starts an empty object.');
+          f.createEl('br');
+          f.appendText('Wikilinks, ');
+          appendCodeBlock(f, '{{templates}}');
+          f.appendText(' and plain lists such as ');
+          appendCodeBlock(f, '[a, b]');
+          f.appendText(' stay as typed.');
+        }),
+        name: 'Should convert flow collections',
+        render: (setting) => {
+          setting.addToggle((toggle) => {
+            this.bind({ propertyName: 'shouldConvertFlowCollections', valueComponent: toggle });
+          });
+        }
+      }),
+      this.settingEx({
+        desc: createFragment((f) => {
           f.appendText('Whether to record each vault-wide rename or delete of a nested property as git commits, when the vault is inside a git repository.');
           f.createEl('br');
           f.appendText('Whatever was pending is committed first as ');
