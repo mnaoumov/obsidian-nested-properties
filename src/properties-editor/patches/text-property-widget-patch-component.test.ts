@@ -28,8 +28,15 @@ describe('TextPropertyWidgetPatchComponent', () => {
     const { commit, context, onChange, onValueConverted } = setup(true);
     commit('{ a: 1 }');
     expect(onChange).toHaveBeenCalledWith({ a: 1 });
-    expect(onValueConverted).toHaveBeenCalledWith(context, expect.any(HTMLElement));
+    expect(onValueConverted).toHaveBeenCalledWith(context, expect.any(HTMLElement), { a: 1 });
     expect(onValueConverted.mock.invocationCallOrder[0]).toBeLessThan(onChange.mock.invocationCallOrder[0] ?? 0);
+  });
+
+  it('should commit an empty flow sequence as an empty list', () => {
+    const { commit, context, onChange, onValueConverted } = setup(true);
+    commit('[]');
+    expect(onChange).toHaveBeenCalledWith([]);
+    expect(onValueConverted).toHaveBeenCalledWith(context, expect.any(HTMLElement), []);
   });
 
   it('should commit ordinary text unchanged', () => {

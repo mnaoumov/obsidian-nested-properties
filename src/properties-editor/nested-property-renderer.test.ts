@@ -4,6 +4,7 @@ import type {
   TypeInfo
 } from '@obsidian-typings/obsidian-public-latest';
 import type { App } from 'obsidian';
+import type { MockInstance } from 'vitest';
 
 import { noopAsync } from '@mnaoumov/typescript-lib/function';
 import { castTo } from '@mnaoumov/typescript-lib/object-utils';
@@ -302,6 +303,7 @@ interface RendererTestAccess {
   readonly _loaded: boolean;
   readonly cleanups__: (() => unknown)[];
   readonly expansionOverrides: Map<string, boolean>;
+  readonly nestedContextPaths: WeakMap<PropertyRenderContext, string>;
   // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Tests set the row to focus after a re-render.
   pendingFocus: null | PendingFocusTestAccess;
   // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Tests set and clear the deferred focus target.
@@ -917,6 +919,114 @@ describe('NestedPropertyRenderer', () => {
         vi.stubGlobal('activeDocument', { activeElement: createMockEl(), body: createMockEl(), querySelectorAll: vi.fn(() => []) });
 
         convertInto(createMockEl());
+
+        expect(focusRowByPathSpy).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('after a typed plain list is converted', () => {
+      interface ListConversionEntry {
+        readonly key: string;
+        // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- The renderer writes the converted value back onto the entry, as on Obsidian's own.
+        value: unknown;
+      }
+
+      interface ListConversion {
+        readonly entry: ListConversionEntry;
+        readonly focusRowByPathSpy: MockInstance<NestedPropertyKeyboardNavigator['focusRowByPath']>;
+        readonly focusValue: MockFunction;
+        readonly metadataContainerEl: MockDomElement;
+        readonly onChange: MockFunction;
+      }
+
+      interface ListConversionParams {
+        readonly activeElement: 'body' | 'elsewhere' | 'property';
+        readonly isConnected?: boolean;
+        readonly isInsideMetadataContainer?: boolean;
+        readonly nestedPath?: string;
+        readonly text: string;
+      }
+
+      function convertList(params: ListConversionParams): ListConversion {
+        const focusRowByPathSpy = vi.spyOn(NestedPropertyKeyboardNavigator.prototype, 'focusRowByPath');
+        const bodyEl = createMockEl();
+        const focusedInPropertyEl = createMockEl();
+        const activeElementByKind = { body: bodyEl, elsewhere: createMockEl(), property: focusedInPropertyEl };
+        vi.stubGlobal('activeDocument', { activeElement: activeElementByKind[params.activeElement], body: bodyEl, querySelectorAll: vi.fn(() => []) });
+
+        const metadataContainerEl = createMockEl();
+        const el = createMockEl({
+          closest: vi.fn(() => (params.isInsideMetadataContainer === false ? null : metadataContainerEl)),
+          isConnected: params.isConnected ?? true
+        });
+        const focusValue = vi.fn();
+        const mockView = new hoisted.MarkdownViewBase();
+        // Obsidian has already saved an empty list as an empty value by the time the row is redrawn.
+        const entry: ListConversionEntry = { key: 'testKey', value: null };
+        mockView.metadataEditor.rendered = [{
+          containerEl: { contains: vi.fn((node: unknown) => node === el || node === focusedInPropertyEl) },
+          entry,
+          focusValue,
+          renderProperty: vi.fn()
+        }];
+        mockApp.workspace.getLeavesOfType.mockReturnValue([{ view: mockView }]);
+        loadRenderer();
+
+        const context = createMockContext();
+        if (params.nestedPath !== undefined) {
+          testAccess(renderer).nestedContextPaths.set(context, params.nestedPath);
+        }
+        getWidget('text').render(castTo<HTMLElement>(el), '', context);
+        ensureNonNullable(vi.mocked(textWidget.render).mock.lastCall)[2].onChange(params.text);
+        vi.runAllTimers();
+        return { entry, focusRowByPathSpy, focusValue, metadataContainerEl, onChange: castTo<MockFunction>(context.onChange) };
+      }
+
+      it('should commit a typed empty list, keep it on the row and focus its new-item input', () => {
+        const { entry, focusRowByPathSpy, focusValue, onChange } = convertList({ activeElement: 'property', text: '[]' });
+
+        expect(onChange).toHaveBeenCalledWith([]);
+        expect(entry.value).toEqual([]);
+        expect(focusValue).toHaveBeenCalledWith('end');
+        expect(focusRowByPathSpy).not.toHaveBeenCalled();
+      });
+
+      it('should focus a typed top-level list whose redraw dropped the focus', () => {
+        const { focusValue, onChange } = convertList({ activeElement: 'body', text: '[a, b]' });
+
+        expect(onChange).toHaveBeenCalledWith(['a', 'b']);
+        expect(focusValue).toHaveBeenCalledWith('end');
+      });
+
+      it('should leave a focus the user moved elsewhere where it is', () => {
+        const { focusRowByPathSpy, focusValue } = convertList({ activeElement: 'elsewhere', text: '[a]' });
+
+        expect(focusValue).not.toHaveBeenCalled();
+        expect(focusRowByPathSpy).not.toHaveBeenCalled();
+      });
+
+      it('should focus nothing when the row is already gone', () => {
+        const { focusValue } = convertList({ activeElement: 'body', isConnected: false, text: '[a]' });
+
+        expect(focusValue).not.toHaveBeenCalled();
+      });
+
+      it('should focus the value of a converted nested list', () => {
+        const { entry, focusRowByPathSpy, focusValue, metadataContainerEl } = convertList({ activeElement: 'body', nestedPath: 'test.md:testKey.a', text: '[]' });
+
+        // A nested list lives inside the top-level value, which Obsidian keeps as saved.
+        expect(entry.value).toBeNull();
+        expect(focusRowByPathSpy).toHaveBeenCalledWith({ path: 'test.md:testKey.a', scopeEl: metadataContainerEl, shouldFocusValue: true });
+        expect(focusValue).not.toHaveBeenCalled();
+      });
+
+      it('should focus nothing for a nested list outside a Properties editor', () => {
+        const { focusRowByPathSpy } = convertList({
+          activeElement: 'body',
+          isInsideMetadataContainer: false,
+          nestedPath: 'test.md:testKey.a',
+          text: '[]'
+        });
 
         expect(focusRowByPathSpy).not.toHaveBeenCalled();
       });

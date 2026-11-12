@@ -9,13 +9,13 @@ import { parseFlowCollectionValue } from '../../nested-values/flow-collection-va
 
 interface TextPropertyWidgetPatchComponentConstructorParams {
   readonly isEnabled: (this: void) => boolean;
-  readonly onValueConverted: (this: void, context: PropertyRenderContext, el: HTMLElement) => void;
+  readonly onValueConverted: (this: void, context: PropertyRenderContext, el: HTMLElement, convertedValue: unknown) => void;
   readonly textWidget: PropertyWidget;
 }
 
 /**
- * Turns a text property value typed as a YAML flow collection (`{ key: value }`, `[{ key: value }]`) into the
- * nested value it describes, as the value is committed (issue #15).
+ * Turns a text property value typed as a YAML flow collection (`{ key: value }`, `[a, b]`, `[]`) into the
+ * value it describes, as the value is committed (issue #15).
  *
  * Obsidian's text widget calls `onChange` only when its value is committed - on Enter or on blur - never on
  * each keystroke, so wrapping that callback converts every finished value exactly once and never parses a
@@ -23,7 +23,7 @@ interface TextPropertyWidgetPatchComponentConstructorParams {
  */
 export class TextPropertyWidgetPatchComponent extends MonkeyAroundComponent {
   private readonly isEnabled: (this: void) => boolean;
-  private readonly onValueConverted: (this: void, context: PropertyRenderContext, el: HTMLElement) => void;
+  private readonly onValueConverted: (this: void, context: PropertyRenderContext, el: HTMLElement, convertedValue: unknown) => void;
   private readonly textWidget: PropertyWidget;
 
   public constructor(params: TextPropertyWidgetPatchComponentConstructorParams) {
@@ -51,7 +51,7 @@ export class TextPropertyWidgetPatchComponent extends MonkeyAroundComponent {
             }
 
             // Before the change, so the re-render it causes already sees what the callback recorded.
-            this.onValueConverted(context, el);
+            this.onValueConverted(context, el, convertedValue);
             context.onChange(convertedValue);
           }
         })

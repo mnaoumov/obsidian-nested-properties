@@ -62,7 +62,7 @@ A copy of the vault ships with every release. You can access it via any of the f
 - **Nested objects and arrays as a tree** in the Properties panel, collapsible to any depth. [01 Nested objects](<./demo-vault/01 Nested objects.md>) · [02 Nested arrays](<./demo-vault/02 Nested arrays.md>) · [05 Deeply nested and scrolling](<./demo-vault/05 Deeply nested and scrolling.md>)
 - **Mixed and complex shapes** — lists holding different types, and arrays of objects. [03 Mixed lists](<./demo-vault/03 Mixed lists.md>) · [04 Array of objects](<./demo-vault/04 Array of objects.md>)
 - **Edit in place** — add, remove and reorder entries from the context menu, and change a nested property's type without rewriting the YAML. [06 Context menu actions](<./demo-vault/06 Context menu actions.md>) · [07 Changing property types](<./demo-vault/07 Changing property types.md>)
-- **Type a nested value from the keyboard** — enter `{ author: Jane, year: 2024 }` or `[{ title: Intro }]` as a property's value and press Enter, and it becomes an object or a list of objects. [12 Typing nested values](<./demo-vault/12 Typing nested values.md>)
+- **Type a nested value from the keyboard** — enter `{ author: Jane, year: 2024 }`, `[a, b]`, `[]` or `[{ title: Intro }]` as a property's value and press Enter, and it becomes an object, a list or a list of objects. [12 Typing nested values](<./demo-vault/12 Typing nested values.md>)
 - **Keyboard navigation** — move through the tree, open and close it, edit a value, add an entry and remove one with the keys Obsidian uses for its own properties. [13 Keyboard navigation](<./demo-vault/13 Keyboard navigation.md>)
 - **Rename or delete a nested key across the whole vault**, not just in the note you are looking at. On desktop, with the vault in a `git` repository, the **Should commit bulk operations** setting records each run as `git` commits, and the **Undo a bulk operation...** command reverts one. [09 Vault-wide rename and delete](<./demo-vault/09 Vault-wide rename and delete.md>)
 - **Find them** — search nested properties the way you search anything else. [10 Search nested properties](<./demo-vault/10 Search nested properties.md>)
@@ -86,13 +86,16 @@ nestedProperties:
 
 ### Typing nested values
 
-A text value written as a one-line YAML collection becomes the nested value it describes when you press Enter or leave the field, and opens so you can keep editing it:
+A text value written as a one-line YAML collection becomes the value it describes when you press Enter or leave the field, and opens so you can keep editing it:
 
 - `{ author: Jane, year: 2024 }` becomes an object, and `{}` an empty one;
+- `[a, b]` becomes a list, and `[]` an empty one, with the cursor in it so you can type the next item straight away;
 - `[{ title: Intro }, { title: Outro }]` becomes a list of objects;
 - `{author:Jane}` works too: the space after a key's colon is optional.
 
-It works on a nested text entry as well as on a top-level property. Ordinary text is left alone: wikilinks such as `[[Note]]`, placeholders such as `{{date}}`, plain lists such as `[a, b]` and anything that is not valid YAML stay as typed. To keep a value like `{ a: 1 }` as text, turn off **Settings → `Nested Properties` → Should convert flow collections**.
+It works on a nested text entry as well as on a top-level property. A top-level list is shown with Obsidian's own **List** widget for that note only: the property's type is not changed, so other notes are not affected. If the property is set to **Text** for the whole vault, Obsidian marks the list with its usual type-mismatch warning, as it does for a list written in Source mode. An empty list is saved the way Obsidian saves an empty **List**, as an empty value.
+
+Ordinary text is left alone: a whole value that is one wikilink such as `[[Note]]`, placeholders such as `{{date}}`, and anything that is not valid YAML stay as typed. Inside a list YAML's rules apply, so a link there is written in quotes: `["[[a]]", "[[b]]"]` is a list of two links, while `[[a], [b]]` is a list of two lists. To keep a value like `{ a: 1 }` as text, turn off **Settings → `Nested Properties` → Should convert flow collections**.
 
 ### Keyboard navigation
 
