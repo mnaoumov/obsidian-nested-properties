@@ -1,5 +1,6 @@
 import type { GenericObject } from '@mnaoumov/typescript-lib/type-guards';
 import type {
+  MetadataEditorProperty,
   MultitextPropertyWidgetComponent,
   PropertyRenderContext,
   PropertyWidget,
@@ -73,6 +74,13 @@ interface NestedPropertyRendererComponentChangeTypeParams {
 interface NestedPropertyRendererComponentConstructorParams {
   readonly app: App;
   readonly pluginSettingsComponent: PluginSettingsComponent;
+}
+
+interface NestedPropertyRendererComponentFocusConvertedListParams {
+  readonly isNested: boolean;
+  readonly metadataContainerEl: HTMLElement | null;
+  readonly path: string;
+  readonly property: MetadataEditorProperty | null;
 }
 
 interface NestedPropertyRendererComponentGetWidgetParams {
@@ -265,14 +273,20 @@ export class NestedPropertyRendererComponent extends Component {
     this.addChild(
       new TextPropertyWidgetPatchComponent({
         isEnabled: (): boolean => this.pluginSettingsComponent.settings.shouldConvertFlowCollections,
-        onValueConverted: (context, el): void => {
+        onValueConverted: (context, el, convertedValue): void => {
           // Show the value that was just typed in full, rather than leaving it to a click to expand.
-          const path = this.nestedContextPaths.get(context) ?? `${context.sourcePath}:${context.key}`;
+          const nestedPath = this.nestedContextPaths.get(context);
+          const path = nestedPath ?? `${context.sourcePath}:${context.key}`;
           this.expansionOverrides.set(path, true);
           const metadataContainerEl = el.closest<HTMLElement>('.metadata-container');
+          const isPlainList = isSimpleArray(convertedValue);
           // After the text widget has finished its commit (it sets its own text and blurs right after `onChange`).
           window.setTimeout(() => {
-            this.rerenderPropertyContaining(el);
+            const property = this.rerenderPropertyContaining(el, nestedPath === undefined ? convertedValue : null);
+            if (isPlainList) {
+              this.focusConvertedList({ isNested: nestedPath !== undefined, metadataContainerEl, path, property });
+              return;
+            }
             // When the redraw replaced the nested row that had the keyboard focus, the focus fell to the body; it
             // goes to the row's replacement. A focus the user moved elsewhere, say by clicking away, stays there.
             if (metadataContainerEl && isFocusLost()) {
@@ -395,6 +409,32 @@ export class NestedPropertyRendererComponent extends Component {
       this.reloadAllProperties();
     } else {
       onValueChange(converted);
+    }
+  }
+
+  /**
+   * Puts the focus into a list that a typed `[a, b]` or `[]` just became, ready for its next item, so a list is
+   * filled from the keyboard alone. Only a focus the commit left on the property, or dropped to the body, moves; a
+   * focus the user put elsewhere stays there.
+   */
+  private focusConvertedList(params: NestedPropertyRendererComponentFocusConvertedListParams): void {
+    const { isNested, metadataContainerEl, path, property } = params;
+    if (!property) {
+      return;
+    }
+
+    if (!isFocusLost() && !property.containerEl.contains(activeDocument.activeElement)) {
+      return;
+    }
+
+    if (!isNested) {
+      // A top-level list is Obsidian's own List widget, which focuses its new-item input.
+      property.focusValue('end');
+      return;
+    }
+
+    if (metadataContainerEl) {
+      this.keyboardNavigator.focusRowByPath({ path, scopeEl: metadataContainerEl, shouldFocusValue: true });
     }
   }
 
@@ -797,10 +837,14 @@ export class NestedPropertyRendererComponent extends Component {
    * after the editor's own `onChange`: its widgets never change a value's type, so they never needed to. A text
    * value converted into a nested one (issue #15) is saved as an object but would keep showing the typed text,
    * and a nested entry's in-place edit is not redrawn at all, so the row is redrawn here.
+   *
+   * @param el - An element inside the property.
+   * @param topLevelValue - The value a top-level property was converted to, or `null` for a nested conversion.
+   * @returns The redrawn property, or `null` when no Properties editor holds `el`.
    */
-  private rerenderPropertyContaining(el: HTMLElement): void {
+  private rerenderPropertyContaining(el: HTMLElement, topLevelValue: unknown): MetadataEditorProperty | null {
     if (!el.isConnected) {
-      return;
+      return null;
     }
 
     for (const leaf of this.app.workspace.getLeavesOfType('markdown')) {
@@ -810,11 +854,18 @@ export class NestedPropertyRendererComponent extends Component {
 
       const property = leaf.view.metadataEditor.rendered.find((candidate) => candidate.containerEl.contains(el));
       if (property) {
+        if (topLevelValue !== null) {
+          // Obsidian saves an empty list as an empty value, which it would draw as text again. The row keeps the
+          // list that was typed, as Obsidian's own empty List property does, so its first item can be added.
+          property.entry.value = topLevelValue;
+        }
         // The redrawn nested widget updates the floating scrollbar itself, once it has laid out.
         property.renderProperty(property.entry, true);
-        return;
+        return property;
       }
     }
+
+    return null;
   }
 
   /**

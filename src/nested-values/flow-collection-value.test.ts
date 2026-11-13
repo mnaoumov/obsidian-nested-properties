@@ -1,7 +1,8 @@
 import {
   describe,
   expect,
-  it
+  it,
+  vi
 } from 'vitest';
 
 import { parseFlowCollectionValue } from './flow-collection-value.ts';
@@ -47,20 +48,43 @@ describe('parseFlowCollectionValue', () => {
     expect(parseFlowCollectionValue('[a, { b: 1 }]')).toEqual(['a', { b: 1 }]);
   });
 
-  it('should leave a plain list as text', () => {
-    expect(parseFlowCollectionValue('[a, b]')).toBeNull();
+  it('should read a plain list as a list', () => {
+    expect(parseFlowCollectionValue('[a, b]')).toEqual(['a', 'b']);
   });
 
-  it('should leave an empty list as text', () => {
-    expect(parseFlowCollectionValue('[]')).toBeNull();
+  it('should read a list of mixed scalars', () => {
+    expect(parseFlowCollectionValue('[1, "two", true]')).toEqual([1, 'two', true]);
   });
 
-  it('should leave a list of lists as text', () => {
-    expect(parseFlowCollectionValue('[[a], [b]]')).toBeNull();
+  it('should read an empty list as an empty list', () => {
+    expect(parseFlowCollectionValue('[]')).toEqual([]);
+  });
+
+  it('should read a one-item list, unlike a wikilink', () => {
+    expect(parseFlowCollectionValue('[a]')).toEqual(['a']);
+  });
+
+  it('should read a list of lists, as YAML does', () => {
+    expect(parseFlowCollectionValue('[[a], [b]]')).toEqual([['a'], ['b']]);
+  });
+
+  it('should read quoted wikilinks inside a list as links', () => {
+    expect(parseFlowCollectionValue('["[[a]]", "[[b]]"]')).toEqual(['[[a]]', '[[b]]']);
   });
 
   it('should leave a wikilink as text', () => {
     expect(parseFlowCollectionValue('[[Some note]]')).toBeNull();
+  });
+
+  it('should leave a wikilink with an alias and a heading as text', () => {
+    expect(parseFlowCollectionValue('[[Some note#Heading|alias]]')).toBeNull();
+  });
+
+  it('should leave a bracketed complex key as text', () => {
+    // The YAML parser warns that it stringified the complex key; that warning is the input's, not a failure.
+    const warnSpy = vi.spyOn(process, 'emitWarning').mockImplementation(() => undefined);
+    expect(parseFlowCollectionValue('[a]: b]')).toBeNull();
+    warnSpy.mockRestore();
   });
 
   it('should leave a template placeholder as text', () => {

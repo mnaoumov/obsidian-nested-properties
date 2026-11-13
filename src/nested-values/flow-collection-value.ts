@@ -1,23 +1,26 @@
-import { castTo } from '@mnaoumov/typescript-lib/object-utils';
 import { parseYaml } from 'obsidian';
 
-import { isComplexValue } from './value-utils.ts';
+/**
+ * A whole value that is one wikilink, `[[note]]`, `[[note|alias]]` or `[[note#heading]]`. Obsidian's link
+ * suggester inserts a link that way into a text property and Obsidian stores it as the quoted string, so it stays
+ * text, although YAML would read it as a list holding a list.
+ */
+const WIKILINK_REGEXP = /^\[\[[^[\]]*\]\]$/;
 
 /**
- * Reads a text property value typed as a YAML flow collection - `{ key: value, other: value }` or
- * `[{ key: value }]` - as the nested value it describes, so a nested property can be entered from the
+ * Reads a text property value typed as a YAML flow collection - `{ key: value }`, `[a, b]`, `[]` or
+ * `[{ key: value }]` - as the value it describes, so a nested property or a list can be entered from the
  * keyboard alone (issue #15).
  *
  * Deliberately narrow, so ordinary text never changes:
  *
  * - the text must be wrapped in `{ }` or `[ ]` after trimming;
- * - `[[wikilink]]` and `{{template}}` are left alone, although YAML would read both as nested collections;
- * - a `[ ... ]` converts only when it holds an object, because a plain `[a, b]` is a list, which Obsidian's
- *   own List type already covers, and an array of arrays is what a wikilink parses to;
+ * - a whole value that is one `[[wikilink]]`, and a `{{template}}`, are left alone, although YAML would read both
+ *   as nested collections. Inside a list YAML rules apply, so a link there is written quoted: `["[[a]]", "[[b]]"]`;
  * - anything YAML refuses to parse is left as typed.
  *
  * @param text - The text as the property widget committed it.
- * @returns The nested value, or `null` when the text should stay text.
+ * @returns The value, or `null` when the text should stay text.
  */
 export function parseFlowCollectionValue(text: string): unknown {
   const trimmedText = text.trim();
@@ -27,7 +30,7 @@ export function parseFlowCollectionValue(text: string): unknown {
     return null;
   }
 
-  if (trimmedText.startsWith('{{') || trimmedText.startsWith('[[')) {
+  if (trimmedText.startsWith('{{') || WIKILINK_REGEXP.test(trimmedText)) {
     return null;
   }
 
@@ -38,10 +41,9 @@ export function parseFlowCollectionValue(text: string): unknown {
     return null;
   }
 
-  // A text that opens and closes with braces only ever parses to a mapping, and one with brackets only to a
-  // sequence, so the shape decides which test applies.
-  const isConvertible = isObjectShape ? isPlainObject(parsed) : castTo<unknown[]>(parsed).some((item) => isPlainObject(item));
-  return isConvertible ? parsed : null;
+  // A text in brackets is a sequence and one in braces a mapping - unless the first bracket opens a complex key,
+  // as in `[a]: b]`, which YAML reads as a mapping. That one stays text.
+  return Array.isArray(parsed) === isArrayShape ? parsed : null;
 }
 
 /**
@@ -55,8 +57,4 @@ export function parseFlowCollectionValue(text: string): unknown {
  */
 function addSpaceAfterKeyColons(text: string): string {
   return text.replaceAll(/(?<prefix>[{,]\s*[^\s"',:[\]{}]+):(?=\S)/g, '$<prefix>: ');
-}
-
-function isPlainObject(value: unknown): boolean {
-  return isComplexValue(value) && !Array.isArray(value);
 }
