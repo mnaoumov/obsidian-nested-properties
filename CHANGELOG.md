@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 1.9.0
+
+This release has 1 new feature. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### New
+
+- type `[a, b]` or `[]` into a property to make it a list (#15)
+
 ## 1.8.0
 
 This release has 2 new features and 3 documentation changes. 4 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
