@@ -8,11 +8,11 @@ import type {
 } from 'obsidian';
 
 import { reportBulkOperationProgress } from '@mnaoumov/obsidian-lib/bulk-operation-progress';
+import { ComponentEx } from '@mnaoumov/obsidian-lib/components/component-ex';
 import { processFrontmatter } from '@mnaoumov/obsidian-lib/file-manager';
 import { confirm } from '@mnaoumov/obsidian-lib/modals/confirm';
 import { prompt } from '@mnaoumov/obsidian-lib/modals/prompt';
 import { selectItem } from '@mnaoumov/obsidian-lib/modals/select-item';
-import { Component } from 'obsidian';
 
 import {
   collectNestedPropertyPaths,
@@ -72,7 +72,7 @@ interface NestedPropertyVaultOpsComponentConstructorParams {
  * exposes top-level property names, so this component surfaces the nested ones through commands driven
  * by the shared selection/prompt/confirm modals.
  */
-export class NestedPropertyVaultOpsComponent extends Component {
+export class NestedPropertyVaultOpsComponent extends ComponentEx {
   private readonly app: App;
   private readonly bulkOperationCommitComponent: Pick<BulkOperationCommitComponent, 'runBulkOperation'>;
   private readonly pluginNoticeComponent: PluginNoticeComponent;

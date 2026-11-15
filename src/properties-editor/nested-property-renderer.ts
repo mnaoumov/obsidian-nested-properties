@@ -9,6 +9,7 @@ import type {
 import type { App } from 'obsidian';
 
 import { AllWindowsEventComponent } from '@mnaoumov/obsidian-lib/components/all-windows-event-component';
+import { ComponentEx } from '@mnaoumov/obsidian-lib/components/component-ex';
 import { getAllDomWindows } from '@mnaoumov/obsidian-lib/workspace';
 import {
   convertAsyncToSync,
@@ -16,7 +17,6 @@ import {
 } from '@mnaoumov/typescript-lib/async';
 import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 import {
-  Component,
   MarkdownView,
   Menu,
   setIcon
@@ -196,7 +196,7 @@ interface UpdateToggleButtonParams {
   readonly toggleButton: HTMLElement;
 }
 
-export class NestedPropertyRendererComponent extends Component {
+export class NestedPropertyRendererComponent extends ComponentEx {
   private _listWidget?: PropertyWidget<MultitextPropertyWidgetComponent>;
   private _mixedListWidget?: PropertyWidget;
   private _objectWidget?: PropertyWidget;

@@ -1,9 +1,7 @@
 import { AllWindowsEventComponent } from '@mnaoumov/obsidian-lib/components/all-windows-event-component';
+import { ComponentEx } from '@mnaoumov/obsidian-lib/components/component-ex';
 import { getAllDomWindows } from '@mnaoumov/obsidian-lib/workspace';
-import {
-  App,
-  Component
-} from 'obsidian';
+import { App } from 'obsidian';
 
 const ARROW_SCROLL_PX = 40;
 const MIN_THUMB_WIDTH_PX = 30;
@@ -31,7 +29,7 @@ interface PendingUpdate {
   readonly ownerWindow: Window;
 }
 
-export class FloatingScrollbarComponent extends Component {
+export class FloatingScrollbarComponent extends ComponentEx {
   private activeEl: HTMLElement | null = null;
   private readonly listenerTargetEls = new Set<HTMLElement>();
   private pendingUpdate: null | PendingUpdate = null;
