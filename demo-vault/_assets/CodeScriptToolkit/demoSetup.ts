@@ -1,9 +1,13 @@
 import type {
   App,
-  TFile
+  TFile,
+  View
 } from 'obsidian';
 
-import { Notice } from 'obsidian';
+import {
+  MarkdownView,
+  Notice
+} from 'obsidian';
 
 const FULL_KEY_DISPLAY_COMMAND_ID = 'nested-properties:toggle-full-key-display';
 const VAULT_WIDE_DEMO_FOLDER = 'Vault-wide demo';
@@ -14,34 +18,75 @@ const CONTEXT_MENU_NOTE_PATH = '06 Context menu actions.md';
 const INITIAL_EXPAND_LEVEL_NOTE_PATH = '11 Initial expand level.md';
 const SHIPPED_INITIAL_EXPAND_LEVEL = 2;
 
-// Full key display is toggled by a command that flips a body class across all windows with no reload. So
-// the demo just runs that command (the same thing the command palette and the Properties-header button
-// do); there is no data.json patch + reload to perform. It throws when the class did not flip, so a click
-// that changed nothing is reported rather than shown as a success.
-export function toggleFullKeyDisplay(app: App): void {
-  const wasEnabled = activeDocument.body.hasClass(FULL_KEY_DISPLAY_BODY_CLASS);
-  app.commands.executeCommandById(FULL_KEY_DISPLAY_COMMAND_ID);
-  const isEnabled = activeDocument.body.hasClass(FULL_KEY_DISPLAY_BODY_CLASS);
-  if (isEnabled === wasEnabled) {
-    throw new Error('Full key display did not toggle. Is the Nested Properties plugin enabled?');
+// The note-level override the plugin reads from a note's `nestedProperties` frontmatter key.
+interface NestedPropertiesNoteOverride {
+  readonly initialExpandLevel?: unknown;
+}
+
+// The part of the core Search view the demo drives. Obsidian's public API does not type that view.
+interface SearchQueryView {
+  readonly getQuery: () => string;
+  readonly setQuery: (value: string) => void;
+}
+
+// Both seeders below are idempotent - pressing one again rewrites its notes - so re-seeding IS the
+// reset after a vault-wide rename or delete. What re-seeding cannot do is get rid of the folders, so
+// this removes them once you are done.
+export async function removeDemoFolders(app: App): Promise<void> {
+  let removedCount = 0;
+  for (const folder of [VAULT_WIDE_DEMO_FOLDER, SEARCH_DEMO_FOLDER]) {
+    const abstractFile = app.vault.getFolderByPath(folder);
+    if (!abstractFile) {
+      continue;
+    }
+
+    await app.fileManager.trashFile(abstractFile);
+    removedCount++;
   }
-  new Notice(isEnabled ? 'Full key display is on: keys show their full text.' : 'Full key display is off: long keys are truncated again.');
+  new Notice(removedCount > 0 ? `Removed ${String(removedCount)} demo folder(s).` : 'No demo folders to remove.');
 }
 
 // The context-menu walkthrough copies, pastes and removes keys in its own note, so after one pass there is
 // nothing left to try it on. This puts that note's frontmatter back to how it shipped.
 export async function resetContextMenuDemo(app: App): Promise<void> {
-  await replaceFrontmatter(app, CONTEXT_MENU_NOTE_PATH, [
-    'project:',
-    '  name: Demo',
-    '  tags:',
-    '    - alpha',
-    '    - beta',
-    '  owner:',
-    '    name: Ada',
-    '    email: ada@example.com'
-  ].join('\n'));
+  await replaceFrontmatter(
+    app,
+    CONTEXT_MENU_NOTE_PATH,
+    'project:\n  name: Demo\n  tags:\n    - alpha\n    - beta\n  owner:\n    name: Ada\n    email: ada@example.com'
+  );
   new Notice('Context-menu demo reset: project is back to how it shipped.');
+}
+
+// Puts the expand-level note's frontmatter back to how it shipped, override and all.
+export async function resetInitialExpandLevelDemo(app: App): Promise<void> {
+  await replaceFrontmatter(
+    app,
+    INITIAL_EXPAND_LEVEL_NOTE_PATH,
+    `nestedProperties:\n  initialExpandLevel: ${String(SHIPPED_INITIAL_EXPAND_LEVEL)}\ngenerated:\n  by: human\n  at: 2026-02-09\n  foo:\n    - bar: 1\n    - baz: 2`
+  );
+  await reopenExpandLevelNote(app, SHIPPED_INITIAL_EXPAND_LEVEL);
+  new Notice(`Expand-level demo reset: the note is back to level ${String(SHIPPED_INITIAL_EXPAND_LEVEL)}. It is reopened in the next tab.`);
+}
+
+// `07 Changing property types` is the one cumulative walkthrough here: each conversion rewrites this
+// note's own frontmatter AND records the chosen type in `.obsidian/types.json`, which the note points
+// out survives a reload. Without this, trying step 3 twice is impossible - the second run starts from
+// the converted value rather than the original.
+export async function resetPropertyTypesDemo(app: App): Promise<void> {
+  const NOTE_PATH = '07 Changing property types.md';
+  const ORIGINAL_FRONTMATTER = 'countAsText: "42"\nenabledAsText: "true"\ndueDate: 2026-07-18\n'
+    + 'apiConfig:\n  retries: 3\n  verbose: false\n  labels:\n    - urgent\n    - backend\n'
+    + 'releases:\n  - version: "1.0.0"\n    released: "2026-03-06"\n  - version: "1.1.0"\n    released: "2026-03-21"';
+
+  await replaceFrontmatter(app, NOTE_PATH, ORIGINAL_FRONTMATTER);
+  await forgetDemoPropertyTypes(app);
+  new Notice('Property-type demo reset — frontmatter and saved types are back to how they shipped.');
+}
+
+// Runs one of the plugin's vault-wide commands. Both open a picker, so the choosing stays yours - this
+// only saves hunting through the command palette while reading about them.
+export function runCommand(app: App, commandId: string): void {
+  app.commands.executeCommandById(`nested-properties:${commandId}`);
 }
 
 // Opens Obsidian's own search pane with a query typed in - the same as opening the pane and typing it.
@@ -58,14 +103,46 @@ export async function searchFor(app: App, query: string): Promise<void> {
   }
   await app.workspace.revealLeaf(searchLeaf);
 
-  const searchView = searchLeaf.view as unknown as Partial<{ getQuery(): string; setQuery(value: string): void }>;
-  if (typeof searchView.setQuery !== 'function' || typeof searchView.getQuery !== 'function') {
-    throw new Error('The search pane did not open. Is the core Search plugin enabled?');
+  const searchView = searchLeaf.view;
+  if (!isSearchQueryView(searchView)) {
+    throw new TypeError('The search pane did not open. Is the core Search plugin enabled?');
   }
   searchView.setQuery(query);
   if (searchView.getQuery() !== query) {
     throw new Error(`The search pane did not take the query ${query}.`);
   }
+}
+
+// The search command finds notes by a nested property across the whole vault. This seeds a folder of
+// notes with varying `book.author` / `book.genres` so a query like `book.genres: fantasy` returns more
+// than one match and the picker is meaningful.
+export async function seedSearchDemoNotes(app: App): Promise<void> {
+  const notes: Record<string, string> = {
+    [`${SEARCH_DEMO_FOLDER}/A Wizard of Earthsea.md`]:
+      '---\nbook:\n  author: Ursula K. Le Guin\n  genres:\n    - fantasy\n    - sci-fi\n---\n',
+    [`${SEARCH_DEMO_FOLDER}/Dune.md`]:
+      '---\nbook:\n  author: Frank Herbert\n  genres:\n    - sci-fi\n---\n',
+    [`${SEARCH_DEMO_FOLDER}/The Hobbit.md`]:
+      '---\nbook:\n  author: J.R.R. Tolkien\n  genres:\n    - fantasy\n---\n'
+  };
+  await writeDemoNotes(app, SEARCH_DEMO_FOLDER, notes);
+  new Notice(`Seeded ${String(Object.keys(notes).length)} books. Now run "Find notes by nested property" and try book.genres: fantasy.`);
+}
+
+// Vault-wide rename/delete only makes sense across MANY notes, which a single demo note cannot show. This
+// seeds a folder of notes that all share `project.meta.owner` and `project.release.channel`, so running
+// the rename/delete command lists the shared nested path with a note count and changes every note at once.
+export async function seedVaultWideDemoNotes(app: App): Promise<void> {
+  const notes: Record<string, string> = {
+    [`${VAULT_WIDE_DEMO_FOLDER}/Project Alpha.md`]:
+      '---\nproject:\n  meta:\n    owner: alice\n    status: active\n  release:\n    channel: beta\n---\n',
+    [`${VAULT_WIDE_DEMO_FOLDER}/Project Bravo.md`]:
+      '---\nproject:\n  meta:\n    owner: bob\n    status: paused\n  release:\n    channel: stable\n---\n',
+    [`${VAULT_WIDE_DEMO_FOLDER}/Project Charlie.md`]:
+      '---\nproject:\n  meta:\n    owner: carol\n    status: active\n  release:\n    channel: beta\n---\n'
+  };
+  await writeDemoNotes(app, VAULT_WIDE_DEMO_FOLDER, notes);
+  new Notice(`Seeded ${String(Object.keys(notes).length)} notes sharing project.meta.owner. Now run the rename or delete command.`);
 }
 
 // Sets `nestedProperties.initialExpandLevel` in the expand-level note, or removes the override when given
@@ -90,20 +167,48 @@ export async function setNoteInitialExpandLevel(app: App, level: null | number):
   );
 }
 
-// Puts the expand-level note's frontmatter back to how it shipped, override and all.
-export async function resetInitialExpandLevelDemo(app: App): Promise<void> {
-  await replaceFrontmatter(app, INITIAL_EXPAND_LEVEL_NOTE_PATH, [
-    'nestedProperties:',
-    `  initialExpandLevel: ${String(SHIPPED_INITIAL_EXPAND_LEVEL)}`,
-    'generated:',
-    '  by: human',
-    '  at: 2026-02-09',
-    '  foo:',
-    '    - bar: 1',
-    '    - baz: 2'
-  ].join('\n'));
-  await reopenExpandLevelNote(app, SHIPPED_INITIAL_EXPAND_LEVEL);
-  new Notice(`Expand-level demo reset: the note is back to level ${String(SHIPPED_INITIAL_EXPAND_LEVEL)}. It is reopened in the next tab.`);
+// Full key display is toggled by a command that flips a body class across all windows with no reload. So
+// the demo just runs that command (the same thing the command palette and the Properties-header button
+// do); there is no data.json patch + reload to perform. It throws when the class did not flip, so a click
+// that changed nothing is reported rather than shown as a success.
+export function toggleFullKeyDisplay(app: App): void {
+  const wasEnabled = activeDocument.body.hasClass(FULL_KEY_DISPLAY_BODY_CLASS);
+  app.commands.executeCommandById(FULL_KEY_DISPLAY_COMMAND_ID);
+  const isEnabled = activeDocument.body.hasClass(FULL_KEY_DISPLAY_BODY_CLASS);
+  if (isEnabled === wasEnabled) {
+    throw new Error('Full key display did not toggle. Is the Nested Properties plugin enabled?');
+  }
+  new Notice(isEnabled ? 'Full key display is on: keys show their full text.' : 'Full key display is off: long keys are truncated again.');
+}
+
+// Unset through `metadataTypeManager.unsetType`, the same API the plugin itself writes with
+// (`nested-property-renderer.ts`), rather than editing `.obsidian/types.json` behind Obsidian's back —
+// the manager holds the map in memory and would overwrite a hand-edited file on its next save.
+// The chosen type is stored under the property's DOTTED path, so the demo's entries are the ones whose
+// key is or starts with one of these. Anything you typed yourself is left alone.
+async function forgetDemoPropertyTypes(app: App): Promise<void> {
+  const DEMO_TYPE_KEYS = ['countAsText', 'enabledAsText', 'dueDate', 'apiConfig', 'releases'];
+  // `assignedWidgets` is the map of keys with an EXPLICITLY assigned type — the ones `unsetType`
+  // clears. Not `properties`, which also lists every property merely seen in the vault.
+  const typeKeys = Object.keys(app.metadataTypeManager.assignedWidgets);
+
+  for (const typeKey of typeKeys) {
+    if (DEMO_TYPE_KEYS.some((demoKey) => typeKey === demoKey || typeKey.startsWith(`${demoKey}.`))) {
+      await app.metadataTypeManager.unsetType(typeKey);
+    }
+  }
+}
+
+function getNote(app: App, path: string): TFile {
+  const note = app.vault.getFileByPath(path);
+  if (!note) {
+    throw new Error(`${path} is not in this vault.`);
+  }
+  return note;
+}
+
+function isSearchQueryView(view: View): view is SearchQueryView & View {
+  return 'getQuery' in view && typeof view.getQuery === 'function' && 'setQuery' in view && typeof view.setQuery === 'function';
 }
 
 // Waits until the metadata cache holds the expected override, so the reopened note renders at that level
@@ -111,13 +216,13 @@ export async function resetInitialExpandLevelDemo(app: App): Promise<void> {
 async function reopenExpandLevelNote(app: App, expectedLevel: number | undefined): Promise<void> {
   const note = getNote(app, INITIAL_EXPAND_LEVEL_NOTE_PATH);
   await waitFor(() => {
-    const nestedProperties = app.metadataCache.getFileCache(note)?.frontmatter?.['nestedProperties'] as undefined | { initialExpandLevel?: unknown };
+    const nestedProperties = app.metadataCache.getFileCache(note)?.frontmatter?.['nestedProperties'] as NestedPropertiesNoteOverride | undefined;
     return nestedProperties?.initialExpandLevel === expectedLevel;
   }, `${INITIAL_EXPAND_LEVEL_NOTE_PATH} did not pick up the new level.`);
 
   const activeLeaf = app.workspace.getMostRecentLeaf();
   const otherLeaf = app.workspace.getLeavesOfType('markdown').find((leaf) =>
-    leaf !== activeLeaf && (leaf.view as { file?: { path: string } }).file?.path === note.path
+    leaf !== activeLeaf && leaf.view instanceof MarkdownView && leaf.view.file?.path === note.path
   );
   let reopenedLeaf = otherLeaf;
   if (reopenedLeaf) {
@@ -140,113 +245,6 @@ async function reopenExpandLevelNote(app: App, expectedLevel: number | undefined
   }, `The reopened note did not render generated ${expectedLevel === 0 ? 'collapsed' : 'expanded'}.`);
 }
 
-// Vault-wide rename/delete only makes sense across MANY notes, which a single demo note cannot show. This
-// seeds a folder of notes that all share `project.meta.owner` and `project.release.channel`, so running
-// the rename/delete command lists the shared nested path with a note count and changes every note at once.
-export async function seedVaultWideDemoNotes(app: App): Promise<void> {
-  const notes: Record<string, string> = {
-    [`${VAULT_WIDE_DEMO_FOLDER}/Project Alpha.md`]:
-      `---\nproject:\n  meta:\n    owner: alice\n    status: active\n  release:\n    channel: beta\n---\n`,
-    [`${VAULT_WIDE_DEMO_FOLDER}/Project Bravo.md`]:
-      `---\nproject:\n  meta:\n    owner: bob\n    status: paused\n  release:\n    channel: stable\n---\n`,
-    [`${VAULT_WIDE_DEMO_FOLDER}/Project Charlie.md`]:
-      `---\nproject:\n  meta:\n    owner: carol\n    status: active\n  release:\n    channel: beta\n---\n`
-  };
-  await writeDemoNotes(app, VAULT_WIDE_DEMO_FOLDER, notes);
-  new Notice(`Seeded ${String(Object.keys(notes).length)} notes sharing project.meta.owner. Now run the rename or delete command.`);
-}
-
-// The search command finds notes by a nested property across the whole vault. This seeds a folder of
-// notes with varying `book.author` / `book.genres` so a query like `book.genres: fantasy` returns more
-// than one match and the picker is meaningful.
-export async function seedSearchDemoNotes(app: App): Promise<void> {
-  const notes: Record<string, string> = {
-    [`${SEARCH_DEMO_FOLDER}/A Wizard of Earthsea.md`]:
-      `---\nbook:\n  author: Ursula K. Le Guin\n  genres:\n    - fantasy\n    - sci-fi\n---\n`,
-    [`${SEARCH_DEMO_FOLDER}/The Hobbit.md`]:
-      `---\nbook:\n  author: J.R.R. Tolkien\n  genres:\n    - fantasy\n---\n`,
-    [`${SEARCH_DEMO_FOLDER}/Dune.md`]:
-      `---\nbook:\n  author: Frank Herbert\n  genres:\n    - sci-fi\n---\n`
-  };
-  await writeDemoNotes(app, SEARCH_DEMO_FOLDER, notes);
-  new Notice(`Seeded ${String(Object.keys(notes).length)} books. Now run "Find notes by nested property" and try book.genres: fantasy.`);
-}
-
-// Both seeders above are idempotent - pressing one again rewrites its notes - so re-seeding IS the
-// reset after a vault-wide rename or delete. What re-seeding cannot do is get rid of the folders, so
-// this removes them once you are done.
-export async function removeDemoFolders(app: App): Promise<void> {
-  let removedCount = 0;
-  for (const folder of [VAULT_WIDE_DEMO_FOLDER, SEARCH_DEMO_FOLDER]) {
-    const abstractFile = app.vault.getFolderByPath(folder);
-    if (abstractFile) {
-      await app.fileManager.trashFile(abstractFile);
-      removedCount++;
-    }
-  }
-  new Notice(removedCount > 0 ? `Removed ${String(removedCount)} demo folder(s).` : 'No demo folders to remove.');
-}
-
-// Runs one of the plugin's vault-wide commands. Both open a picker, so the choosing stays yours - this
-// only saves hunting through the command palette while reading about them.
-export function runCommand(app: App, commandId: string): void {
-  app.commands.executeCommandById(`nested-properties:${commandId}`);
-}
-
-// `07 Changing property types` is the one cumulative walkthrough here: each conversion rewrites this
-// note's own frontmatter AND records the chosen type in `.obsidian/types.json`, which the note points
-// out survives a reload. Without this, trying step 3 twice is impossible - the second run starts from
-// the converted value rather than the original.
-export async function resetPropertyTypesDemo(app: App): Promise<void> {
-  const NOTE_PATH = '07 Changing property types.md';
-  const ORIGINAL_FRONTMATTER = [
-    'countAsText: "42"',
-    'enabledAsText: "true"',
-    'dueDate: 2026-07-18',
-    'apiConfig:',
-    '  retries: 3',
-    '  verbose: false',
-    '  labels:',
-    '    - urgent',
-    '    - backend',
-    'releases:',
-    '  - version: "1.0.0"',
-    '    released: "2026-03-06"',
-    '  - version: "1.1.0"',
-    '    released: "2026-03-21"'
-  ].join('\n');
-
-  await replaceFrontmatter(app, NOTE_PATH, ORIGINAL_FRONTMATTER);
-  await forgetDemoPropertyTypes(app);
-  new Notice('Property-type demo reset — frontmatter and saved types are back to how they shipped.');
-}
-
-// Unset through `metadataTypeManager.unsetType`, the same API the plugin itself writes with
-// (`nested-property-renderer.ts`), rather than editing `.obsidian/types.json` behind Obsidian's back —
-// the manager holds the map in memory and would overwrite a hand-edited file on its next save.
-// The chosen type is stored under the property's DOTTED path, so the demo's entries are the ones whose
-// key is or starts with one of these. Anything you typed yourself is left alone.
-async function forgetDemoPropertyTypes(app: App): Promise<void> {
-  const DEMO_TYPE_KEYS = ['countAsText', 'enabledAsText', 'dueDate', 'apiConfig', 'releases'];
-  // `assignedWidgets` is the map of keys with an EXPLICITLY assigned type — the ones `unsetType`
-  // clears. Not `properties`, which also lists every property merely seen in the vault.
-  const typeKeys = Object.keys(app.metadataTypeManager.assignedWidgets ?? {});
-
-  for (const typeKey of typeKeys) {
-    if (DEMO_TYPE_KEYS.some((demoKey) => typeKey === demoKey || typeKey.startsWith(`${demoKey}.`))) {
-      await app.metadataTypeManager.unsetType(typeKey);
-    }
-  }
-}
-
-function getNote(app: App, path: string): TFile {
-  const note = app.vault.getFileByPath(path);
-  if (!note) {
-    throw new Error(`${path} is not in this vault.`);
-  }
-  return note;
-}
-
 // Rewrites a note's whole frontmatter block as text, keeping its body. Text rather than
 // `processFrontMatter`, so the keys come back in the order the note shipped with.
 async function replaceFrontmatter(app: App, path: string, frontmatter: string): Promise<void> {
@@ -257,11 +255,11 @@ async function replaceFrontmatter(app: App, path: string, frontmatter: string): 
   });
 }
 
-async function waitFor(predicate: () => boolean, message: string): Promise<void> {
+async function waitFor(isReady: () => boolean, message: string): Promise<void> {
   const TIMEOUT_IN_MILLISECONDS = 5000;
   const POLL_INTERVAL_IN_MILLISECONDS = 50;
   const deadline = Date.now() + TIMEOUT_IN_MILLISECONDS;
-  while (!predicate()) {
+  while (!isReady()) {
     if (Date.now() > deadline) {
       throw new Error(message);
     }
