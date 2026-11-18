@@ -100,15 +100,23 @@ async function runBasesScenario(): Promise<BasesResult> {
         const cellTexts = rowPaths.map((path) => getAuthorCellEl(path)?.textContent ?? '');
 
         // The Properties picker lists `book.year` although no column shows it yet.
-        const propertiesButtonEl = containerEl.querySelector<HTMLElement>(':scope .bases-toolbar-properties-menu .text-icon-button');
-        if (!propertiesButtonEl) {
-          throw new Error('the Properties toolbar button did not render');
-        }
-        await clickElement({ element: propertiesButtonEl });
         const menuItemSelector = '.menu.bases-toolbar-properties-menu .bases-toolbar-menu-item-name';
+        // On a loaded machine a click can land while Bases is still laying out its toolbar and open nothing, so a
+        // poll that finds no menu clicks the freshly queried button again. The interval leaves each click time to open it.
         await waitUntil({
+          intervalInMilliseconds: 1000,
           message: 'the Properties menu did not open',
-          predicate: () => activeDocument.querySelector(menuItemSelector) !== null
+          async predicate() {
+            if (activeDocument.querySelector(menuItemSelector) !== null) {
+              return true;
+            }
+            const propertiesButtonEl = containerEl.querySelector<HTMLElement>(':scope .bases-toolbar-properties-menu .text-icon-button');
+            if (propertiesButtonEl) {
+              await clickElement({ element: propertiesButtonEl });
+            }
+            return false;
+          },
+          timeoutInMilliseconds: 9000
         });
         const pickerNames = [...activeDocument.querySelectorAll(menuItemSelector)].map((el) => el.textContent);
         await pressKey({ key: 'Escape' });
