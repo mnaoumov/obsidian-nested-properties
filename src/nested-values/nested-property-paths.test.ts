@@ -7,10 +7,13 @@ import {
 } from 'vitest';
 
 import {
+  buildNestedPropertyUpdate,
   collectNestedPropertyEntries,
   collectNestedPropertyPaths,
   didDeleteNestedProperty,
-  didRenameNestedProperty
+  didRenameNestedProperty,
+  getNestedPropertyValue,
+  resolveNestedPropertyKeys
 } from './nested-property-paths.ts';
 
 describe('collectNestedPropertyPaths', () => {
@@ -171,5 +174,89 @@ describe('didRenameNestedProperty', () => {
     const frontmatter: GenericObject = { a: { b: { value: 1 } } };
     expect(didRenameNestedProperty({ fromPath: 'a.b', frontmatter, toPath: 'x.y.z' })).toBe(true);
     expect(frontmatter).toEqual({ a: {}, x: { y: { z: { value: 1 } } } });
+  });
+});
+
+describe('resolveNestedPropertyKeys', () => {
+  it('returns the actual keys, matching each segment case-insensitively', () => {
+    expect(resolveNestedPropertyKeys({ Book: { Author: 'x' } }, 'book.author')).toEqual(['Book', 'Author']);
+  });
+
+  it('prefers an exact spelling over a case-insensitive one', () => {
+    expect(resolveNestedPropertyKeys({ book: { a: 1, A: 2 } }, 'book.A')).toEqual(['book', 'A']);
+  });
+
+  it('returns null for a top-level path', () => {
+    expect(resolveNestedPropertyKeys({ book: 1 }, 'book')).toBeNull();
+  });
+
+  it('returns null when a top-level key is spelled as the whole dotted path', () => {
+    expect(resolveNestedPropertyKeys({ 'book': { author: 'nested' }, 'book.author': 'flat' }, 'book.author')).toBeNull();
+  });
+
+  it('returns null for a missing segment', () => {
+    expect(resolveNestedPropertyKeys({ book: { title: 'x' } }, 'book.author')).toBeNull();
+  });
+
+  it('returns null when the path passes through a non-object', () => {
+    expect(resolveNestedPropertyKeys({ book: ['a'] }, 'book.0')).toBeNull();
+  });
+});
+
+describe('getNestedPropertyValue', () => {
+  it('returns the value at the path', () => {
+    expect(getNestedPropertyValue({ book: { meta: { year: 1969 } } }, 'book.meta.year')).toBe(1969);
+  });
+
+  it('returns null when the path does not resolve', () => {
+    expect(getNestedPropertyValue({ book: {} }, 'book.author')).toBeNull();
+  });
+});
+
+describe('buildNestedPropertyUpdate', () => {
+  it('returns a copy of the top-level object with the nested value set, leaving the input untouched', () => {
+    const frontmatter: GenericObject = { book: { author: 'Ursula', year: 1969 } };
+    expect(buildNestedPropertyUpdate({ frontmatter, path: 'book.author', value: 'Le Guin' })).toEqual({
+      key: 'book',
+      value: { author: 'Le Guin', year: 1969 }
+    });
+    expect(frontmatter).toEqual({ book: { author: 'Ursula', year: 1969 } });
+  });
+
+  it('keeps the existing spelling of every key', () => {
+    expect(buildNestedPropertyUpdate({ frontmatter: { Book: { Author: 'x' } }, path: 'book.author', value: 'y' })).toEqual({
+      key: 'Book',
+      value: { Author: 'y' }
+    });
+  });
+
+  it('creates the missing objects along the path', () => {
+    expect(buildNestedPropertyUpdate({ frontmatter: {}, path: 'book.meta.year', value: 1969 })).toEqual({
+      key: 'book',
+      value: { meta: { year: 1969 } }
+    });
+  });
+
+  it('treats a null top-level value as an empty object', () => {
+    expect(buildNestedPropertyUpdate({ frontmatter: { book: null }, path: 'book.author', value: 'x' })).toEqual({
+      key: 'book',
+      value: { author: 'x' }
+    });
+  });
+
+  it('returns null for a top-level path', () => {
+    expect(buildNestedPropertyUpdate({ frontmatter: {}, path: 'book', value: 'x' })).toBeNull();
+  });
+
+  it('returns null when a top-level key is spelled as the whole dotted path', () => {
+    expect(buildNestedPropertyUpdate({ frontmatter: { 'book.author': 'flat' }, path: 'book.author', value: 'x' })).toBeNull();
+  });
+
+  it('returns null when the top-level value is not an object', () => {
+    expect(buildNestedPropertyUpdate({ frontmatter: { book: 'scalar' }, path: 'book.author', value: 'x' })).toBeNull();
+  });
+
+  it('returns null when an intermediate value is not an object', () => {
+    expect(buildNestedPropertyUpdate({ frontmatter: { book: { meta: 'scalar' } }, path: 'book.meta.year', value: 1 })).toBeNull();
   });
 });

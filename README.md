@@ -66,6 +66,7 @@ A copy of the vault ships with every release. You can access it via any of the f
 - **Keyboard navigation** — move through the tree, open and close it, edit a value, add an entry and remove one with the keys Obsidian uses for its own properties. [13 Keyboard navigation](<./demo-vault/13 Keyboard navigation.md>)
 - **Rename or delete a nested key across the whole vault**, not just in the note you are looking at. On desktop, with the vault in a `git` repository, the **Should commit bulk operations** setting records each run as `git` commits, and the **Undo a bulk operation...** command reverts one. [09 Vault-wide rename and delete](<./demo-vault/09 Vault-wide rename and delete.md>)
 - **Find them** — search nested properties the way you search anything else. [10 Search nested properties](<./demo-vault/10 Search nested properties.md>)
+- **Use them in Bases** — pick `book.author` as a column, sort by it, and edit it right in the table cell, with no formula. [14 Nested properties in Bases](<./demo-vault/14 Nested properties in Bases.md>)
 - **See the full key** of a nested entry when the short name is ambiguous. [08 Full key display](<./demo-vault/08 Full key display.md>)
 - **Read it without opening it** — a collapsed property shows a one-line preview of its content, and you can choose how many levels arrive expanded, vault-wide or per note. [11 Initial expand level](<./demo-vault/11 Initial expand level.md>)
 
