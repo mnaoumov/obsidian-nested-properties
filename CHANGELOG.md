@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 1.10.0
+
+This release has 1 new feature. Maintenance commits (tests, build, refactoring) are not listed.
+
+### New
+
+- Support for Bases: nested properties such as `note.book.author` now show, sort and edit as ordinary Bases columns, and appear in the Properties picker (#17)
+
 ## 1.9.0
 
 This release has 1 new feature. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
