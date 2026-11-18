@@ -16,6 +16,7 @@ With this plugin a nested property is an ordinary column:
 - **See it** in its column, and **sort by it** like any other property.
 - **Edit it in place**: type into a table cell and the value is written back into the nested key, `book:` → `author:`.
 
+<!-- obsidian-dev-toolkit-disable-next-line demo-vault-validation/try-it-code-button -- the feature is the base embedded below, which you edit in place, so a button would skip the very thing this note shows -->
 ## Try it
 
 The base below lists every note with a `book` property. This note is one of them; the `Seed search demo notes` button in [10 Search nested properties](<./10 Search nested properties.md>) adds three more.
