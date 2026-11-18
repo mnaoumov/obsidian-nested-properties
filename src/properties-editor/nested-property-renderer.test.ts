@@ -253,6 +253,10 @@ interface FakeLeaf {
   readonly getContainer: () => FakeContainer;
 }
 
+interface FakeRootSplit {
+  readonly win: unknown;
+}
+
 interface FakeWindow {
   readonly document: FakeWindowDocument;
 }
@@ -291,7 +295,10 @@ interface MockWorkspace {
   readonly getLeavesOfType: MockFunction;
   // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Tests replace the leaf iterator to simulate windows.
   iterateAllLeaves: MockFunction;
+  readonly offref: MockFunction;
+  readonly on: MockFunction;
   readonly onLayoutReady: MockFunction;
+  readonly rootSplit: FakeRootSplit;
 }
 
 interface PendingFocusTestAccess {
@@ -473,7 +480,13 @@ describe('NestedPropertyRenderer', () => {
       workspace: {
         getLeavesOfType: vi.fn(() => []),
         iterateAllLeaves: vi.fn(),
-        onLayoutReady: vi.fn()
+        offref: vi.fn(),
+        on: vi.fn((name: string) => ({ name })),
+        onLayoutReady: vi.fn(),
+        // The main window is `rootSplit.win`, so it follows each test's stubbed `activeWindow`.
+        get rootSplit(): FakeRootSplit {
+          return { win: activeWindow };
+        }
       }
     };
 
