@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-class-instance-assignment -- A false positive on every `this` and settings tab
+ * here: `PluginBase` and the settings tab base extend a mixin (`mixinAsyncEvents()(Plugin)`), whose declared base is an
+ * intersection the rule does not walk, so it cannot see that they ARE `Plugin` and `PluginSettingTab` instances. */
 import { OpenBugReportCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/open-bug-report-command-handler';
 import { OpenDemoVaultCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/open-demo-vault-command-handler';
 import { UndoBulkOperationCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/undo-bulk-operation-command-handler';
@@ -7,6 +10,7 @@ import { PluginDataHandler } from '@mnaoumov/obsidian-lib/data-handler';
 import { PluginBase } from '@mnaoumov/obsidian-lib/plugin/plugin';
 import { invokeAsyncSafely } from '@mnaoumov/typescript-lib/async';
 
+import { NestedPropertyBasesPatchComponent } from './bases/nested-property-bases-patch-component.ts';
 import { NestedPropertyRendererComponent } from './properties-editor/nested-property-renderer.ts';
 import { NestedPropertySearchPatchComponent } from './search/nested-property-search-patch-component.ts';
 import { PluginSettingsComponent } from './settings/plugin-settings-component.ts';
@@ -89,6 +93,11 @@ export class Plugin extends PluginBase {
         app: this.app
       })
     );
+    this.addChild(
+      new NestedPropertyBasesPatchComponent({
+        app: this.app
+      })
+    );
     await this.commandHandlerComponent.registerCommandHandlers(() => [
       new UndoBulkOperationCommandHandler({
         bulkOperationCommitComponent,
@@ -108,3 +117,4 @@ export class Plugin extends PluginBase {
     ]);
   }
 }
+/* eslint-enable @typescript-eslint/no-unsafe-class-instance-assignment -- Ends the mixin false-positive block above. */

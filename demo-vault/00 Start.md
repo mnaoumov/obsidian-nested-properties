@@ -32,3 +32,4 @@ Welcome to the [Nested Properties](https://github.com/mnaoumov/obsidian-nested-p
 
 - [09 Vault-wide rename and delete](<./09 Vault-wide rename and delete.md>)
 - [10 Search nested properties](<./10 Search nested properties.md>)
+- [14 Nested properties in Bases](<./14 Nested properties in Bases.md>)

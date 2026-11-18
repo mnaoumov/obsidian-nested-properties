@@ -2,6 +2,9 @@ import type { GenericObject } from '@mnaoumov/typescript-lib/type-guards';
 
 import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 
+// A nested path has at least a parent key and a child key.
+const MIN_NESTED_SEGMENT_COUNT = 2;
+
 /**
  * A nested property path (depth of two or more segments) paired with the value found there.
  */
@@ -13,6 +16,42 @@ export interface NestedPropertyEntry {
 
   /**
    * The value the path resolves to (a scalar, array, or nested object).
+   */
+  readonly value: unknown;
+}
+
+/**
+ * A replacement for one top-level frontmatter key that carries a nested property change.
+ */
+export interface NestedPropertyUpdate {
+  /**
+   * The top-level frontmatter key to replace, spelled as it already is in the note when it exists.
+   */
+  readonly key: string;
+
+  /**
+   * The new value of that key: a copy of its current object with the nested property set.
+   */
+  readonly value: GenericObject;
+}
+
+/**
+ * Parameters for {@link buildNestedPropertyUpdate}.
+ */
+interface BuildNestedPropertyUpdateParams {
+  /**
+   * The note's current frontmatter. It is not mutated.
+   */
+  readonly frontmatter: GenericObject;
+
+  /**
+   * The dotted nested property path to set (e.g. `book.author`). Segments match keys case-insensitively, as
+   * Obsidian matches top-level property names.
+   */
+  readonly path: string;
+
+  /**
+   * The value to store at the path.
    */
   readonly value: unknown;
 }
@@ -51,6 +90,54 @@ interface DidRenameNestedPropertyParams {
    * objects are created as needed.
    */
   readonly toPath: string;
+}
+
+interface ResolvedNestedProperty {
+  readonly keys: string[];
+  readonly value: unknown;
+}
+
+/**
+ * Builds the top-level key replacement that sets a nested property, so a writer that can only replace one
+ * top-level key (Bases' cell editor) can store a nested value.
+ *
+ * Intermediate objects that do not exist yet are created, using the path's own spelling.
+ *
+ * @param params - The parameters.
+ * @returns The update, or `null` when the path is not nested, when the note has a top-level key spelled as the
+ *   whole dotted path, or when the path passes through a value that is not an object.
+ */
+export function buildNestedPropertyUpdate(params: BuildNestedPropertyUpdateParams): NestedPropertyUpdate | null {
+  const { frontmatter, path, value } = params;
+  const segments = splitPath(path);
+  if (segments.length < MIN_NESTED_SEGMENT_COUNT || findKey(frontmatter, path) !== null) {
+    return null;
+  }
+
+  const [firstSegment = '', ...restSegments] = segments;
+  const topKey = findKey(frontmatter, firstSegment) ?? firstSegment;
+  const topValue = frontmatter[topKey] ?? {};
+  if (!isPlainObject(topValue)) {
+    return null;
+  }
+
+  // Copy-on-write along the path only: every object on it is a fresh shallow copy, and the siblings off it are
+  // shared, so the note's cached frontmatter is never mutated.
+  const copy = { ...topValue };
+  let current = copy;
+  for (const segment of restSegments.slice(0, -1)) {
+    const key = findKey(current, segment) ?? segment;
+    const next = current[key] ?? {};
+    if (!isPlainObject(next)) {
+      return null;
+    }
+    const nextCopy = { ...next };
+    current[key] = nextCopy;
+    current = nextCopy;
+  }
+  const leaf = lastSegment(restSegments);
+  current[findKey(current, leaf) ?? leaf] = value;
+  return { key: topKey, value: copy };
 }
 
 /**
@@ -162,6 +249,32 @@ export function didRenameNestedProperty(params: DidRenameNestedPropertyParams): 
   return true;
 }
 
+/**
+ * Reads the value at a nested property path.
+ *
+ * @param frontmatter - The frontmatter object to read from.
+ * @param path - The dotted path (e.g. `book.author`).
+ * @returns The value, or `null` when {@link resolveNestedPropertyKeys} does not resolve the path.
+ */
+export function getNestedPropertyValue(frontmatter: GenericObject, path: string): unknown {
+  const resolved = resolveNestedProperty(frontmatter, path);
+  return resolved === null ? null : resolved.value;
+}
+
+/**
+ * Resolves a dotted nested property path against a note's frontmatter, matching each segment's key
+ * case-insensitively (an exact spelling wins), as Obsidian matches top-level property names.
+ *
+ * @param frontmatter - The frontmatter object to resolve against.
+ * @param path - The dotted path (e.g. `book.author`).
+ * @returns The actual keys along the path, or `null` when the path is not nested, when the note has a
+ *   top-level key spelled as the whole dotted path (Obsidian already reads that one), or when any segment is
+ *   missing or passes through a value that is not an object.
+ */
+export function resolveNestedPropertyKeys(frontmatter: GenericObject, path: string): null | string[] {
+  return resolveNestedProperty(frontmatter, path)?.keys ?? null;
+}
+
 function collectEntriesInto($object: GenericObject, prefix: string, entries: NestedPropertyEntry[]): void {
   for (const [key, value] of Object.entries($object)) {
     const path = prefix ? `${prefix}.${key}` : key;
@@ -174,6 +287,14 @@ function collectEntriesInto($object: GenericObject, prefix: string, entries: Nes
   }
 }
 
+function findKey($object: GenericObject, name: string): null | string {
+  if (Object.hasOwn($object, name)) {
+    return name;
+  }
+  const lowerName = name.toLowerCase();
+  return Object.keys($object).find((key) => key.toLowerCase() === lowerName) ?? null;
+}
+
 function isAncestorOrSame(candidateAncestor: string, path: string): boolean {
   return path === candidateAncestor || path.startsWith(`${candidateAncestor}.`);
 }
@@ -184,6 +305,28 @@ function isPlainObject(value: unknown): value is GenericObject {
 
 function lastSegment(segments: string[]): string {
   return ensureNonNullable(segments.at(-1));
+}
+
+function resolveNestedProperty(frontmatter: GenericObject, path: string): null | ResolvedNestedProperty {
+  const segments = splitPath(path);
+  if (segments.length < MIN_NESTED_SEGMENT_COUNT || findKey(frontmatter, path) !== null) {
+    return null;
+  }
+
+  const keys: string[] = [];
+  let current: unknown = frontmatter;
+  for (const segment of segments) {
+    if (!isPlainObject(current)) {
+      return null;
+    }
+    const key = findKey(current, segment);
+    if (key === null) {
+      return null;
+    }
+    keys.push(key);
+    current = current[key];
+  }
+  return { keys, value: current };
 }
 
 function resolveOrCreateParent(frontmatter: GenericObject, segments: string[]): GenericObject | null {
