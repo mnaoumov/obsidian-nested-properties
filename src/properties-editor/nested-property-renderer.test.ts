@@ -72,6 +72,7 @@ interface MockDomElement {
 }
 
 type MockFunction = ReturnType<typeof vi.fn>;
+type NodeConstructor = abstract new (...constructorArguments: never[]) => unknown;
 
 // The only allowed thin stubs are kept here. MockHTMLElementBase / MockHTMLInputElementBase back the
 // hand-rolled DOM elements (createMockEl) so instanceof HTMLElement / HTMLInputElement resolve.
@@ -84,6 +85,11 @@ type MockFunction = ReturnType<typeof vi.fn>;
 const hoisted = vi.hoisted(() => {
   class MockHTMLElementBase {
     public readonly isMockElement = true;
+
+    // Obsidian's `Node.instanceOf`, which the renderer uses in place of `instanceof` to stay correct across windows.
+    public instanceOf(type: NodeConstructor): boolean {
+      return this instanceof type;
+    }
   }
   class MockHTMLInputElementBase extends MockHTMLElementBase {}
 
@@ -367,7 +373,7 @@ function createMockEl(overrides?: Partial<MockDomElement>): MockDomElement {
     getAttributeNames: vi.fn(() => []),
     hasClass: vi.fn(() => false),
     insertBefore: vi.fn(),
-    instanceOf: vi.fn(() => false),
+    instanceOf: vi.fn((type: NodeConstructor) => el instanceof type),
     isConnected: true,
     querySelector: vi.fn(() => null),
     querySelectorAll: vi.fn(() => []),
@@ -2000,7 +2006,7 @@ describe('NestedPropertyRenderer', () => {
       loadRenderer();
 
       vi.stubGlobal('activeDocument', {
-        activeElement: 'not-html-element',
+        activeElement: { instanceOf: vi.fn(() => false) },
         querySelectorAll: vi.fn(() => [])
       });
 
@@ -2980,7 +2986,7 @@ describe('NestedPropertyRenderer', () => {
     it('should handle metadataContainerEl that is not HTMLElement', () => {
       loadRenderer();
 
-      const containerEl = createMockEl({ closest: vi.fn(() => 'not-html-element') });
+      const containerEl = createMockEl({ closest: vi.fn(() => ({ instanceOf: vi.fn(() => false) })) });
       const el = createMockEl();
       el.createDiv.mockReturnValue(containerEl);
 

@@ -440,13 +440,13 @@ export class NestedPropertyRendererComponent extends ComponentEx {
 
   // Resolve the persisted widget for a node, honouring the layered read order:
   // Per-index override (`versions.0.released`) -> collapsed per-field default (`versions.released`).
-  // Returns undefined when nothing is assigned so the caller can fall back to value inference.
-  private getAssignedWidgetForPath(path: string): PropertyWidget | undefined {
+  // Returns null when nothing is assigned so the caller can fall back to value inference.
+  private getAssignedWidgetForPath(path: string): null | PropertyWidget {
     const metadataTypeManager = this.app.metadataTypeManager;
     const itemType = metadataTypeManager.getAssignedWidget(getItemTypeKey(path));
     const fieldKey = getFieldTypeKey(path);
     const assignedType = itemType ?? (fieldKey ? metadataTypeManager.getAssignedWidget(fieldKey) : null);
-    return assignedType ? metadataTypeManager.registeredTypeWidgets[assignedType] : undefined;
+    return assignedType ? (metadataTypeManager.registeredTypeWidgets[assignedType] ?? null) : null;
   }
 
   private getWidget(params: NestedPropertyRendererComponentGetWidgetParams): PropertyWidget {
@@ -562,7 +562,7 @@ export class NestedPropertyRendererComponent extends ComponentEx {
     const rootPath = `${context.sourcePath}:${context.key}`;
 
     const propertyEl = el.closest('.metadata-property');
-    if (propertyEl instanceof HTMLElement) {
+    if (propertyEl?.instanceOf(HTMLElement)) {
       const isExpanded = this.isExpanded({ path: rootPath, sourcePath: context.sourcePath });
       propertyEl.classList.add('nested-properties-collapsible');
       propertyEl.dataset['path'] = rootPath;
@@ -573,7 +573,7 @@ export class NestedPropertyRendererComponent extends ComponentEx {
       this.registerCollapsibleRow({ path: rootPath, propertyEl });
 
       const existingIcon = propertyEl.querySelector(':scope .metadata-property-key .metadata-property-icon');
-      if (existingIcon instanceof HTMLElement) {
+      if (existingIcon?.instanceOf(HTMLElement)) {
         setIcon(existingIcon, widgetType === LIST_WIDGET_TYPE ? 'lucide-list-tree' : 'lucide-braces');
       }
 
@@ -593,12 +593,12 @@ export class NestedPropertyRendererComponent extends ComponentEx {
       // expand it. Obsidian's default input width overrides `size` while the toggle is off, so this is
       // inert until the body class is present — mirroring the nested inputs in `renderKeyEl`.
       const keyInputEl = keyEl?.querySelector(':scope .metadata-property-key-input');
-      if (keyInputEl instanceof HTMLInputElement) {
+      if (keyInputEl?.instanceOf(HTMLInputElement)) {
         keyInputEl.size = Math.max(1, keyInputEl.value.length);
       }
     }
 
-    if (propertyEl instanceof HTMLElement) {
+    if (propertyEl?.instanceOf(HTMLElement)) {
       createSummary({
         onExpand: () => {
           this.setRowExpanded({ isExpanded: true, path: rootPath, propertyEl });
@@ -621,7 +621,7 @@ export class NestedPropertyRendererComponent extends ComponentEx {
 
     window.setTimeout(() => {
       const metadataContainerEl = containerEl.closest('.metadata-container');
-      if (metadataContainerEl instanceof HTMLElement) {
+      if (metadataContainerEl?.instanceOf(HTMLElement)) {
         injectHeaderButtons({
           expansionOverrides: this.expansionOverrides,
           metadataContainerEl,
@@ -648,9 +648,9 @@ export class NestedPropertyRendererComponent extends ComponentEx {
           if (input.instanceOf(HTMLInputElement) && input.value === key) {
             const property = input.closest('.metadata-property');
             const valueEl = property?.querySelector(':scope > .metadata-property-value');
-            if (valueEl instanceof HTMLElement) {
+            if (valueEl?.instanceOf(HTMLElement)) {
               const focusTargetEl = valueEl.querySelector('input, textarea, [contenteditable]');
-              if (focusTargetEl instanceof HTMLElement) {
+              if (focusTargetEl?.instanceOf(HTMLElement)) {
                 focusTargetEl.focus();
               } else {
                 valueEl.click();
@@ -666,7 +666,7 @@ export class NestedPropertyRendererComponent extends ComponentEx {
     return {
       // Obsidian's own row calls this for Enter or ArrowRight: the tree opens and its first row takes the focus.
       focus: (): void => {
-        if (propertyEl instanceof HTMLElement) {
+        if (propertyEl?.instanceOf(HTMLElement)) {
           this.setRowExpanded({ isExpanded: true, path: rootPath, propertyEl });
         }
         this.keyboardNavigator.focusFirstStop(containerEl);
@@ -978,8 +978,9 @@ export class NestedPropertyRendererComponent extends ComponentEx {
 // Obsidian does not redraw a property's value while the focus is inside it, so a structural change made from
 // inside the tree moves the focus out first.
 function blurActiveElement(): void {
-  if (activeDocument.activeElement instanceof HTMLElement) {
-    activeDocument.activeElement.blur();
+  const focusedEl = activeDocument.activeElement;
+  if (focusedEl?.instanceOf(HTMLElement)) {
+    focusedEl.blur();
   }
 }
 
