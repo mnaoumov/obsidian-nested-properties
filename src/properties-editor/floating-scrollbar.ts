@@ -66,10 +66,11 @@ export class FloatingScrollbarComponent extends ComponentEx {
         if (!this.activeEl || ($event.key !== 'ArrowLeft' && $event.key !== 'ArrowRight')) {
           return;
         }
+        const focusedEl = activeDocument.activeElement;
         if (
-          activeDocument.activeElement instanceof HTMLInputElement
-          || activeDocument.activeElement instanceof HTMLTextAreaElement
-          || (activeDocument.activeElement instanceof HTMLElement && activeDocument.activeElement.isContentEditable)
+          focusedEl?.instanceOf(HTMLInputElement)
+          || focusedEl?.instanceOf(HTMLTextAreaElement)
+          || (focusedEl?.instanceOf(HTMLElement) && focusedEl.isContentEditable)
         ) {
           return;
         }
@@ -124,7 +125,7 @@ export class FloatingScrollbarComponent extends ComponentEx {
     }
 
     const statusBar = activeDocument.querySelector('.status-bar');
-    const bottomOffset = statusBar instanceof HTMLElement ? statusBar.offsetHeight : 0;
+    const bottomOffset = statusBar?.instanceOf(HTMLElement) ? statusBar.offsetHeight : 0;
     const visibleBottom = activeWindow.innerHeight - bottomOffset;
 
     let best: HTMLElement | null = null;

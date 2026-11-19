@@ -255,9 +255,11 @@ function isSearchView(candidate: unknown): candidate is SearchView {
 }
 
 function matchNestedProperties(
+  // eslint-disable-next-line typescript-dev-toolkit/no-undefined-return-type -- Mirrors Obsidian's `SearchPropertyMatcher.match`.
   fallback: () => null | SearchMatchResult | undefined,
   context: SearchMatchContext,
   matcher: SearchPropertyMatcher
+  // eslint-disable-next-line typescript-dev-toolkit/no-undefined-return-type -- Mirrors Obsidian's `SearchPropertyMatcher.match`.
 ): null | SearchMatchResult | undefined {
   const nativeResult = fallback();
   // The property matcher only runs against note content; mirror the native guard.
