@@ -315,8 +315,12 @@ This release has 2 new features and 2 fixes. 1 maintenance commit (tests, build,
 
 ## 1.0.0
 
-This release has 1 new feature.
+The first release: view and edit nested frontmatter properties in the Properties editor.
 
 ### New
 
-- initial
+- Nested YAML objects and arrays render as a collapsible tree inside the Properties editor, instead of as raw text
+- Collapse or expand one nested property, or all of them at once
+- Context menu on nested properties: Cut, Copy, Paste and Remove
+- Add a new property at any nesting level
+- Horizontal scrolling for deeply nested structures
